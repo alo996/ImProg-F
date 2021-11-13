@@ -3,13 +3,12 @@
 module Declarations where
 
     data Token =
-        BooleanToken |
+        BooleanToken Bool |
         MetaToken |
         NameToken String |
         NumberToken Int
 
-    data BooleanToken = False | True deriving Show
-    
+
     data MetaToken = Semicolon | 
                      Assign | 
                      Let | 
