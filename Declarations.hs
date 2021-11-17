@@ -4,30 +4,31 @@ module Declarations where
 
     data Token =
         BooleanToken Bool |
-        MetaToken |
+        KeywordToken Keyword |
         NameToken String |
-        NumberToken Int
+        NumberToken String
+        deriving Show
 
 
-    data MetaToken = Semicolon | 
-                     Assign | 
-                     Let | 
-                     In | 
-                     If | 
-                     Then | 
-                     Else | 
-                     LBracket | 
-                     RBracket | 
-                     And | 
-                     Not | 
-                     Or | 
-                     Equals |
-                     Plus |
-                     Minus | 
-                     Times |
-                     Divide
+    data Keyword = Semicolon | 
+                        Assign | 
+                        Let | 
+                        In | 
+                        If | 
+                        Then | 
+                        Else | 
+                        LBracket | 
+                        RBracket | 
+                        And | 
+                        Not | 
+                        Or | 
+                        Equals |
+                        Plus |
+                        Minus | 
+                        Times |
+                        Divide
 
-    instance Show MetaToken where
+    instance Show Keyword where
         show Semicolon = ";"
         show Assign    = "="
         show Let       = "let"
