@@ -9,7 +9,6 @@ module Declarations where
         NumberToken String
         deriving Show
 
-
     data Keyword = Semicolon | 
                         Assign | 
                         Let | 
