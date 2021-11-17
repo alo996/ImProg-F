@@ -48,6 +48,7 @@ module Tokenizer where
         '-' -> tokenize' xs ((KeywordToken Minus , lineAcc) : tokenAcc) lineAcc
         '*' -> tokenize' xs ((KeywordToken Times, lineAcc) : tokenAcc) lineAcc
         '/' -> tokenize' xs ((KeywordToken Divide , lineAcc) : tokenAcc) lineAcc
+        '<' -> tokenize' xs ((KeywordToken LessThan, lineAcc) : tokenAcc) lineAcc
         x   -> tokenize'' (x:xs) tokenAcc lineAcc
 
     -- next characters from a number
@@ -70,4 +71,4 @@ module Tokenizer where
                                                               else tokenize' (y:xs) ((NameToken (name ++ [x]), lineAcc) : tokenAcc) lineAcc
     
     validateChar :: Char -> Bool 
-    validateChar x = elem x $ [';', '=', '(', ')', '&', '|', '+', '-', '*', '/', '\n', '\r'] ++ ['0' .. '9']
+    validateChar x = elem x $ [';', '=', '(', ')', '&', '|', '+', '-', '*', '/', '<', '\n', '\r'] ++ ['0' .. '9']
