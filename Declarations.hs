@@ -9,39 +9,42 @@ module Declarations where
         NumberToken String
         deriving Show
 
-    data Keyword = Semicolon | 
-                        Assign | 
-                        Let | 
-                        In | 
-                        If | 
-                        Then | 
-                        Else | 
-                        LBracket | 
-                        RBracket | 
-                        And | 
-                        Not | 
-                        Or | 
-                        Equals |
-                        Plus |
-                        Minus | 
-                        Times |
-                        Divide
+    data Keyword = And |
+                   Assign |
+                   Divide |
+                   Else |
+                   Equals |
+                   If |
+                   In |
+                   LessThan |
+                   Let |
+                   LBracket |
+                   Minus | 
+                   Not | 
+                   Or | 
+                   Plus |
+                   RBracket |
+                   Semicolon |  
+                   Times |
+                   Then         
+                             
 
     instance Show Keyword where
-        show Semicolon = ";"
-        show Assign    = "="
-        show Let       = "let"
-        show In        = "in"
-        show If        = "if"
-        show Then      = "then"
-        show Else      = "else"
-        show LBracket  = "("
-        show RBracket  = ")"
         show And       = "&"
+        show Assign    = "="
+        show Divide    = "/"
+        show Else      = "else"
+        show Equals    = "=="
+        show If        = "if"
+        show In        = "in"
+        show LessThan  = "<"
+        show Let       = "let"
+        show LBracket  = "("
+        show Minus     = "-"
         show Not       = "not"
         show Or        = "|"
-        show Equals    = "=="
         show Plus      = "+"
-        show Minus     = "-"
+        show RBracket  = ")"
+        show Semicolon = ";"
+        show Then      = "then"
         show Times     = "*"
-        show Divide    = "/"
