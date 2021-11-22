@@ -6,7 +6,7 @@ module Declarations where
         BooleanToken Bool |
         KeywordToken Keyword |
         NameToken String |
-        NumberToken String
+        NumberToken Int
         deriving Show
 
     data Keyword = And |
