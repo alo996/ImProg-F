@@ -54,3 +54,22 @@ where
         show Minus     = "-"
         show Times     = "*"
         show Divide    = "/"
+
+            instance Show NameToken where
+      show (NameToken s) = s
+
+    instance Show NumberToken where
+      show (NumberToken s) = s
+
+    instance Show BoolToken where
+      show (BoolToken s) = s
+
+  data SyntaxTree = SyntaxTree [(Token)]
+
+ -- data UnOp a = (show "not") a | (show "-") a deriving (Show)
+
+  type IsNot = Bool
+
+  data AtomExpr = AtomExpr Variable | NumberToken | BoolToken deriving (Show, Eq)
+
+  data Variable = Variable String  deriving (Show, Eq)
