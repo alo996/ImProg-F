@@ -55,7 +55,7 @@ module Tokenizer where
                     then tokenizeNumbers (x:xs) tokenAcc lineAcc ""
                     else tokenizeNames (x:xs) tokenAcc lineAcc ""
 
-    -- tokenizes numbers or strings
+    -- tokenizes numbers or names
     tokenizeNumbers, tokenizeNames :: String -> [(Token, Int)] -> Int -> String -> [(Token, Int)]
     tokenizeNumbers [x] tokenAcc lineAcc number            = reverse $ (NumberToken $ stringToInt $ number ++ [x], lineAcc) : tokenAcc
     tokenizeNumbers (x : ' ' : xs) tokenAcc lineAcc number = tokenize' xs ((NumberToken $ stringToInt $ number ++ [x], lineAcc) : tokenAcc) lineAcc
