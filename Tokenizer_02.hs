@@ -88,8 +88,8 @@ where
         then (NumberToken $ (numToString $ reverse nameAcc) , lineCounter) -- NAME MODE empty input
         else (NameToken $ reverse nameAcc, lineCounter)
 
-    numToString :: [Char] -> Integer
-    numToString numString = read numString :: Integer
+    numToString :: [Char] -> Int
+    numToString numString = read numString :: Int
 
 
         -- NAME MODE name zwischen number string unterscheiden und numberstring zu Num umwandeln! --> NumberToken Num statt String
