@@ -1,0 +1,51 @@
+--Reine Syntax-Tests für Tokenizer (21):
+
+if True|False then(1+2) else 5
+
+if8False x y z | x == y && y == z = True
+
+let Then = (<+-|*&/&*|-+>)
+
+let x = 32a in x + x
+
+if True & (False(then )else)
+
+let  32x = True/False| ()
+
+main x= (12 /3*(2* 3))
+
+bool x= x ==true | x== false;f x =if bool x | x << 0
+
+let x =else &not True
+
+if 8*3>2 then( False) else(True)
+
+functi0n x=let x=3 in x/x
+
+if True&True == not False then(True)else(False)
+
+let a = b in b * a; b = 2; 
+
+f  x  =  if  x  >  3  then  x  *  x  else  x  +  x  ;  main  =  f  3  ;
+
+thenTrueelseFalseifinletnotthen x = if x>3|x=0 then True else False
+
+ let x=3 in x* x
+
+x=True;y=True;if x==y then(x&y)else(x|y);
+
+if x>8&x<10then x=9else x=(10*x)
+
+x=1; y=(2*x)+x;z =(3*y)-3;
+
+if x==not True then(3|2)  else(3-(-2)*(3))  
+ 
+If X==Not true Then(false) Else Let Y=3 In Y*Y
+
+
+--Test für Zeichen, die nicht berücksichtigt werden sollen:
+
+testfunction x = if x == 1 then $ True && True else $ False && False
+
+predicate xs = [if x `mod` 2 == 0 then "False" else "True" | x <- xs, x/=11, x/=12, x/=13]
+
