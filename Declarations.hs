@@ -2,6 +2,7 @@
 
 module Declarations where
 
+
     data Token =
         BooleanToken Bool |
         KeywordToken Keyword |
@@ -50,10 +51,17 @@ module Declarations where
         show Then      = "then"
 
 
-    --data SyntaxTree = SyntaxTree [(Token)] deriving (Show)
-    data SyntaxTree = Tree Expression SyntaxTree SyntaxTree | Leaf Expression
+    type ComparisonOp = Keyword
+    type Variable = String
+    data Literal = Bool | Integer
+    data AtomicExpr = Variable | Literal | Expression
+    data Definition = Definition [Variable] Expression
+    data Expression = Expr Int
 
+    -- data SyntaxTree = SyntaxTree [(Token)] deriving (Show)
+    -- data SyntaxTree = Tree Expression SyntaxTree SyntaxTree | Leaf Expression
 
+    {-
     data Expression =
             Atom AtomExp
           | Not Expression
@@ -65,10 +73,9 @@ module Declarations where
           | Times Expression Expression
           | Divide Expression Expression
           deriving Show
+    -}
 
 
     --  data BinSym = And | Or | Equals | Less | Plus | Minus | Times | Divide
 
-      --data UnSym =  Not | Minus deriving (Show)
-
-    data AtomExp = VarExp NameToken | NumExp NumberToken | BoolExp BoolToken deriving (Show, Eq)
+    -- data AtomExp = VarExp NameToken | NumExp NumberToken | BoolExp BoolToken deriving (Show, Eq)
