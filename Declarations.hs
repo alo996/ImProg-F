@@ -49,17 +49,30 @@ module Declarations where
         show Semicolon = ";"
         show Times     = "*"
         show Then      = "then"
+    
 
 
+
+{-
     type ComparisonOp = Keyword
-    type Variable = String
+    newtype Variable =  Var String
     data Literal = Bool | Integer
     data AtomicExpr = Variable | Literal | Expression
+    type Expr8 = [AtomicExpr]
+    type RestExpr7 = [Expr8]
+    data Expr7 = Expr7 Expr8 RestExpr7
+    type Expr6 = Expr7
+    type RestExpr5 = [Expr6]
+    data Expr5 = Expr5 Expr6 RestExpr5
+    data Expr4 = Expr4 Expr5 [(ComparisonOp, Expr5)]
+    type Expr3 = Expr4
+
     data Definition = Definition [Variable] Expression
     data Expression = Expr Int
 
     -- data SyntaxTree = SyntaxTree [(Token)] deriving (Show)
     -- data SyntaxTree = Tree Expression SyntaxTree SyntaxTree | Leaf Expression
+    -}
 
     {-
     data Expression =
