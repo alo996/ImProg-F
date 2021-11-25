@@ -3,7 +3,6 @@ module Parser
     (parseInterface
     ) where
 
-import Declarations_02
 import Tokenizer_02
 import Data.List
 import Data.Char

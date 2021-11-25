@@ -54,7 +54,7 @@ module Declarations where
     data SyntaxTree = Tree Expression SyntaxTree SyntaxTree | Leaf Expression
 
 
-data Expression =
+    data Expression =
             Atom AtomExp
           | Not Expression
           | Minus Expression
