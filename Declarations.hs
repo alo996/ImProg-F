@@ -50,18 +50,16 @@ module Declarations where
         show Then      = "then"
 
 
-    data SyntaxTree = SyntaxTree [(Token)] deriving (Show)
+    --data SyntaxTree = SyntaxTree [(Token)] deriving (Show)
+    data SyntaxTree = Tree Expression SyntaxTree SyntaxTree | Leaf Expression
 
 
-    data Expression = Expression
-          | Keyword KeywordToken
-          | Value NumberToken
-          | Name NameToken
+data Expression =
+            Atom AtomExp
           | Not Expression
           | Minus Expression
           | Popen Expression      --open paranthesis
           | Pclose Expression     --close paranthesis
-          | Atom AtomExp
           | Add Expression Expression
           | Subtract Expression Expression
           | Times Expression Expression
@@ -73,4 +71,4 @@ module Declarations where
 
       --data UnSym =  Not | Minus deriving (Show)
 
-    -- data AtomExp = NameToken NumberToken | NameToken Keyword |NameToken BoolToken deriving (Show, Eq)
+    data AtomExp = VarExp NameToken | NumExp NumberToken | BoolExp BoolToken deriving (Show, Eq)
