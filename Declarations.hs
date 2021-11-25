@@ -46,5 +46,31 @@ module Declarations where
         show Plus      = "+"
         show RBracket  = ")"
         show Semicolon = ";"
-        show Then      = "then"
         show Times     = "*"
+        show Then      = "then"
+
+
+    data SyntaxTree = SyntaxTree [(Token)] deriving (Show)
+
+
+    data Expression = Expression
+          | Keyword KeywordToken
+          | Value NumberToken
+          | Name NameToken
+          | Not Expression
+          | Minus Expression
+          | Popen Expression      --open paranthesis
+          | Pclose Expression     --close paranthesis
+          | Atom AtomExp
+          | Add Expression Expression
+          | Subtract Expression Expression
+          | Times Expression Expression
+          | Divide Expression Expression
+          deriving Show
+
+
+    --  data BinSym = And | Or | Equals | Less | Plus | Minus | Times | Divide
+
+      --data UnSym =  Not | Minus deriving (Show)
+
+    -- data AtomExp = NameToken NumberToken | NameToken Keyword |NameToken BoolToken deriving (Show, Eq)
