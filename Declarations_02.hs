@@ -1,6 +1,7 @@
 -- This module contains all necessary types and aliases.
 
 module Declarations
+
 where
 
     data Token =
@@ -55,21 +56,36 @@ where
         show Times     = "*"
         show Divide    = "/"
 
-            instance Show NameToken where
-      show (NameToken s) = s
+        instance Show NameToken where
+          show (NameToken s) = s
 
-    instance Show NumberToken where
-      show (NumberToken s) = s
+        instance Show NumberToken where
+          show (NumberToken s) = s
 
-    instance Show BoolToken where
-      show (BoolToken s) = s
+        instance Show BoolToken where
+          show (BoolToken s) = s
 
-  data SyntaxTree = SyntaxTree [(Token)]
+      data SyntaxTree = SyntaxTree [(Token)] deriving (Show)
 
- -- data UnOp a = (show "not") a | (show "-") a deriving (Show)
 
-  type IsNot = Bool
+      data Expression = Expression
+          | Keyword KeywordToken
+          | Value NumberToken
+          | Name NameToken
+          | Not Expression
+          | Minus Expression
+          | Popen Expression      --open paranthesis
+          | Pclose Expression     --close paranthesis
+          | Atom AtomExp
+          | Add Expression Expression
+          | Subtract Expression Expression
+          | Times Expression Expression
+          | Divide Expression Expression
+          deriving Show
 
-  data AtomExpr = AtomExpr Variable | NumberToken | BoolToken deriving (Show, Eq)
 
-  data Variable = Variable String  deriving (Show, Eq)
+    --  data BinSym = And | Or | Equals | Less | Plus | Minus | Times | Divide
+
+      --data UnSym =  Not | Minus deriving (Show)
+
+    -- data AtomExp = NameToken NumberToken | NameToken Keyword |NameToken BoolToken deriving (Show, Eq)
