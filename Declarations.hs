@@ -50,6 +50,9 @@ module Declarations where
         show Times     = "*"
         show Then      = "then"
     
+    
+
+
 
 
 
@@ -74,7 +77,8 @@ module Declarations where
     -- data SyntaxTree = Tree Expression SyntaxTree SyntaxTree | Leaf Expression
     -}
 
-    {-
+   {-
+   
     data Expression =
             Atom AtomExp
           | Not Expression
@@ -86,9 +90,38 @@ module Declarations where
           | Times Expression Expression
           | Divide Expression Expression
           deriving Show
+    
     -}
 
+{-
+Program ::= Definiton ";" {Definition ";"}
+Definition ::= Variable {Variable} "=" Expression
+LocalDefinitions ::= LocalDefiniton {";" LocalDefinition}
+LocalDefinition ::= Variable "=" Expression
+Expression ::= "let" LocalDefinitions "in" Expression
+| "if" Expression "then" Expression "else" Expression
+| Expression1
+Expression1 ::= Expression2 ["|" Expression1 ]
+Expression2 ::= Expression3 ["&" Expression2 ]
+Expression3 ::= ["not"] Expression4
+Expression4 ::= Expression5 [ComparisonOperator Expression5 ]
+Expression5 ::= Expression6 RestExpression5
+RestExpression5 ::= {"+" Expression6 } | "-" Expression6
+Expression6 ::= ["-"] Expression7
+Expression7 ::= Expression8 RestExpression7
+RestExpression7 ::= {"*" Expression8 } | "/" Expression8
+Expression8 ::= AtomicExpression {AtomicExpression}
+AtomicExpression ::= Variable | Literal | "(" Expression ")"
+ComparisonOperator ::= "==" | "<"
+Variable ::= Name
+-}
+
+
+   -- data Variable = Name String
+   -- data ComparisonOperator = 
 
     --  data BinSym = And | Or | Equals | Less | Plus | Minus | Times | Divide
 
     -- data AtomExp = VarExp NameToken | NumExp NumberToken | BoolExp BoolToken deriving (Show, Eq)
+
+    
