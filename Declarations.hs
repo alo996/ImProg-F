@@ -1,34 +1,39 @@
 -- This module contains all necessary types and aliases.
 
-module Declarations where
-
+module Declarations where 
 
     data Token =
-        BooleanToken Bool |
+        BooleanToken BoolF |
         KeywordToken Keyword |
         NameToken String |
         NumberToken Int
         deriving Show
 
-    data Keyword = And |
-                   Assign |
-                   Divide |
-                   Else |
-                   Equals |
-                   If |
-                   In |
-                   LessThan |
-                   Let |
-                   LBracket |
-                   Minus | 
-                   Not | 
-                   Or | 
-                   Plus |
-                   RBracket |
-                   Semicolon |  
-                   Times |
-                   Then         
-                             
+    data Keyword = 
+        And |
+        Assign |
+        Divide |
+        Else |
+        Equals |
+        If |
+        In |
+        Less |
+        Let |
+        LBracket |
+        Minus | 
+        Not | 
+        Or | 
+        Plus |
+        RBracket |
+        Semicolon |  
+        Times |
+        Then               
+
+    newtype BoolF = BoolF Bool 
+
+    instance Show BoolF where
+        show (BoolF True) = "true"
+        show (BoolF _)    = "false"
 
     instance Show Keyword where
         show And       = "&"
@@ -38,7 +43,7 @@ module Declarations where
         show Equals    = "=="
         show If        = "if"
         show In        = "in"
-        show LessThan  = "<"
+        show Less      = "<"
         show Let       = "let"
         show LBracket  = "("
         show Minus     = "-"
@@ -49,12 +54,6 @@ module Declarations where
         show Semicolon = ";"
         show Times     = "*"
         show Then      = "then"
-    
-    
-
-
-
-
 
 {-
     type ComparisonOp = Keyword
@@ -73,12 +72,9 @@ module Declarations where
     data Definition = Definition [Variable] Expression
     data Expression = Expr Int
 
-    -- data SyntaxTree = SyntaxTree [(Token)] deriving (Show)
-    -- data SyntaxTree = Tree Expression SyntaxTree SyntaxTree | Leaf Expression
-    -}
+    data SyntaxTree = SyntaxTree [(Token)] deriving (Show)
+    data SyntaxTree = Tree Expression SyntaxTree SyntaxTree | Leaf Expression
 
-   {-
-   
     data Expression =
             Atom AtomExp
           | Not Expression
@@ -90,38 +86,11 @@ module Declarations where
           | Times Expression Expression
           | Divide Expression Expression
           deriving Show
-    
+
+    data Variable = Name String
+    data ComparisonOperator = 
+    data BinSym = And | Or | Equals | Less | Plus | Minus | Times | Divide
+    data AtomExp = VarExp NameToken | NumExp NumberToken | BoolExp BoolToken deriving (Show, Eq)
     -}
-
-{-
-Program ::= Definiton ";" {Definition ";"}
-Definition ::= Variable {Variable} "=" Expression
-LocalDefinitions ::= LocalDefiniton {";" LocalDefinition}
-LocalDefinition ::= Variable "=" Expression
-Expression ::= "let" LocalDefinitions "in" Expression
-| "if" Expression "then" Expression "else" Expression
-| Expression1
-Expression1 ::= Expression2 ["|" Expression1 ]
-Expression2 ::= Expression3 ["&" Expression2 ]
-Expression3 ::= ["not"] Expression4
-Expression4 ::= Expression5 [ComparisonOperator Expression5 ]
-Expression5 ::= Expression6 RestExpression5
-RestExpression5 ::= {"+" Expression6 } | "-" Expression6
-Expression6 ::= ["-"] Expression7
-Expression7 ::= Expression8 RestExpression7
-RestExpression7 ::= {"*" Expression8 } | "/" Expression8
-Expression8 ::= AtomicExpression {AtomicExpression}
-AtomicExpression ::= Variable | Literal | "(" Expression ")"
-ComparisonOperator ::= "==" | "<"
-Variable ::= Name
--}
-
-
-   -- data Variable = Name String
-   -- data ComparisonOperator = 
-
-    --  data BinSym = And | Or | Equals | Less | Plus | Minus | Times | Divide
-
-    -- data AtomExp = VarExp NameToken | NumExp NumberToken | BoolExp BoolToken deriving (Show, Eq)
 
     
