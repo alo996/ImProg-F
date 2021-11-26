@@ -17,6 +17,7 @@ module Tokenizer where
 
     -- next character is a whitespace or newline
     tokenize' (' ' : xs) tokenAcc lineAcc         = tokenize' xs tokenAcc lineAcc
+    tokenize' ('\t' : xs) tokenAcc lineAcc        = tokenize' xs tokenAcc lineAcc
     tokenize' ('\r' : '\n' : xs) tokenAcc lineAcc = tokenize' xs tokenAcc (lineAcc + 1)
     tokenize' ('\n' : xs) tokenAcc lineAcc        = tokenize' xs tokenAcc (lineAcc + 1)
     tokenize' ('\r' : xs) tokenAcc lineAcc        = tokenize' xs tokenAcc (lineAcc + 1)
@@ -45,9 +46,11 @@ module Tokenizer where
         ')' -> tokenize' xs ((KeywordToken RBracket , lineAcc) : tokenAcc) lineAcc
         ';' -> tokenize' xs ((KeywordToken Semicolon , lineAcc) : tokenAcc) lineAcc
         '*' -> tokenize' xs ((KeywordToken Times, lineAcc) : tokenAcc) lineAcc
-        _   -> if isDigit x
-                    then tokenizeNumbers (x:xs) tokenAcc lineAcc ""
-                    else tokenizeNames (x:xs) tokenAcc lineAcc ""
+        _   -> if isAlphaNum x
+                    then if isDigit x
+                        then tokenizeNumbers (x:xs) tokenAcc lineAcc ""
+                        else tokenizeNames (x:xs) tokenAcc lineAcc ""
+                    else error $ "Syntax error: illegal character on input " ++ show x ++ " in line " ++ show lineAcc
 
     -- tokenizes numbers or names
     tokenizeNumbers, tokenizeNames :: String -> [(Token, Int)] -> Int -> String -> [(Token, Int)]
@@ -59,6 +62,6 @@ module Tokenizer where
 
     tokenizeNames [x] tokenAcc lineAcc name                = reverse $ (NameToken $ name ++ [x], lineAcc) : tokenAcc
     tokenizeNames (x : y : xs) tokenAcc lineAcc name       = if isAlphaNum y
-                                                                then tokenizeNames (y : xs) tokenAcc lineAcc (name ++ [x])
+                                                                then tokenizeNames (y : xs) tokenAcc lineAcc (name ++ [x]) 
                                                                 else tokenize' (y : xs) ((NameToken $ name ++ [x], lineAcc) : tokenAcc) lineAcc
     tokenizeNames _ _ _ _                                  = undefined
