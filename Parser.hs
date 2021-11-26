@@ -11,7 +11,8 @@ module Parser where
 
 -- In attomicExpr the expression between "(" ")" is not defined, both as a data and the function that calls it
 -- we are not sure, that expression 8 needs to be strictly defined (per function/data) 
---as in the EBNF in the ToyParser it is not defined that way 
+-- as in the EBNF in the ToyParser it is not defined that way 
+-- by implementation: see that the parser does not take a numbertoken followed by name/keyword token. beispiel: let 32a = x + 2 
 
 
 -- Grammer
