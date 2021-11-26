@@ -1,6 +1,40 @@
 -- This module contains all functionality to pursue lexical analysis in F.
 
 module Tokenizer where
+
+    {-
+    if3==3 vs if3 x=2
+    truefalse vs true3false
+    true=false
+
+    IF : muss alleine stehen oder ohne Leerzeichen folgt Bedingung in Klammern
+
+    either a keyword made up of letters (beispiel: if else etc.) 
+    is directly followed by a whitespace OR 
+    a keyword not made up of letters (beispiel: + = - etc.) -> then it is accepted as KeywordToken
+
+    true/false:
+    - if true==false ; should be tokenized as (if)(true)(==)(false)
+    - if(true==false) ; should be tokenized as (if)(()(true)(==)(false)())
+    - let true3 = false3 ; should be tokenized as (let)(true3)(=)(false3)
+    - truefalse x = 1 ; should be tokenized as (truefalse)(x)(=)(1)
+    if/then/else:
+    - if3 x = 3 ; 
+    - ifthenelse x = 3;
+    - if(3==3)then(2)else(3) ;
+    - if true then3else4 ;
+    - if true then true else false ;
+    let/in:
+    - let3 ; NameToken
+    - in3 ; NameToken
+    - let(x=3)in(x*x) ; should be tokenized as ()
+    
+
+    tokenize "iffalse"
+    evtl 32a fall gleich im Tokenizer abfangen
+    evtl main zu keyword?
+    truefalseletthen ok, true=false ok
+    -}
     
     import Data.Char
     import Declarations
