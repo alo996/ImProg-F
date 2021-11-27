@@ -55,7 +55,7 @@ module Tokenizer where
     tokenize' ('\n' : xs) tokenAcc lineAcc        = tokenize' xs tokenAcc (lineAcc + 1)
     tokenize' ('\r' : xs) tokenAcc lineAcc        = tokenize' xs tokenAcc (lineAcc + 1)
 
-    -- next characters form a multiple character keyword or a boolean value
+    -- next characters form a multiple character keyword or a boolean value & only if followed by symbol or space
     tokenize' ('=' : '=' : xs) tokenAcc lineAcc                       = tokenize' xs ((KeywordToken Equals , lineAcc) : tokenAcc) lineAcc
     tokenize' ('e' : 'l' : 's' : 'e' : a : xs) tokenAcc lineAcc       = if (validateChar a) then tokenize' (a:xs) ((KeywordToken Else , lineAcc) : tokenAcc) lineAcc else tokenizeNames ('e' : 'l' : 's' : 'e' : a : xs) tokenAcc lineAcc ""
     tokenize' ('f' : 'a' : 'l' : 's' : 'e' : a : xs) tokenAcc lineAcc = if (validateChar a) then tokenize' (a:xs) ((BooleanToken $ BoolF False, lineAcc) : tokenAcc) lineAcc else tokenizeNames ('f' : 'a' : 'l' : 's' : 'e' : a : xs) tokenAcc lineAcc ""
