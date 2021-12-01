@@ -50,7 +50,7 @@ Variable ::= Name
 
   data Expression = MulDiv AtomicExpr AtomicExpr | UnOp Expression | AtomicExpr
   
-  data AtomicExpr = Name String | LitBool Bool | LitNum Int deriving Show
+  data AtomicExpr = Name String | LitBool BoolF | LitNum Int deriving Show
 
   -- [(NameToken "f",1),(NameToken "x",1),(KeywordToken =,1),(NumberToken 3,1)]
 
@@ -60,14 +60,14 @@ Variable ::= Name
   
   atomicExpression :: [(Token, Int)] -> (Either String AtomicExpr, [(Token, Int)])
   atomicExpression a@((NameToken x, lc) : xs)        = variable a
-  atomicExpression ((BooleanToken x : xs), lc)       = (Right (BoolLit x), xs)
-  atomicExpression ((NumberToken x : xs), lc)        = (Right (NumLit x), xs)
-  -- atomicExpression (KeywordToken LBracket : xs) = do 
-  --            (e, ys) <- expression xs
-  --            case ys of
-  --                (KeywordToken RBracket : zs) -> (Right e, zs)
-  --                (_ : zs)                     -> (Left "what is happening here hahah", zs)  
-  atomicExpression  ((_, lc): xs)                    = (Left ("Parse error in line " ++ show lc), xs)
+  atomicExpression ((BooleanToken x, lc) : xs)       = (Right (LitBool x), xs)  --we have a problem with the BoolF definition - it dosent work now
+  atomicExpression ((NumberToken x, lc) : xs)        = (Right (LitNum x), xs)
+  atomicExpression ((KeywordToken LBracket, lc) : xs)      = do 
+--              (e, ys) <- expression xs
+--              case ys of
+--                  (KeywordToken RBracket : zs) -> (Right e, zs)
+--                 (_ : zs)                     -> (Left "what is happening here hahah", zs)  
+  atomicExpression  ((_, lc): xs)                    = (Left ("Parse error in line " ++ show lc), xs)   -- it dosent work for now
 
 {-
 

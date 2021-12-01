@@ -33,7 +33,7 @@ module Declarations where
 
     instance Show BoolF where
         show (BoolF True) = "true"
-        show (BoolF _)    = "false"
+        show (BoolF False)    = "false"
 
     instance Show Keyword where
         show And       = "&"

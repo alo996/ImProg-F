@@ -1,6 +1,6 @@
 -- This module contains all functionality to pursue lexical analysis in F.
 
-module Tokenizer where
+module Tokenizer_is where
 
     {-
     if3==3 vs if3 x=2
