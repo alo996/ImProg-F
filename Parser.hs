@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 module Parser where
 
   import Tokenizer_is
@@ -76,31 +75,33 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
   variable ((x , lc) : xs)             = Left $ "Parse error on input " ++ show x ++ " in line " ++ show lc
   variable []                          = Left "Parse error"
   
-  atomicExpression :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
-  atomicExpression a@((NameToken x, lc) : xs)                  = variable a
-  atomicExpression ((BooleanToken b@(BoolF x), lc) : xs)       = Right ([AtomicExpr (LitBool (BoolF x))], xs)
-  atomicExpression ((NumberToken x, lc) : xs)                  = Right ([AtomicExpr (LitNum x)], xs)
-  atomicExpression ((KeywordToken LBracket, lc) : xs)          = do 
+  atomicExpr :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
+  atomicExpr a@((NameToken x, lc) : xs)                  = variable a
+  atomicExpr ((BooleanToken b@(BoolF x), lc) : xs)       = Right ([AtomicExpr (LitBool (BoolF x))], xs)
+  atomicExpr ((NumberToken x, lc) : xs)                  = Right ([AtomicExpr (LitNum x)], xs)
+  atomicExpr ((KeywordToken LBracket, lc) : xs)          = do 
     (e, ys) <- expr xs
     case ys of
       ((KeywordToken RBracket, lc) : zs) -> return (e, ys)
-      (_ : zs)                           -> Left "Parse error"
-  atomicExpression ((_, lc): xs)                               = Left $ "Parse error in line " ++ show lc
+      _                                  -> Left "Parse error"
+  atomicExpr ((_, lc): xs)                               = Left $ "Parse error in line " ++ show lc
+  atomicExpr ts                                          = return ([], ts)
 
   expr8 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   expr8 xs = do
-    (e, ys) <- atomicExpression xs
+    (e, ys) <- atomicExpr xs
     (es, zs) <- expr8 ys
     return (e ++ es, zs)
 
   restExpr7 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
-  restExpr7 ((KeywordToken Times, _) : xs) = do
+  restExpr7 ((KeywordToken Times, _) : xs)  = do
     (e, ys) <- expr8 xs
     (es, zs) <- restExpr7 ys
     return (e ++ es, zs)
   restExpr7 ((KeywordToken Divide, _) : xs) = do
     (e, ys) <- expr8 xs
     return (e, ys)
+  restExpr7 ts                              = return ([], ts)
 
   expr7 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   expr7 xs = do
@@ -112,14 +113,15 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
   expr6 ((KeywordToken Minus, _) : xs) = do
     (e, ys) <- expr7 xs
     return (e, ys)
-  expr6 (_ : xs)                       = expr7 xs
-  
+  expr6 ts                             = expr7 ts
+
   restExpr5 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
-  restExpr5 ((KeywordToken Plus, _) : xs) = do
+  restExpr5 ((KeywordToken Plus, _) : xs)  = do
     (e, ys) <- expr6 xs
     (es, zs) <- restExpr5 ys
     return (e ++ es, zs)
   restExpr5 ((KeywordToken Minus, _) : xs) = expr6 xs
+  restExpr5 ts                             = return ([], ts)
 
   expr5 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   expr5 xs = do
@@ -184,6 +186,8 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
     case ys of
       ((KeywordToken Assign, lc) : zs) -> expr zs
       _                                -> Left "Parse error"
+  localDef ts                          = return ([], ts)
+
 
   localDefs :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   localDefs xs = do
