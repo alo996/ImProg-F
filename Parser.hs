@@ -4,6 +4,7 @@ module Parser where
   import Declarations
   import Data.List
   import Data.Char
+  import Distribution.SPDX (LicenseId(XSkat))
   
 {-
 Grammar
@@ -44,7 +45,7 @@ ComparisonOperator ::= "==" | "<"
 Variable ::= Name
 -}
 
-  type Parser a = [Token] -> (Either String a, [Token])
+  type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
 
   --data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | Mult atomExpression atomExpression 
 
@@ -52,31 +53,28 @@ Variable ::= Name
   
   data AtomicExpr = Name String | LitBool BoolF | LitNum Int deriving Show
 
-  -- [(NameToken "f",1),(NameToken "x",1),(KeywordToken =,1),(NumberToken 3,1)]
 
-  variable :: [(Token, Int)] -> (Either String AtomicExpr, [(Token, Int)])
-  variable ((NameToken x, lc) : xs)       = (Right (Name x), xs)
-  variable ((_, lc) : xs)                 = (Left ("Parse error in line " ++ show lc), xs)
+  -- [(NameToken "f",1),(NameToken "x",1),(KeywordToken =,1),(NumberToken 3,1)]
   
-  atomicExpression :: [(Token, Int)] -> (Either String AtomicExpr, [(Token, Int)])
-  atomicExpression a@((NameToken x, lc) : xs)        = variable a
-  atomicExpression ((BooleanToken x, lc) : xs)       = (Right (LitBool x), xs)  --we have a problem with the BoolF definition - it dosent work now
-  atomicExpression ((NumberToken x, lc) : xs)        = (Right (LitNum x), xs)
-  atomicExpression ((KeywordToken LBracket, lc) : xs)      = do 
---              (e, ys) <- expression xs
+  atomicExpression :: [(Token, Int)] -> Either String (AtomicExpr, [(Token, Int)])
+  atomicExpression ((NameToken x, lc) : xs)                  = Right (Name x, xs)
+  atomicExpression ((BooleanToken b@(BoolF x), lc) : xs)     = Right (LitBool b, xs)
+  atomicExpression ((NumberToken x, lc) : xs)                = Right (LitNum x, xs)
+  --atomicExpression ((KeywordToken LBracket, lc) : xs)      = do 
+  --              (e, ys) <- expression xs
 --              case ys of
 --                  (KeywordToken RBracket : zs) -> (Right e, zs)
---                 (_ : zs)                     -> (Left "what is happening here hahah", zs)  
-  atomicExpression  ((_, lc): xs)                    = (Left ("Parse error in line " ++ show lc), xs)   -- it dosent work for now
+--                  (_ : zs)                     -> (Left "what is happening here hahah", zs)  
+  atomicExpression ((_, lc): xs)                             = Left $ "Parse error in line " ++ show lc   -- it dosent work for now
+
+
+  expr8 :: [(Token, Int)] -> Either String ([AtomicExpr], [(Token, Int)])
+  expr8 a@(x : xs) = do
+    (expr, xs) <- atomicExpression a
+    (exprs, ys) <- expr8 xs
+    return ((expr : exprs), ys)
 
 {-
-
-  expr8 :: [Token] -> (Either String [Expression], [Token])
-  expr8 xs = do
-    (e, ys) <- atomicExpression xs
-    (es, zs) <- expr8 ys
-    return (e : es, zs)
-    
   restExpr7 :: [Token] -> (Either String [Expression], [Token])
   restExpr7 (KeywordToken Times : xs) = do
     (e, ys) <- expr8 xs
@@ -98,12 +96,11 @@ Variable ::= Name
     (UnOp, ys) <- expr7 xs
     return (UnOp, ys)
   expr6 (_ : xs)                  = expr7 xs
-
-  
--}
   
 
 
 
-  --expression :: Parser Expression
-  --expression = undefined
+  expression :: Parser Expression
+  expression = undefined
+
+  -}
