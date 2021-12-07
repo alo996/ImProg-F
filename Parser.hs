@@ -93,8 +93,13 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
   expr8 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   expr8 xs = do
     (e, ys) <- trace ("expr8, calling atomicExpr with input " ++ show xs) (atomicExpr xs)
-    (es, zs) <- trace ("expr8, calling expr8 with input " ++ show ys) (expr8 ys)
-    return (e ++ es, zs)
+    case ys of
+      [] -> do
+        return (e, ys)
+      ys -> do
+        (es, zs) <- trace ("expr8, calling expr8 with input " ++ show ys) (expr8 ys)
+        return (e ++ es, zs)
+     -- _ -> return (e, zs)
 
   restExpr7 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   restExpr7 ((KeywordToken Times, _) : xs)  = do
@@ -221,3 +226,9 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
     case ys of
       ((KeywordToken Semicolon, lc) : zs) -> trace ("program, program with input " ++ show zs) (program zs)
       _                                   -> Left "Parse error of program"
+
+      -- as we tried to run the program (after trying to fix expr8, we missed a fehlerhandlung for the program itself, as it called through
+      --all the grammer functions with a [] list, untill its called its own Left)
+
+      -- after looking at the toy parser - its seems we miss a return as a "answer" for our program function
+
