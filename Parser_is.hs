@@ -50,8 +50,8 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
   type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
 
   data Expression
-          = Add Expression Expression
-          | Mult Expression Expression
+          = Add [Expression] [Expression]
+          | Mult [Expression] [Expression]
           | Div Expression Expression
           | BinaryMin Expression Expression
           | UnaryMin Expression
@@ -86,26 +86,61 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
     case ys of
       ((KeywordToken RBracket, lc) : zs) -> return (e, ys)
       _                                  -> Left "Parse error in atomicexpr"
-  atomicExpr ((_, lc): xs)                               = Left $ "Parse error in line atomicexpr" ++ show lc
-  --atomicExpr ts                                          = return ([], ts)
+  --atomicExpr ((_, lc): xs)                               = Left $ "Parse error in line atomicexpr" ++ show lc
+  atomicExpr ((KeywordToken RBracket, lc) : zs)          = return ([], zs)
+  atomicExpr []                                          = return ([], [])
+  atomicExpr ts                                          = return ([], ts)
 
-  -- hier: Problem!!
+
+  -- derartige Funktion erlaubt keine zwei atomicExpr hintereinander - was aber wahrscheinlich auch nicht notwendig ist! Da durch restexpressions eigentlich rekursiv es auch funktionieren müsste
   expr8 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
-  expr8 xs = do
-    (e, ys) <- trace ("expr8, calling atomicExpr with input " ++ show xs) (atomicExpr xs)
-    case ys of
+  expr8 a@(x:xs) = do
+    (e, ys) <- trace ("expr8, calling atomicExpr with input " ++ show a) (atomicExpr a)
+  --  (es, ys1) <- expr8 ys
+    return (e, ys)
+  expr8 [] = return ([],[])
+
+ {-
+
+  expr8 a@((NameToken x, lc) : xs) = do
+    (e, ys) <- trace ("expr8, calling atomicExpr (NameToken) with input " ++ show xs) (atomicExpr a)
+    (es, ys1) <- expr8 ys
+    return (e++es, ys1)
+  expr8 a@((BooleanToken x, lc) : xs) = do
+    (e, ys) <- trace ("expr8, calling atomicExpr (BooleanToken) with input " ++ show xs) (atomicExpr a)
+    (es, ys1) <- expr8 ys
+    return (e++es, ys1)
+  expr8 a@((NumberToken x, lc) : xs) = do
+    (e, ys) <- trace ("expr8, calling atomicExpr (NumberToken) with input " ++ show xs) (atomicExpr a)
+    (es, ys1) <- expr8 ys
+    return (e++es, ys1)
+  expr8 a@((KeywordToken LBracket, lc) : xs) = do
+    (e, ys) <- trace ("expr8, calling atomicExpr (LBracket) with input " ++ show xs) (atomicExpr a)
+    (es, ys1) <- expr8 ys
+    return (e++es, ys1)
+  expr8 a@((KeywordToken RBracket, lc) : xs) = do
+    (e, ys) <- trace ("expr8, calling atomicExpr (RBracket) with input " ++ show xs) (atomicExpr a)
+    (es, ys1) <- expr8 ys
+    return (e++es, ys1)
+  expr8 [] = return ([], [])
+  expr8 xs = return ([], xs)
+  -}
+
+    {-
+     case ys of
       [] -> do
         return (e, ys)
       ys -> do
-        (es, zs) <- trace ("expr8, calling expr8 with input " ++ show ys) (expr8 ys)
+        (es, zs) <- trace ("expr8, calling expr with input " ++ show ys) (expr ys)
         return (e ++ es, zs)
      -- _ -> return (e, zs)
+     -}
 
   restExpr7 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   restExpr7 ((KeywordToken Times, _) : xs)  = do
     (e, ys) <- trace ("restExpr7, calling expr8 with input " ++ show xs) (expr8 xs)
     (es, zs) <- trace ("restExpr7, calling restExpr7 with input " ++ show ys) (restExpr7 ys)
-    return (e ++ es, zs)
+    return (e++es, zs)
   restExpr7 ((KeywordToken Divide, _) : xs) = do
     (e, ys) <- trace ("restExpr7, calling expr8 with input " ++ show xs) (expr8 xs)
     return (e, ys)
@@ -115,7 +150,7 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
   expr7 xs = do
     (e, ys) <- trace ("expr7, calling expr8 with input " ++ show xs) (expr8 xs)
     (es, zs) <- trace ("expr7, calling restExpr7 with input " ++ show ys) (restExpr7 ys)
-    return (e ++ es, zs)
+    return ([Mult e es], zs)
 
   expr6 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   expr6 ((KeywordToken Minus, _) : xs) = do
@@ -134,8 +169,8 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
   expr5 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   expr5 xs = do
     (e, ys) <- trace ("expr5, calling expr6 with input " ++ show xs) (expr6 xs)
-    (es, zs) <- trace ("expr5, calling expr5 with input " ++ show ys) (restExpr5 ys)
-    return (e ++ es, zs)
+    (es, zs) <- trace ("expr5, calling restExpr5 with input " ++ show ys) (restExpr5 ys)
+    return ([Add e es], zs)
 
   expr4 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   expr4 xs = do
@@ -214,6 +249,7 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
   def ((KeywordToken Assign, lc) : ys2) = do
     (e2, ys2) <- expr ys2
     return (e2, ys2)
+
 
 {- laut Grammatik nicht notwendig, es sollen nur Korrekte fälle berücksichtigt werden
   defHilf :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
