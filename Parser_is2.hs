@@ -1,4 +1,4 @@
-module Parser_is_ok where
+module Parser_is2 where
 
   import Tokenizer_is
   import Declarations
