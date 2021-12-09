@@ -23,7 +23,7 @@ BinärOp ::= "&" | "|" | "==" | "<" | "+" | "−" | "∗" | "/" .
 UnärOp ::= "not" | "−" .
 AtomarerAusdruck ::= Variable | Zahl | Wahrheitswert .
 
-Program ::= Definiton ";" {Definition ";"}
+Program ::= Definiton ";" {Definition ";"} - every definition forms a tree kind of; [tree]
 Definition ::= Variable {Variable} "=" Expression
 LocalDefinitions ::= LocalDefiniton {";" LocalDefinition}
 LocalDefinition ::= Variable "=" Expression
@@ -40,28 +40,14 @@ Expression6 ::= ["-"] Expression7
 Expression7 ::= Expression8 RestExpression7
 RestExpression7 ::= {"*" Expression8 } | "/" Expression8
 Expression8 ::= AtomicExpression {AtomicExpression}
-AtomicExpression ::= Variable | Literal | "(" Expression ")"
+AtomicExpression ::= Variable | Literal | "(" Expression ")" - for example function application like main = f 1
 ComparisonOperator ::= "==" | "<"
 Variable ::= Name
 
--- Grammar in EBNF:
--- ExprAdd ::= ExprMult {"+" ExprMult}
--- ExprMult ::= AtomicExpr {"*" AtomicExpr}
--- AtomicExpr ::= Number | "(" ExprAdd ")"
-
--- Grammar in strict LL(1) form (the code follows this fashion)
--- ExprAdd ::= ExprMult RestExprAdd
--- RestExprAdd ::= epsilon | "+" ExprMult RestExprAdd
--- ExprMult ::= AtomicExpr RestExprMult
--- RestExprMult ::= epsilon | "*" AtomicExpr RestExprMult
--- AtomicExpr ::= Number | "(" ExprAdd ")"
-
-Right (Add (Add (Val 1) (Val 2)) (Mult (Val 2) (Val 3)),[])
-exprAdd [OpenPar, Number 1, Plus, Number 2, ClosePar, Plus, Number 2, Times, Number 3]
-
-
 data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | Mult atomExpression atomExpression
 -}
+
+--Parser errors should be dropped when we expect something and it is not there
 
   type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
 
@@ -87,6 +73,8 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
   type Variable = String
   data AtomicExpression = Var Variable | LitBool BoolF | LitNum Int | Expr Expression deriving Show
 
+  --program & def are missing
+
 
   variable :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   variable ((NameToken name, lc) : xs) = Right ([AtomicExpr (Var name)], xs)
@@ -102,53 +90,21 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
     case ys of
       ((KeywordToken RBracket, lc) : zs) -> return (e, ys)
       _                                  -> Left "Parse error in atomicexpr"
-<<<<<<< HEAD
-  atomicExpr ((KeywordToken RBracket, lc) : zs)          = return ([], [(KeywordToken RBracket, lc)])
-  atomicExpr []                                          = return ([], [])
-  atomicExpr ts                                          = trace ("atomicExpr + on elsecase") (expr ts)
-
-  expr8 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
-  expr8 a@((NameToken x, lc) : xs) = do
-    (e, ys) <- trace ("expr8, calling atomicExpr (NameToken) with input " ++ show a) (atomicExpr a)
-    (es, ys1) <- expr8 ys
-    return (e++es, ys1)
-  expr8 a@((BooleanToken x, lc) : xs) = do
-    (e, ys) <- trace ("expr8, calling atomicExpr (BooleanToken) with input " ++ show a) (atomicExpr a)
-    (es, ys1) <- expr8 ys
-    return (e++es, ys1)
-  expr8 a@((NumberToken x, lc) : xs) = do
-    (e, ys) <- trace ("expr8, calling atomicExpr (NumberToken) with input " ++ show a) (atomicExpr a)
-    (es, ys1) <- expr8 ys
-    return (e++es, ys1)
-  expr8 a@((KeywordToken LBracket, lc) : xs) = do
-    (e, ys) <- trace ("expr8, calling atomicExpr (LBracket) with input " ++ show a) (atomicExpr a)
-    (es, ys1) <- expr8 ys
-    return (e++es, ys1)
-  expr8 a@((KeywordToken RBracket, lc) : xs) = do
-    (e, ys) <- trace ("expr8, calling atomicExpr (RBracket) with input " ++ show a) (atomicExpr a)
-    (es, ys1) <- expr8 ys
-    return (e++es, ys1)
-  expr8 [] = return ([], [])
-  expr8 xs = return ([], xs)
-{-
-  -- expr8 braucht cases für atomic expressions um rekursiv sein zu können - wenn keine atomic expression, dann return
-=======
   --atomicExpr ((_, lc): xs)                               = Left $ "Parse error in line atomicexpr" ++ show lc
-  atomicExpr ((KeywordToken RBracket, lc) : zs)          = return ([], zs)
+  --atomicExpr ((KeywordToken RBracket, lc) : zs)          = return ([], zs)
   atomicExpr []                                          = return ([], [])
   atomicExpr ts                                          = return ([], ts)
 
 
   -- derartige Funktion erlaubt keine zwei atomicExpr hintereinander - was aber wahrscheinlich auch nicht notwendig ist! Da durch restexpressions eigentlich rekursiv es auch funktionieren müsste
->>>>>>> 21681db290928d93998b0f276315ee4329ea1546
   expr8 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   expr8 a@(x:xs) = do
     (e, ys) <- trace ("expr8, calling atomicExpr with input " ++ show a) (atomicExpr a)
-  --  (es, ys1) <- expr8 ys
-    return (e, ys)
+    (es, ys1) <- restexpr8 ys
+    return (e++es, ys1)
   expr8 [] = return ([],[])
 
- {-
+ {-restexpr8:
 
   expr8 a@((NameToken x, lc) : xs) = do
     (e, ys) <- trace ("expr8, calling atomicExpr (NameToken) with input " ++ show xs) (atomicExpr a)
@@ -166,10 +122,10 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
     (e, ys) <- trace ("expr8, calling atomicExpr (LBracket) with input " ++ show xs) (atomicExpr a)
     (es, ys1) <- expr8 ys
     return (e++es, ys1)
-  expr8 a@((KeywordToken RBracket, lc) : xs) = do
-    (e, ys) <- trace ("expr8, calling atomicExpr (RBracket) with input " ++ show xs) (atomicExpr a)
-    (es, ys1) <- expr8 ys
-    return (e++es, ys1)
+  --expr8 a@((KeywordToken RBracket, lc) : xs) = do
+  --  (e, ys) <- trace ("expr8, calling atomicExpr (RBracket) with input " ++ show xs) (atomicExpr a)
+  --  (es, ys1) <- expr8 ys
+  --  return (e++es, ys1)
   expr8 [] = return ([], [])
   expr8 xs = return ([], xs)
   -}
@@ -179,25 +135,16 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
       [] -> do
         return (e, ys)
       ys -> do
-<<<<<<< HEAD
-        (es, zs) <- trace ("expr8, calling expr8 with input " ++ show ys) (expr8 ys)
-        return (e ++ es, ys)-}
-=======
         (es, zs) <- trace ("expr8, calling expr with input " ++ show ys) (expr ys)
         return (e ++ es, zs)
      -- _ -> return (e, zs)
      -}
->>>>>>> 21681db290928d93998b0f276315ee4329ea1546
 
   restExpr7 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   restExpr7 ((KeywordToken Times, _) : xs)  = do
     (e, ys) <- trace ("restExpr7, calling expr8 with input " ++ show xs) (expr8 xs)
     (es, zs) <- trace ("restExpr7, calling restExpr7 with input " ++ show ys) (restExpr7 ys)
-<<<<<<< HEAD
-    return ( e ++ es, zs)
-=======
     return (e++es, zs)
->>>>>>> 21681db290928d93998b0f276315ee4329ea1546
   restExpr7 ((KeywordToken Divide, _) : xs) = do
     (e, ys) <- trace ("restExpr7, calling expr8 with input " ++ show xs) (expr8 xs)
     return (e, ys)
@@ -227,11 +174,7 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
   expr5 xs = do
     (e, ys) <- trace ("expr5, calling expr6 with input " ++ show xs) (expr6 xs)
     (es, zs) <- trace ("expr5, calling restExpr5 with input " ++ show ys) (restExpr5 ys)
-<<<<<<< HEAD
-    return (e ++ es, zs)
-=======
     return ([Add e es], zs)
->>>>>>> 21681db290928d93998b0f276315ee4329ea1546
 
   expr4 :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   expr4 xs = do
@@ -301,7 +244,7 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
       ((KeywordToken Semicolon, lc) : zs) -> trace ("localDefs, calling localDefs with input " ++ show zs) (localDefs zs)
       _                                   -> return (e, ys)
 
-  -- Definition ::= Variable {Variable} "=" Expression
+  -- Definition ::= Variable {Variable} "=" Expression; need to add definition-type; should return a tree
   def :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   def a@((NameToken name, lc) : xs) = do
     (e, ys) <- variable a
@@ -320,7 +263,7 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
       ((KeywordToken Assign, lc) : zs) -> trace ("defHilf, calling expr with input " ++ show zs) (expr zs)
       _                                -> Left "Parse error of def"
 -}
-
+--need to add program type; return should be list of trees
   program :: [(Token, Int)] -> Either String ([Expression], [(Token, Int)])
   program xs = do
     (e, ys) <- trace ("program, calling def with input " ++ show xs) (def xs)
