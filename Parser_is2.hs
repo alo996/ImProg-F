@@ -206,17 +206,19 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
     (e, ys) <- trace ("expr, calling localDefs with input " ++ show xs) (localDefs xs) --localDefs liefert Liste von Definitions
     case ys of
       ((KeywordToken In, lc) : zs) -> do
-        (es, as) <- trace ("expr, calling expr with input " ++ show zs) (expr zs)
+        (es, as) <- trace ("expr (In), calling expr with input " ++ show zs) (expr zs)
         return (LetIn e es, as)
       _                            -> Left "Parse error of expr"
 
   expr ((KeywordToken If, lc) : xs) = do
-    (e, ys) <- trace ("expr, calling expr with input " ++ show xs) (expr xs)
+    (e, ys) <- trace ("expr (If), calling expr with input " ++ show xs) (expr xs)
     case ys of
       ((KeywordToken Then, lc) : zs) -> do
-        (f, as) <- trace ("expr, calling expr with input " ++ show zs) (expr zs)
+        (f, as) <- trace ("expr (Then), calling expr with input " ++ show zs) (expr zs)
         case as of
-          ((KeywordToken Else, lc) : as) -> expr as
+          ((KeywordToken Else, lc) : as) -> do
+            (g, bs) <- trace ("expr (Else), calling expr with input " ++ show as) expr as
+            return (IfThenElse e f g, bs)
           _                              -> Left "Parse error of expr"
       _                              -> Left "Parse error of expr"
   expr xs                           = expr1 xs
@@ -250,12 +252,15 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
   def ((KeywordToken Assign, lc) : ys2) = do
     (e2, ys2) <- expr ys2
     return ([e2], ys2)
+  def _                                = Left "Parse error of Def"
 
 --need to add program type; return should be list of trees
   program :: Parser [Expression]
   program xs = do
     (e, ys) <- trace ("program, calling def with input " ++ show xs) (def xs)
     case ys of
-      ((KeywordToken Semicolon, lc) : zs) -> trace ("program, program with input " ++ show zs) (program zs)--dieser Fall kann nicht auftreten aktuell, da davor schon ein Parser error kommen würde
+      ((KeywordToken Semicolon, lc) : zs) -> do
+        (e1, ys1) <- trace ("program, program with input " ++ show zs) (program zs)
+        return (e++e1, ys1)
       []                                  -> Right (e, ys)
       _                                   -> Left "Parse error of program"
