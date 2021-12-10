@@ -46,10 +46,13 @@ Variable ::= Name
 -}
 
 --Parser errors should be dropped when we expect something and it is not there
+--data Definition = Asd
+  {-
+  data DefTree a = L | Knt a (DefTree a) (DefTree a) deriving Show
+  type Deftrees = [DefTree Expr] --müsste wahrscheinlich irgendwie mit LocalDefinitions zusammenarbeiten auch
+  -}
 
   type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
-
-  --data Definition = Asd
 
   data Expr
           = Add Expr Expr
@@ -71,15 +74,10 @@ Variable ::= Name
   data LocalDef = LocalDef Expr Expr deriving Show
   type LocalDefs = [LocalDef]
 
-  {-
-  data DefTree a = L | Knt a (DefTree a) (DefTree a) deriving Show
-  type Deftrees = [DefTree Expr] --müsste wahrscheinlich irgendwie mit LocalDefinitions zusammenarbeiten auch
-  -}
-
   type Var = String
   data AtomicExpr = Var Var | LitBool BoolF | LitNum Int | Expr Expr deriving Show
 
-  data Def = Def [Var] Expr deriving Show
+  data Def = Def [Expr] Expr deriving Show
   newtype Prog = Prog [Def]
 
 
@@ -97,9 +95,9 @@ Variable ::= Name
     case ys of
       ((KeywordToken RBracket, lc) : zs) -> return (e, ys)
       ((tk, lc) : zs)                    -> Left $ "Parse error on input " ++ show tk ++ "in line " ++ show lc ++ ": right bracket expected."
-      _                                  -> Left $ "Parse error at end of program: right bracket expected."
+      _                                  -> Left "Parse error at end of program: right bracket expected."
   atomicExpr ((tk, lc) : xs)                             = Left $ "Parse error on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
-  atomicExpr []                                          = Left $ "Parse error at end of program: atomic expression expected."
+  atomicExpr []                                          = Left "Parse error at end of program: atomic expression expected."
 
   expr8 :: Parser Expr
   expr8 xs = do
@@ -130,7 +128,7 @@ Variable ::= Name
   expr7 xs  = do
     (e, ys) <- trace ("expr7, calling expr8 with input " ++ show xs) (expr8 xs)
     (es, zs) <- trace ("expr7, calling restExpr7 with input " ++ show ys) (restExpr7 ys)
-    --case es of -- potentially we do not need a case for Divide for it is an unary operation and will just be folded over?
+    --case es of -- potentially we do not need a case for Divide for it is a unary operation and will just be folded over?
     --    ((Div _ _) : xs) -> return (foldl es, zs)
     return (foldl Mult e es, zs)
 
@@ -244,24 +242,34 @@ Variable ::= Name
       _                                   -> return ([e], ys)
 
   -- Definition ::= Variable {Variable} "=" Expression;
-  --need to add definition-type; should return a tree
-  def :: Parser [Expr]
+  -- need to add definition-type; should return a tree
+  -- data Def = Def [Expr] Expr deriving Show
+  -- newtype Prog = Prog [Def]
+
+  def :: Parser Def
   def a@((NameToken name, lc) : xs) = do
-    (e, ys) <- variable a
-    (e1, ys1) <- def xs
-    return (e:e1, ys1)
-  def ((KeywordToken Assign, lc) : ys2) = do
-    (e2, ys2) <- expr ys2
-    return ([e2], ys2)
-  def _                                = Left "Parse error of Def"
+    (e1, ys) <- variable a
+    case ys of
+      b@((NameToken name1, lc1) : ys1) -> do
+        (Def es2 e2, ys2) <- def b
+        return (Def (e1 : es2) e2, ys2)
+      ((KeywordToken Assign, lc) : ys2) -> do
+        (e2, ys3) <- expr ys2
+        return (Def [e1] e2, ys3)
+      ((tk , lc) : ys2)                 -> Left $ "Parse error on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
+      []                                -> Left "Parse error at end of program: invalid syntax."
+  def xs                            = undefined
+
 
 --need to add program type; return should be list of trees
-  program :: Parser [Expr]
+--Program ::= Definiton ";" {Definition ";"} - every definition forms a tree kind of; [tree]
+
+  program :: Parser Prog
   program xs = do
     (e, ys) <- trace ("program, calling def with input " ++ show xs) (def xs)
     case ys of
       ((KeywordToken Semicolon, lc) : zs) -> do
         (e1, ys1) <- trace ("program, program with input " ++ show zs) (program zs)
-        return (e++e1, ys1)
+        return (e:e1, ys1)
       []                                  -> Right (e, ys)
       _                                   -> Left "Parse error of program"
