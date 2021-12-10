@@ -45,12 +45,14 @@ ComparisonOperator ::= "==" | "<"
 Variable ::= Name
 -}
 
---Parser errors should be dropped when we expect something and it is not there
---data Definition = Asd
-  {-
-  data DefTree a = L | Knt a (DefTree a) (DefTree a) deriving Show
-  type Deftrees = [DefTree Expr] --müsste wahrscheinlich irgendwie mit LocalDefinitions zusammenarbeiten auch
-  -}
+  {- TODO:
+
+   1. Parser errors should be dropped when we expect something and it is not there
+   2. Div - funktioniert, keine Ahnung warum
+   3. Tests
+   4. Klammern - funktioniert
+   5. Präzedenzen (Assoziativ etc.)
+   -}
 
   type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
 
@@ -58,8 +60,7 @@ Variable ::= Name
           = Add Expr Expr
           | Func Expr Expr -- Variable Expression Expression -- sure with "Variable?" perhaps rather AtomicExpression + Expression? (changed for test purposes)
           | Mult Expr Expr
-          | Div Expr -- ?perhaps only one?
-          | BinaryMin Expr Expr
+          | Div Expr Expr -- ?perhaps only one? // redone back to 2 x expr
           | UnaryMin Expr
           | Equal Expr Expr
           | LessThan Expr Expr
@@ -83,7 +84,7 @@ Variable ::= Name
 
   variable :: Parser Expr
   variable ((NameToken name, lc) : xs) = Right (AtomicExpr (Var name), xs)
-  variable ((x , lc) : xs)             = Left $ "Parse error on input " ++ show x ++ " in line " ++ show lc ++ ": invalid syntax."
+  variable ((x , lc) : xs)             = Left $ "Parse error of varibale on input " ++ show x ++ " in line " ++ show lc ++ ": invalid syntax."
   variable []                          = Left "Parse error variable"  -- dieser Fall noch unklar
 
   atomicExpr :: Parser Expr
@@ -93,11 +94,11 @@ Variable ::= Name
   atomicExpr ((KeywordToken LBracket, lc) : xs)          = do
     (e, ys) <- expr xs
     case ys of
-      ((KeywordToken RBracket, lc) : zs) -> return (e, ys)
-      ((tk, lc) : zs)                    -> Left $ "Parse error on input " ++ show tk ++ "in line " ++ show lc ++ ": right bracket expected."
-      _                                  -> Left "Parse error at end of program: right bracket expected."
-  atomicExpr ((tk, lc) : xs)                             = Left $ "Parse error on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
-  atomicExpr []                                          = Left "Parse error at end of program: atomic expression expected."
+      ((KeywordToken RBracket, lc) : zs) -> return (e, zs)
+      ((tk, lc) : zs)                    -> Left $ "Parse error of atomicExpr on input " ++ show tk ++ "in line " ++ show lc ++ ": right bracket expected."
+      _                                  -> Left "atomicexpr, Parse error at end of program: right bracket expected."
+  atomicExpr ((tk, lc) : xs)                             = Left $ "Parse error of atomicExpr on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
+  atomicExpr []                                          = Left "Parse error (atomicExpr) at end of program: atomic expression expected."
 
   expr8 :: Parser Expr
   expr8 xs = do
@@ -124,24 +125,30 @@ Variable ::= Name
     return (e:es, ys1)
   restexpr8 xs                                   = return ([], xs)
 
+-- Expression7 ::= Expression8 RestExpression7
+-- RestExpression7 ::= {"*" Expression8 } | "/" Expression8
   expr7 :: Parser Expr
   expr7 xs  = do
     (e, ys) <- trace ("expr7, calling expr8 with input " ++ show xs) (expr8 xs)
-    (es, zs) <- trace ("expr7, calling restExpr7 with input " ++ show ys) (restExpr7 ys)
-    --case es of -- potentially we do not need a case for Divide for it is a unary operation and will just be folded over?
-    --    ((Div _ _) : xs) -> return (foldl es, zs)
-    return (foldl Mult e es, zs)
-
+    case ys of
+      ((KeywordToken Divide, lc) : zs) -> do
+        (es, list) <- expr8 zs
+        return (Div e es, list) 
+      _  -> do
+        (es, list) <- restExpr7 ys
+        return (foldl Mult e es, list)
+     -- ((tk, lc) : zs)                  -> Left $ "Parse error of expr7 on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
+     -- _                                -> Left "Parse error (expr7) on end of program: invalid syntax."
+    
   restExpr7 :: Parser [Expr]
   restExpr7 ((KeywordToken Times, _) : xs)  = do
     (e, ys) <- trace ("restExpr7mult, calling expr8 with input " ++ show xs) (expr8 xs)
     (es, zs) <- trace ("restExpr7mult, calling restExpr7 with input " ++ show ys) (restExpr7 ys)
-    return (e:es, zs)
-  restExpr7 ((KeywordToken Divide, _) : xs) = do
-    (e, ys) <- trace ("restExpr7div, calling expr8 with input " ++ show xs) (expr8 xs)
-    return ([Div e], ys)
-  restExpr7 ts                              = return ([], ts)
+    return (e : es, zs)
+  restExpr7 ts = return ([], ts)
 
+-- Expression6 ::= ["-"] Expression7
+-- Expression7 ::= Expression8 RestExpression7
   expr6 :: Parser Expr
   expr6 ((KeywordToken Minus, _) : xs) = do
     (e, ys) <- trace ("expr6, calling expr7 with input " ++ show xs) (expr7 xs)
@@ -240,6 +247,7 @@ Variable ::= Name
       ((KeywordToken Semicolon, lc) : zs) -> trace ("localDefs, calling localDefs with input " ++ show zs) (localDefs zs)
       _                                   -> return ([e], ys)
 
+  -- data Def = Def [Expr] Expr deriving Show
   def :: Parser Def
   def xs = do
     (e1, ys) <- variable xs
@@ -253,13 +261,17 @@ Variable ::= Name
       ((tk , lc) : ys2)                 -> Left $ "def, Parse error on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
       _                                 -> Left "def, Parse error at end of program: invalid syntax."
 
+
+  -- newtype Prog = Prog [Def] deriving Show
   program :: Parser Prog
-  program xs = do
-    (def1, ys) <- trace ("program, calling def with input " ++ show xs) (def xs)
+  program a@((NameToken name1, lc1) : ys1) = do
+    (def1, ys) <- trace ("program, calling def with input " ++ show a) (def a)
     case ys of
       ((KeywordToken Semicolon, lc) : zs) -> do
         (Prog defs2, ys1) <- trace ("program, program with input " ++ show zs) (program zs)
         return (Prog (def1 : defs2), ys1)
-      ((tk , lc) : zs)                    -> Left $ "Parse error on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
-      _                                   -> Left "program, Parse error at end of program: invalid syntax."
-
+      ((tk , lc) : zs)                    -> Left $ "program, Parse error on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
+      _                                   -> Left "program 1, Parse error at end of program: invalid syntax."
+  program ((tk, lc) : ys1)             = Left $ "program 2, Parse error on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
+  program [] = Right(Prog [], [])    
+    
