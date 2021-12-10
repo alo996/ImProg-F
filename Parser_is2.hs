@@ -78,7 +78,7 @@ Variable ::= Name
   data AtomicExpr = Var Var | LitBool BoolF | LitNum Int | Expr Expr deriving Show
 
   data Def = Def [Expr] Expr deriving Show
-  newtype Prog = Prog [Def]
+  newtype Prog = Prog [Def] deriving Show
 
 
   variable :: Parser Expr
@@ -224,14 +224,13 @@ Variable ::= Name
 
   --liefert LocalDefinition
   localDef :: Parser LocalDef
-  localDef a@((NameToken name, lc) : xs) = do
-    (e, ys) <- trace ("localDef, calling variable with input " ++ show [(NameToken name, lc)]) (variable a)
+  localDef xs = do
+    (e, ys) <- trace ("localDef, calling variable with input " ++ show xs) (variable xs)
     case ys of
       ((KeywordToken Assign, lc) : zs) -> do
         (e1, y1) <- trace ("localDef, calling expr with input " ++ show zs) (expr zs)
         return (LocalDef e e1, y1)
-      _                                -> Left "Parse error of localDef"
-  --localDef ts                          = expr ts --need to think what to do here
+      _                                -> Left "localDef, Parse error of localDef"
 
 --liefert Liste von LocalDefinition
   localDefs :: Parser LocalDefs
@@ -241,14 +240,9 @@ Variable ::= Name
       ((KeywordToken Semicolon, lc) : zs) -> trace ("localDefs, calling localDefs with input " ++ show zs) (localDefs zs)
       _                                   -> return ([e], ys)
 
-  -- Definition ::= Variable {Variable} "=" Expression;
-  -- need to add definition-type; should return a tree
-  -- data Def = Def [Expr] Expr deriving Show
-  -- newtype Prog = Prog [Def]
-
   def :: Parser Def
-  def a@((NameToken name, lc) : xs) = do
-    (e1, ys) <- variable a
+  def xs = do
+    (e1, ys) <- variable xs
     case ys of
       b@((NameToken name1, lc1) : ys1) -> do
         (Def es2 e2, ys2) <- def b
@@ -256,20 +250,16 @@ Variable ::= Name
       ((KeywordToken Assign, lc) : ys2) -> do
         (e2, ys3) <- expr ys2
         return (Def [e1] e2, ys3)
-      ((tk , lc) : ys2)                 -> Left $ "Parse error on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
-      []                                -> Left "Parse error at end of program: invalid syntax."
-  def xs                            = undefined
-
-
---need to add program type; return should be list of trees
---Program ::= Definiton ";" {Definition ";"} - every definition forms a tree kind of; [tree]
+      ((tk , lc) : ys2)                 -> Left $ "def, Parse error on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
+      _                                 -> Left "def, Parse error at end of program: invalid syntax."
 
   program :: Parser Prog
   program xs = do
-    (e, ys) <- trace ("program, calling def with input " ++ show xs) (def xs)
+    (def1, ys) <- trace ("program, calling def with input " ++ show xs) (def xs)
     case ys of
       ((KeywordToken Semicolon, lc) : zs) -> do
-        (e1, ys1) <- trace ("program, program with input " ++ show zs) (program zs)
-        return (e:e1, ys1)
-      []                                  -> Right (e, ys)
-      _                                   -> Left "Parse error of program"
+        (Prog defs2, ys1) <- trace ("program, program with input " ++ show zs) (program zs)
+        return (Prog (def1 : defs2), ys1)
+      ((tk , lc) : zs)                    -> Left $ "Parse error on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
+      _                                   -> Left "program, Parse error at end of program: invalid syntax."
+
