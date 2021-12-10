@@ -43,8 +43,6 @@ Expression8 ::= AtomicExpression {AtomicExpression}
 AtomicExpression ::= Variable | Literal | "(" Expression ")" - for example function application like main = f 1
 ComparisonOperator ::= "==" | "<"
 Variable ::= Name
-
-data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | Mult atomExpression atomExpression
 -}
 
 --Parser errors should be dropped when we expect something and it is not there
@@ -53,60 +51,63 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
 
   --data Definition = Asd
 
-  data Expression
-          = Add Expression Expression
-          | Func Expression Expression -- Variable Expression Expression -- sure with "Variable?" perhaps rather AtomicExpression + Expression? (changed for test purposes)
-          | Mult Expression Expression
-          | Div Expression -- ?perhaps only one?
-          | BinaryMin Expression Expression
-          | UnaryMin Expression
-          | Equal Expression Expression
-          | LessThan Expression Expression
-          | LogicalAnd Expression Expression
-          | LogicalOr Expression Expression
-          | LogicalNot Expression
-          | LetIn LocalDefinitions Expression
-          | IfThenElse Expression Expression Expression
-          | AtomicExpr AtomicExpression
-       --   | Assignment Variable Expression
+  data Expr
+          = Add Expr Expr
+          | Func Expr Expr -- Variable Expression Expression -- sure with "Variable?" perhaps rather AtomicExpression + Expression? (changed for test purposes)
+          | Mult Expr Expr
+          | Div Expr -- ?perhaps only one?
+          | BinaryMin Expr Expr
+          | UnaryMin Expr
+          | Equal Expr Expr
+          | LessThan Expr Expr
+          | LogicalAnd Expr Expr
+          | LogicalOr Expr Expr
+          | LogicalNot Expr
+          | LetIn LocalDefs Expr
+          | IfThenElse Expr Expr Expr
+          | AtomicExpr AtomicExpr
           deriving Show
 
-  data LocalDefinition = Assignment Expression Expression deriving Show --no idea how to implement if "Variable" instead of "Expression"
-  type LocalDefinitions = [LocalDefinition]
+  data LocalDef = LocalDef Expr Expr deriving Show
+  type LocalDefs = [LocalDef]
 
+  {-
   data DefTree a = L | Knt a (DefTree a) (DefTree a) deriving Show
-  type Deftrees = [DefTree Expression] --müsste wahrscheinlich irgendwie mit LocalDefinitions zusammenarbeiten auch
+  type Deftrees = [DefTree Expr] --müsste wahrscheinlich irgendwie mit LocalDefinitions zusammenarbeiten auch
+  -}
 
-  type Variable = String
-  data AtomicExpression = Var Variable | LitBool BoolF | LitNum Int | Expr Expression deriving Show
+  type Var = String
+  data AtomicExpr = Var Var | LitBool BoolF | LitNum Int | Expr Expr deriving Show
 
-  --program (list of defs) & def as tree - definitions are missing
+  data Def = Def [Var] Expr deriving Show
+  newtype Prog = Prog [Def]
 
 
-  variable :: Parser Expression
+  variable :: Parser Expr
   variable ((NameToken name, lc) : xs) = Right (AtomicExpr (Var name), xs)
-  variable ((x , lc) : xs)             = Left $ "Parse error on input in variable" ++ show x ++ " in line " ++ show lc
-  variable []                          = Left "Parse error variable"
+  variable ((x , lc) : xs)             = Left $ "Parse error on input " ++ show x ++ " in line " ++ show lc ++ ": invalid syntax."
+  variable []                          = Left "Parse error variable"  -- dieser Fall noch unklar
 
-  atomicExpr :: Parser Expression
+  atomicExpr :: Parser Expr
   atomicExpr a@((NameToken x, lc) : xs)                  = variable a
-  atomicExpr ((BooleanToken b@(BoolF x), lc) : xs)       = Right (AtomicExpr (LitBool (BoolF x)), xs)
-  atomicExpr ((NumberToken x, lc) : xs)                  = trace "atomicExpr Right on NumberToken" (Right (AtomicExpr (LitNum x), xs))
+  atomicExpr ((BooleanToken b@(BoolF x), lc) : xs)       = Right (AtomicExpr (LitBool b), xs)
+  atomicExpr ((NumberToken x, lc) : xs)                  = Right (AtomicExpr (LitNum x), xs)
   atomicExpr ((KeywordToken LBracket, lc) : xs)          = do
     (e, ys) <- expr xs
     case ys of
       ((KeywordToken RBracket, lc) : zs) -> return (e, ys)
-      _                                  -> Left "Parse error in atomicexpr - no right bracket detected"
-  --atomicExpr []                                          = return ([], [])
-  --atomicExpr ts                                          = return ([], ts)
+      ((tk, lc) : zs)                    -> Left $ "Parse error on input " ++ show tk ++ "in line " ++ show lc ++ ": right bracket expected."
+      _                                  -> Left $ "Parse error at end of program: right bracket expected."
+  atomicExpr ((tk, lc) : xs)                             = Left $ "Parse error on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
+  atomicExpr []                                          = Left $ "Parse error at end of program: atomic expression expected."
 
-  expr8 :: Parser Expression
+  expr8 :: Parser Expr
   expr8 xs = do
     (e, ys) <- trace ("expr8, calling atomicExpr with input " ++ show xs) (atomicExpr xs)
     (es, ys1) <- restexpr8 ys
     return (foldl Func e es, ys1)
 
-  restexpr8 :: Parser [Expression]
+  restexpr8 :: Parser [Expr]
   restexpr8 a@((NameToken x, lc) : xs)           = do
     (e, ys) <- trace ("expr8, calling atomicExpr (NameToken) with input " ++ show xs) (atomicExpr a)
     (es, ys1) <- restexpr8 ys
@@ -125,7 +126,7 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
     return (e:es, ys1)
   restexpr8 xs                                   = return ([], xs)
 
-  expr7 :: Parser Expression
+  expr7 :: Parser Expr
   expr7 xs  = do
     (e, ys) <- trace ("expr7, calling expr8 with input " ++ show xs) (expr8 xs)
     (es, zs) <- trace ("expr7, calling restExpr7 with input " ++ show ys) (restExpr7 ys)
@@ -133,7 +134,7 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
     --    ((Div _ _) : xs) -> return (foldl es, zs)
     return (foldl Mult e es, zs)
 
-  restExpr7 :: Parser [Expression]
+  restExpr7 :: Parser [Expr]
   restExpr7 ((KeywordToken Times, _) : xs)  = do
     (e, ys) <- trace ("restExpr7mult, calling expr8 with input " ++ show xs) (expr8 xs)
     (es, zs) <- trace ("restExpr7mult, calling restExpr7 with input " ++ show ys) (restExpr7 ys)
@@ -143,19 +144,19 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
     return ([Div e], ys)
   restExpr7 ts                              = return ([], ts)
 
-  expr6 :: Parser Expression
+  expr6 :: Parser Expr
   expr6 ((KeywordToken Minus, _) : xs) = do
     (e, ys) <- trace ("expr6, calling expr7 with input " ++ show xs) (expr7 xs)
     return (UnaryMin e, ys)
   expr6 ts                             = trace ("expr6, calling expr7 with input " ++ show ts) (expr7 ts)
 
-  expr5 :: Parser Expression
+  expr5 :: Parser Expr
   expr5 xs = do
     (e, ys) <- trace ("expr5, calling expr6 with input " ++ show xs) (expr6 xs)
     (es, zs) <- trace ("expr5, calling restExpr5 with input " ++ show ys) (restExpr5 ys)
     return (foldl Add e es, zs)
 
-  restExpr5 :: Parser [Expression]
+  restExpr5 :: Parser [Expr]
   restExpr5 ((KeywordToken Plus, _) : xs)  = do
     (e, ys) <- trace ("restExpr5, calling expr6 with input " ++ show xs) (expr6 xs)
     (es, zs) <- trace ("restExpr5, calling restExpr5 with input " ++ show ys) (restExpr5 ys)
@@ -165,7 +166,7 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
     return ([UnaryMin e], ys)
   restExpr5 ts                             = return ([], ts)
 
-  expr4 :: Parser Expression
+  expr4 :: Parser Expr
   expr4 xs = do
     (e, ys) <- trace ("expr4, calling expr5 with input " ++ show xs) (expr5 xs)
     case ys of
@@ -177,13 +178,13 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
         return (LessThan e es, as)
       _ -> return (e, ys) -- needed?
 
-  expr3 :: Parser Expression
+  expr3 :: Parser Expr
   expr3 ((KeywordToken Not, _) : xs) = do
       (e, es) <- trace ("expr3, calling expr4 with input " ++ show xs) (expr4 xs)
       return (LogicalNot e, es)
   expr3 a@((_, _) : xs)              = trace ("expr3, calling expr4 with input " ++ show a) (expr4 a)
 
-  expr2 :: Parser Expression
+  expr2 :: Parser Expr
   expr2 xs = do
     (e, ys) <- trace ("expr2, calling expr3 with input " ++ show xs) (expr3 xs)
     case ys of
@@ -192,7 +193,7 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
         return (LogicalAnd e es, as)
       _ -> return (e, ys)
 
-  expr1 :: Parser Expression
+  expr1 :: Parser Expr
   expr1 xs = do
     (e, ys) <- trace ("expr1, calling expr2 with input " ++ show xs) (expr2 xs)
     case ys of
@@ -201,7 +202,7 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
         return (LogicalOr e es, as)
       _ -> return (e, ys)
 
-  expr :: Parser Expression --missing Datentypzuweisung
+  expr :: Parser Expr --missing Datentypzuweisung
   expr ((KeywordToken Let, lc) : xs) = do
     (e, ys) <- trace ("expr, calling localDefs with input " ++ show xs) (localDefs xs) --localDefs liefert Liste von Definitions
     case ys of
@@ -224,18 +225,18 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
   expr xs                           = expr1 xs
 
   --liefert LocalDefinition
-  localDef :: Parser LocalDefinition
+  localDef :: Parser LocalDef
   localDef a@((NameToken name, lc) : xs) = do
     (e, ys) <- trace ("localDef, calling variable with input " ++ show [(NameToken name, lc)]) (variable a)
     case ys of
       ((KeywordToken Assign, lc) : zs) -> do
         (e1, y1) <- trace ("localDef, calling expr with input " ++ show zs) (expr zs)
-        return (Assignment e e1, y1)
+        return (LocalDef e e1, y1)
       _                                -> Left "Parse error of localDef"
   --localDef ts                          = expr ts --need to think what to do here
 
 --liefert Liste von LocalDefinition
-  localDefs :: Parser LocalDefinitions
+  localDefs :: Parser LocalDefs
   localDefs xs = do
     (e, ys) <- trace ("localDefs, calling localDef with input " ++ show xs) (localDef xs)
     case ys of
@@ -244,7 +245,7 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
 
   -- Definition ::= Variable {Variable} "=" Expression;
   --need to add definition-type; should return a tree
-  def :: Parser [Expression]
+  def :: Parser [Expr]
   def a@((NameToken name, lc) : xs) = do
     (e, ys) <- variable a
     (e1, ys1) <- def xs
@@ -255,7 +256,7 @@ data Expression = Expression String | Name String | BoolLit Bool | NumLit Int | 
   def _                                = Left "Parse error of Def"
 
 --need to add program type; return should be list of trees
-  program :: Parser [Expression]
+  program :: Parser [Expr]
   program xs = do
     (e, ys) <- trace ("program, calling def with input " ++ show xs) (def xs)
     case ys of
