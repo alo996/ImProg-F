@@ -7,21 +7,6 @@ module Parser_is2 where
   import Debug.Trace
 
 {-
-Grammar
-Programm ::= Definition ";" { Definition ";"} .
-Definition ::= Variable {Variable} "=" Ausdruck .
-Lokaldefinitionen ::= Lokaldefinition { ";" Lokaldefinition } .
-Lokaldefinition ::= Variable "=" Ausdruck .
-Ausdruck ::= "let" Lokaldefinitionen "in" Ausdruck
- | "if" Ausdruck "then" Ausdruck "else" Ausdruck
- | Ausdruck BinärOp Ausdruck
- | UnärOp Ausdruck
- | Ausdruck Ausdruck
- | "(" Ausdruck ")"
- | AtomarerAusdruck .
-BinärOp ::= "&" | "|" | "==" | "<" | "+" | "−" | "∗" | "/" .
-UnärOp ::= "not" | "−" .
-AtomarerAusdruck ::= Variable | Zahl | Wahrheitswert .
 
 Program ::= Definiton ";" {Definition ";"} - every definition forms a tree kind of; [tree]
 Definition ::= Variable {Variable} "=" Expression
@@ -58,9 +43,9 @@ Variable ::= Name
 
   data Expr
           = Add Expr Expr
-          | Func Expr Expr -- Variable Expression Expression -- sure with "Variable?" perhaps rather AtomicExpression + Expression? (changed for test purposes)
+          | Func Expr Expr
           | Mult Expr Expr
-          | Div Expr Expr -- ?perhaps only one? // redone back to 2 x expr
+          | Div Expr Expr 
           | UnaryMin Expr
           | Equal Expr Expr
           | LessThan Expr Expr
@@ -80,7 +65,6 @@ Variable ::= Name
 
   data Def = Def [Expr] Expr deriving Show
   newtype Prog = Prog [Def] deriving Show
-
 
   variable :: Parser Expr
   variable ((NameToken name, lc) : xs) = Right (AtomicExpr (Var name), xs)
@@ -125,8 +109,6 @@ Variable ::= Name
     return (e:es, ys1)
   restexpr8 xs                                   = return ([], xs)
 
--- Expression7 ::= Expression8 RestExpression7
--- RestExpression7 ::= {"*" Expression8 } | "/" Expression8
   expr7 :: Parser Expr
   expr7 xs  = do
     (e, ys) <- trace ("expr7, calling expr8 with input " ++ show xs) (expr8 xs)
@@ -137,8 +119,6 @@ Variable ::= Name
       _  -> do
         (es, list) <- restExpr7 ys
         return (foldl Mult e es, list)
-     -- ((tk, lc) : zs)                  -> Left $ "Parse error of expr7 on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
-     -- _                                -> Left "Parse error (expr7) on end of program: invalid syntax."
     
   restExpr7 :: Parser [Expr]
   restExpr7 ((KeywordToken Times, _) : xs)  = do
@@ -147,8 +127,6 @@ Variable ::= Name
     return (e : es, zs)
   restExpr7 ts = return ([], ts)
 
--- Expression6 ::= ["-"] Expression7
--- Expression7 ::= Expression8 RestExpression7
   expr6 :: Parser Expr
   expr6 ((KeywordToken Minus, _) : xs) = do
     (e, ys) <- trace ("expr6, calling expr7 with input " ++ show xs) (expr7 xs)
@@ -207,9 +185,9 @@ Variable ::= Name
         return (LogicalOr e es, as)
       _ -> return (e, ys)
 
-  expr :: Parser Expr --missing Datentypzuweisung
+  expr :: Parser Expr
   expr ((KeywordToken Let, lc) : xs) = do
-    (e, ys) <- trace ("expr, calling localDefs with input " ++ show xs) (localDefs xs) --localDefs liefert Liste von Definitions
+    (e, ys) <- trace ("expr, calling localDefs with input " ++ show xs) (localDefs xs)
     case ys of
       ((KeywordToken In, lc) : zs) -> do
         (es, as) <- trace ("expr (In), calling expr with input " ++ show zs) (expr zs)
@@ -229,7 +207,6 @@ Variable ::= Name
       _                              -> Left "Parse error of expr"
   expr xs                           = expr1 xs
 
-  --liefert LocalDefinition
   localDef :: Parser LocalDef
   localDef xs = do
     (e, ys) <- trace ("localDef, calling variable with input " ++ show xs) (variable xs)
@@ -239,7 +216,6 @@ Variable ::= Name
         return (LocalDef e e1, y1)
       _                                -> Left "localDef, Parse error of localDef"
 
---liefert Liste von LocalDefinition
   localDefs :: Parser LocalDefs
   localDefs xs = do
     (e, ys) <- trace ("localDefs, calling localDef with input " ++ show xs) (localDef xs)
@@ -247,7 +223,6 @@ Variable ::= Name
       ((KeywordToken Semicolon, lc) : zs) -> trace ("localDefs, calling localDefs with input " ++ show zs) (localDefs zs)
       _                                   -> return ([e], ys)
 
-  -- data Def = Def [Expr] Expr deriving Show
   def :: Parser Def
   def xs = do
     (e1, ys) <- variable xs
@@ -261,8 +236,6 @@ Variable ::= Name
       ((tk , lc) : ys2)                 -> Left $ "def, Parse error on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
       _                                 -> Left "def, Parse error at end of program: invalid syntax."
 
-
-  -- newtype Prog = Prog [Def] deriving Show
   program :: Parser Prog
   program a@((NameToken name1, lc1) : ys1) = do
     (def1, ys) <- trace ("program, calling def with input " ++ show a) (def a)
