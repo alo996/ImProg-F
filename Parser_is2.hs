@@ -37,9 +37,14 @@ Variable ::= Name
    3. Tests
    4. Klammern - funktioniert
    5. Präzedenzen (Assoziativ etc.)
+   6. Wir sollten traces löschen
    -}
 
+  {- initializing parser variable by using tuple of tokens and line number of token, result is either correct and thereby a tuple of parser expression and token/line number variable or a Left error 
+-}
   type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
+
+-- creating different expression datatypes based on grammar
 
   data Expr
           = Add Expr Expr
@@ -57,19 +62,27 @@ Variable ::= Name
           | AtomicExpr AtomicExpr
           deriving Show
 
+-- initialize sthe local definitions that use expressions, [] makes a list of them
+
   data LocalDef = LocalDef Expr Expr deriving Show
   type LocalDefs = [LocalDef]
 
+-- ?
   type Var = String
-  data AtomicExpr = Var Var | LitBool BoolF | LitNum Int | Expr Expr deriving Show
+  data AtomicExpr = Var Var | LitBool BoolF | LitNum Int | Expr Expr deriving Show -- maybe String instead of second -- Var?
 
   data Def = Def [Expr] Expr deriving Show
   newtype Prog = Prog [Def] deriving Show
+
+  -- variable is used in the program, converts a name token into an Atomicexpression of the variable type we got from -- the base type which the tokenizer recognizes
 
   variable :: Parser Expr
   variable ((NameToken name, lc) : xs) = Right (AtomicExpr (Var name), xs)
   variable ((x , lc) : xs)             = Left $ "Parse error of varibale on input " ++ show x ++ " in line " ++ show lc ++ ": invalid syntax."
   variable []                          = Left "Parse error variable"  -- dieser Fall noch unklar
+
+-- LitBool for expressions, BooleanToken for tokens, BoolF as a basic type (in declarations), we go -- --one-step-lookahead in order to see what type of exoression we need to create in the tree
+
 
   atomicExpr :: Parser Expr
   atomicExpr a@((NameToken x, lc) : xs)                  = variable a
@@ -83,6 +96,9 @@ Variable ::= Name
       _                                  -> Left "atomicexpr, Parse error at end of program: right bracket expected."
   atomicExpr ((tk, lc) : xs)                             = Left $ "Parse error of atomicExpr on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
   atomicExpr []                                          = Left "Parse error (atomicExpr) at end of program: atomic expression expected."
+
+
+{- "regular" Expr functions return one expression and the rest of the list of tokens, "restExpr" return a list of --expressions and the rest of the list of tokens -}
 
   expr8 :: Parser Expr
   expr8 xs = do
@@ -235,6 +251,8 @@ Variable ::= Name
         return (Def [e1] e2, ys3)
       ((tk , lc) : ys2)                 -> Left $ "def, Parse error on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
       _                                 -> Left "def, Parse error at end of program: invalid syntax."
+
+--accumulates the end result, only if the semicolon occurs at the end, multiple also possible 
 
   program :: Parser Prog
   program a@((NameToken name1, lc1) : ys1) = do
