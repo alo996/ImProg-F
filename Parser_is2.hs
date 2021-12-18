@@ -40,11 +40,13 @@ Variable ::= Name
    6. Wir sollten traces löschen
    -}
 
-  {- initializing parser variable by using tuple of tokens and line number of token, result is either correct and thereby a tuple of parser expression and token/line number variable or a Left error 
--}
+  -- initializing parser variable by using tuple of tokens and line number of token
+  -- result will either be Right, a tuple of parser expression and token/line number variable, or a Left error 
+
   type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
 
--- creating different expression datatypes based on grammar
+-- creating different expression datatypes based on the given grammar and our declarations and tokenizer
+-- deriving Show so we can see them on the console later
 
   data Expr
           = Add Expr Expr
@@ -62,27 +64,31 @@ Variable ::= Name
           | AtomicExpr AtomicExpr
           deriving Show
 
--- initialize sthe local definitions that use expressions, [] makes a list of them
+-- initializing the local definitions by using Expr type, [] makes a list of them
 
   data LocalDef = LocalDef Expr Expr deriving Show
   type LocalDefs = [LocalDef]
 
--- ?
+-- initializing atomic expressions
+
   type Var = String
-  data AtomicExpr = Var Var | LitBool BoolF | LitNum Int | Expr Expr deriving Show -- maybe String instead of second -- Var?
+  data AtomicExpr = Var String | LitBool BoolF | LitNum Int | Expr Expr deriving Show
+
+--initializing definitions and Prog, which will respresent our program
 
   data Def = Def [Expr] Expr deriving Show
   newtype Prog = Prog [Def] deriving Show
 
-  -- variable is used in the program, converts a name token into an Atomicexpression of the variable type we got from -- the base type which the tokenizer recognizes
+  -- defining variable, used at multiple places in the parser code
+  -- converts a name token into an atomic expression of the base variable type
 
   variable :: Parser Expr
   variable ((NameToken name, lc) : xs) = Right (AtomicExpr (Var name), xs)
   variable ((x , lc) : xs)             = Left $ "Parse error of varibale on input " ++ show x ++ " in line " ++ show lc ++ ": invalid syntax."
-  variable []                          = Left "Parse error variable"  -- dieser Fall noch unklar
+  variable []                          = Left "Parse error variable"  -- covers other possible errors
 
--- LitBool for expressions, BooleanToken for tokens, BoolF as a basic type (in declarations), we go -- --one-step-lookahead in order to see what type of exoression we need to create in the tree
-
+-- LitBool is used for expressions, BooleanToken for tokens, BoolF as a basic type (in declarations)
+-- one-step-lookahead used below in order to see what type of expression we need next to create next valid tree node
 
   atomicExpr :: Parser Expr
   atomicExpr a@((NameToken x, lc) : xs)                  = variable a
@@ -91,14 +97,15 @@ Variable ::= Name
   atomicExpr ((KeywordToken LBracket, lc) : xs)          = do
     (e, ys) <- expr xs
     case ys of
-      ((KeywordToken RBracket, lc) : zs) -> return (e, zs)
-      ((tk, lc) : zs)                    -> Left $ "Parse error of atomicExpr on input " ++ show tk ++ "in line " ++ show lc ++ ": right bracket expected."
+      ((KeywordToken RBracket, lc) : zs) -> return (e, zs)  -- if closing bracket exists, input is valid and evaluated
+      ((tk, lc) : zs)                    -> Left $ "Parse error of atomicExpr on input " ++ show tk ++ "in line " ++ show lc ++ ": right bracket expected."  --checking for invalid bracket-related inputs
       _                                  -> Left "atomicexpr, Parse error at end of program: right bracket expected."
   atomicExpr ((tk, lc) : xs)                             = Left $ "Parse error of atomicExpr on input " ++ show tk ++ " in line " ++ show lc ++ ": invalid syntax."
   atomicExpr []                                          = Left "Parse error (atomicExpr) at end of program: atomic expression expected."
 
 
-{- "regular" Expr functions return one expression and the rest of the list of tokens, "restExpr" return a list of --expressions and the rest of the list of tokens -}
+-- Expr functions return one expression and the rest of the list of tokens
+-- restExpr functions return a list of expressions and the rest of the list of tokens
 
   expr8 :: Parser Expr
   expr8 xs = do
