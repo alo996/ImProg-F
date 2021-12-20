@@ -30,7 +30,7 @@ module Tokenizer where
     tokenize' token@('t' : 'h' : 'e' : 'n' : x : xs) tokenAcc lineAcc       = if validateChar x then tokenize' (x : xs) ((KeywordToken Then , lineAcc) : tokenAcc) lineAcc         else tokenizeNames token tokenAcc lineAcc ""
     tokenize' token@('t' : 'r' : 'u' : 'e' : x : xs) tokenAcc lineAcc       = if validateChar x then tokenize' (x : xs) ((BooleanToken $ BoolF True, lineAcc) : tokenAcc) lineAcc  else tokenizeNames token tokenAcc lineAcc ""
 
-    -- If multiple character keyword is either at the end of ... or the program.
+    -- If multiple character keyword is either at the end of an identifier or the program.
     tokenize' ('e' : 'l' : 's' : 'e' : xs) tokenAcc lineAcc           = tokenize' xs ((KeywordToken Else , lineAcc) : tokenAcc) lineAcc
     tokenize' ('f' : 'a' : 'l' : 's' : 'e' : xs) tokenAcc lineAcc     = tokenize' xs ((BooleanToken $ BoolF False , lineAcc) : tokenAcc) lineAcc
     tokenize' ('i' : 'f' : xs) tokenAcc lineAcc                       = tokenize' xs ((KeywordToken If , lineAcc) : tokenAcc) lineAcc
