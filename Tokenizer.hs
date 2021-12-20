@@ -1,6 +1,6 @@
 -- This module contains all functionality to pursue lexical analysis in F.
 module Tokenizer where
-    import Data.Char ( isAlphaNum, isDigit )
+    import Data.Char ( isAlpha, isAlphaNum, isDigit )
     import Declarations
 
     -- tokenize receives user input and transforms it to a list of tuples, each containing a token and its respective line in the source code.
@@ -57,21 +57,22 @@ module Tokenizer where
                     then if isDigit x
                         then tokenizeNumbers (x:xs) tokenAcc lineAcc ""
                         else tokenizeNames (x:xs) tokenAcc lineAcc ""
-                    else error $ "Syntax error: illegal character on input " ++ show x ++ " in line " ++ show lineAcc ++ "."
+                    else error $ "Syntax error in line " ++ show lineAcc ++ ": Illegal character '" ++ show x ++ "'."
 
     -- Tokenize integers or identifiers.
     tokenizeNumbers, tokenizeNames :: String -> [(Token, Int)] -> Int -> String -> [(Token, Int)]
-    tokenizeNumbers [x] tokenAcc lineAcc number            = reverse $ (NumberToken (read (number ++ [x]) :: Int), lineAcc) : tokenAcc
-    tokenizeNumbers (x : y : xs) tokenAcc lineAcc number   = if isDigit y
-                                                                then tokenizeNumbers (y : xs) tokenAcc lineAcc (number ++ [x])
-                                                                else tokenize' (y : xs) ((NumberToken (read (number ++ [x]) :: Int), lineAcc) : tokenAcc) lineAcc
-    tokenizeNumbers _ _ _ _                                = undefined -- This case can never be reached.
+    tokenizeNumbers [x] tokenAcc lineAcc number = reverse $ (NumberToken (read (number ++ [x]) :: Int), lineAcc) : tokenAcc
+    tokenizeNumbers (x : y : ys) tokenAcc lineAcc number 
+        | isDigit y = tokenizeNumbers (y : ys) tokenAcc lineAcc (number ++ [x])
+        | isAlpha y = error $ "Syntax error in line " ++ show lineAcc ++ ": Identifiers can not begin with a digit."
+        | otherwise = tokenize' (y : ys) ((NumberToken (read (number ++ [x]) :: Int), lineAcc) : tokenAcc) lineAcc
+    tokenizeNumbers _ _ _ _                     = undefined -- This case can never be reached.
 
-    tokenizeNames [x] tokenAcc lineAcc name                = reverse $ (NameToken $ name ++ [x], lineAcc) : tokenAcc
-    tokenizeNames (x : y : xs) tokenAcc lineAcc name       = if isAlphaNum y
-                                                                then tokenizeNames (y : xs) tokenAcc lineAcc (name ++ [x])
-                                                                else tokenize' (y : xs) ((NameToken $ name ++ [x], lineAcc) : tokenAcc) lineAcc
-    tokenizeNames _ _ _ _                                  = undefined -- This case can never be reached.
+    tokenizeNames [x] tokenAcc lineAcc name = reverse $ (NameToken $ name ++ [x], lineAcc) : tokenAcc
+    tokenizeNames (x : y : ys) tokenAcc lineAcc name 
+        | isAlphaNum y = tokenizeNames (y : ys) tokenAcc lineAcc (name ++ [x])
+        | otherwise    = tokenize' (y : ys) ((NameToken $ name ++ [x], lineAcc) : tokenAcc) lineAcc
+    tokenizeNames _ _ _ _                   = undefined -- This case can never be reached.
 
     -- Helper function validateChar checks whether a character either belongs to the set of reserved special characters of F or is a space.
     validateChar :: Char -> Bool
