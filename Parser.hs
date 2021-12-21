@@ -8,9 +8,9 @@ module Parser where
   program d@((NameToken name, _) : ts) = do
     (d, ts1) <- def d
     case ts1 of
-      ((KeywordToken Semicolon, _) : ts2) -> program ts2 >>= (\ (Prog ds, ts3) -> return (Prog (d : ds), ts3))
-      ((token , line) : _)                -> Left $ "Syntax error in line " ++ show line ++ ": Keyword ';' expected but found '" ++ show token ++ "'."
-      []                                  -> Left "Syntax error at end of program: Keyword ';' expected."
+      (KeywordToken Semicolon, _) : ts2 -> program ts2 >>= \ (Prog ds, ts3) -> return (Prog (d : ds), ts3)
+      (token , line) : _                -> Left $ "Syntax error in line " ++ show line ++ ": Keyword ';' expected but found '" ++ show token ++ "'."
+      []                                -> Left "Syntax error at end of program: Keyword ';' expected."
   program ((token, line) : _)          = Left $ "Syntax error in line " ++ show line ++ ": Identifier expected but found '" ++ show token ++ "'."
   program []                           = Right (Prog [], [])
 
@@ -18,108 +18,111 @@ module Parser where
   def ts = do
     (e, ts1) <- variable ts
     case ts1 of
-      d@((NameToken name1, lc1) : ts2)  -> def d >>= (\ (Def es e1, ts3) -> return (Def (e : es) e1, ts3))
-      ((KeywordToken Assign, lc) : ts2) -> expr ts2 >>= (\ (e1, ts3) -> return (Def [e] e1, ts3))
-      ((token , line) : _)              -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' or expression expected but found '" ++ show token ++ "'."
-      []                                -> Left "Syntax error at end of program: Keyword '=' or expression expected."
+      d@((NameToken name1, lc1) : ts2) -> def d >>= \ (Def es e1, ts3) -> return (Def (e : es) e1, ts3)
+      (KeywordToken Assign, lc) : ts2  -> expr ts2 >>= \ (e1, ts3) -> return (Def [e] e1, ts3)
+      (token , line) : _               -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' or expression expected but found '" ++ show token ++ "'."
+      []                               -> Left "Syntax error at end of program: Keyword '=' or expression expected."
     
   localDefs :: Parser LocalDefs
   localDefs ts = do
     (e, ts1) <- localDef ts
     case ts1 of
-      ((KeywordToken Semicolon, _) : ts2) -> localDefs ts2
-      _                                   -> return ([e], ts1)
+      (KeywordToken Semicolon, _) : ts2 -> localDefs ts2
+      _                                 -> return ([e], ts1)
   
   localDef :: Parser LocalDef
   localDef ts = do
     (e, ts1) <- variable ts
     case ts1 of
-      ((KeywordToken Assign, _) : ts2) -> expr ts2 >>= (\ (e1, ts2) -> return (LocalDef e e1, ts2))
-      ((token, line) : _)              -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' expected but found '" ++ show token ++ "'."
+      (KeywordToken Assign, _) : ts2 -> expr ts2 >>= \ (e1, ts2) -> return (LocalDef e e1, ts2)
+      (token, line) : _              -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' expected but found '" ++ show token ++ "'."
 
   expr, expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, atomicExpr, variable :: Parser Expr
   expr ((KeywordToken Let, _) : ts) = do
     (e, ts1) <- localDefs ts
     case ts1 of
-      ((KeywordToken In, _) : ts2) -> expr ts2 >>= (\ (e1, ts3) -> return (LetIn e e1, ts3))
-      ((token, line) : _)          -> Left $ "Syntax error in line " ++ show line ++ ": Keyword 'in' expected but found '" ++ show token ++ "'."
+      (KeywordToken In, _) : ts2 -> expr ts2 >>= \ (e1, ts3) -> return (LetIn e e1, ts3)
+      (token, line) : _          -> Left $ "Syntax error in line " ++ show line ++ ": Keyword 'in' expected but found '" ++ show token ++ "'."
   expr ((KeywordToken If, _) : ts) = do
     (e, ts1) <- expr ts
     case ts1 of
-      ((KeywordToken Then, _) : ts2) -> do
+      (KeywordToken Then, _) : ts2 -> do
         (e1, ts3) <- expr ts2
         case ts3 of
-          ((KeywordToken Else, _) : ts3) -> expr ts3 >>= (\ (e2, ts4) -> return (IfThenElse e e1 e2, ts4))
-          ((token, line) : _)            -> Left $ "Syntax error in line " ++ show line ++ ": Keyword 'else' expected but found '" ++ show token ++ "'."
-      ((token, line) : _)            -> Left $ "Syntax error in line " ++ show line ++ ": Keyword 'then' expected but found '" ++ show token ++ "'."
+          (KeywordToken Else, _) : ts3 -> expr ts3 >>= \ (e2, ts4) -> return (IfThenElse e e1 e2, ts4)
+          (token, line) : _            -> Left $ "Syntax error in line " ++ show line ++ ": Keyword 'else' expected but found '" ++ show token ++ "'."
+      (token, line) : _            -> Left $ "Syntax error in line " ++ show line ++ ": Keyword 'then' expected but found '" ++ show token ++ "'."
   expr ts                           = expr1 ts
 
   expr1 ts = do
     (e, ts1) <- expr2 ts
     case ts1 of
-      ((KeywordToken Or, _) : ts2) -> expr1 ts2 >>= (\ (e1, ts3) -> return (LogicalOr e e1, ts3))
+      (KeywordToken Or, _) : ts2 -> expr1 ts2 >>= \ (e1, ts3) -> return (LogicalOr e e1, ts3)
       _ -> return (e, ts1)
 
   expr2 ts = do
     (e, ts1) <- expr3 ts
     case ts1 of
-      ((KeywordToken And, _) : ts2) -> expr2 ts2 >>= (\ (e1, ts3) -> return (LogicalAnd e e1, ts3))
-      _                             -> return (e, ts1)
+      (KeywordToken And, _) : ts2 -> expr2 ts2 >>= \ (e1, ts3) -> return (LogicalAnd e e1, ts3)
+      _                           -> return (e, ts1)
 
-  expr3 ((KeywordToken Not, _) : ts) = expr4 ts >>= (\ (e, ts1) -> return (LogicalNot e, ts1))
+  expr3 ((KeywordToken Not, _) : ts) = expr4 ts >>= \ (e, ts1) -> return (LogicalNot e, ts1)
   expr3 ts                           = expr4 ts
 
   expr4 ts = do
     (e, ts1) <- expr5 ts
     case ts1 of
-      ((KeywordToken Equals, _) : ts2) -> expr5 ts2 >>= (\ (e1, ts3) -> return (Equal e e1, ts3))
-      ((KeywordToken Less, _) : ts2)   -> expr5 ts2 >>= (\ (e1, ts3) -> return (LessThan e e1, ts3))
-      _                                -> return (e, ts1)
+      (KeywordToken Equals, _) : ts2 -> expr5 ts2 >>= \ (e1, ts3) -> return (Equal e e1, ts3)
+      (KeywordToken Less, _) : ts2   -> expr5 ts2 >>= \ (e1, ts3) -> return (LessThan e e1, ts3)
+      _                              -> return (e, ts1)
 
-  expr5 ts = expr6 ts >>= (\ (e, ts1) -> restExpr5 ts1 >>= (\ (es, ts2) -> return (foldl Add e es, ts2)))
+  expr5 ts = expr6 ts >>= \ (e, ts1) -> restExpr5 ts1 >>= \ (es, ts2) -> return (foldl Add e es, ts2)
 
-  expr6 expr@((KeywordToken Minus, _) : ts) = expr7 ts >>= (\ (e, ts1) -> return (UnaryMin e, ts1))
-  expr6 ts                                  = expr7 ts
+  expr6 ((KeywordToken Minus, _) : ts) = expr7 ts >>= \ (e, ts1) -> return (UnaryMin e, ts1)
+  expr6 ts                             = expr7 ts
 
   expr7 ts  = do
     (e, ts1) <- expr8 ts
     case ts1 of
-      ((KeywordToken Divide, _) : ts2) -> expr8 ts2 >>= (\ (e1, ts3) -> return (Div e e1, ts3))
-      _                                -> restExpr7 ts1 >>= (\ (es, ts3) -> return (foldl Mult e es, ts3))
+      (KeywordToken Divide, _) : ts2 -> expr8 ts2 >>= \ (e1, ts3) -> return (Div e e1, ts3)
+      _                              -> restExpr7 ts1 >>= \ (es, ts3) -> return (foldl Mult e es, ts3)
 
-  expr8 ts = do
-    (e, ts1) <- atomicExpr ts
-    (es, ts2) <- restExpr8 ts1
-    return (foldl Func e es, ts2)
-
+  expr8 ts = atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (foldl Func e es, ts2)
+    
   atomicExpr n@((NameToken name, _) : _)             = variable n
   atomicExpr ((BooleanToken b@(BoolF bool), _) : ts) = Right (AtomicExpr (LitBool b), ts)
   atomicExpr ((NumberToken num, _) : ts)             = Right (AtomicExpr (LitNum num), ts)
   atomicExpr ((KeywordToken LBracket, line) : ts)    = do
     (e, ts1) <- expr ts
     case ts1 of
-      ((KeywordToken RBracket, _) : ts2) -> return (e, ts2)
-      ((token, line) : ts1)              -> Left $ "Syntax error in line " ++ show line ++ ": Right bracket expected but found '" ++ show token ++ "'."
-      _                                  -> Left "Syntax error at end of program: Right bracket expected."
+      (KeywordToken RBracket, _) : ts2 -> return (e, ts2)
+      (token, line) : _                -> Left $ "Syntax error in line " ++ show line ++ ": Right bracket expected but found '" ++ show token ++ "'."
+      _                                -> Left "Syntax error at end of program: Right bracket expected."
   atomicExpr ((token, line) : _)                     = Left $ "Syntax error in line " ++ show line ++ ": Expression expected but found '" ++ show token ++ "'."
   atomicExpr []                                      = Left "Syntax error at end of program: Expression expected."
 
   variable ((NameToken name, _) : ts) = Right (AtomicExpr (Var name), ts)
-  variable ((token , line) : ts)      = Left $ "Syntax error in line " ++ show line ++ ": Identifier expected but found '" ++ show token ++ "'."
+  variable ((token , line) : _)       = Left $ "Syntax error in line " ++ show line ++ ": Identifier expected but found '" ++ show token ++ "'."
   variable []                         = Left "Syntax error at end of program: Identifier expected."
 
   restExpr5, restExpr7, restExpr8 :: Parser [Expr]
-  restExpr5 ((KeywordToken Plus, _) : ts)  = expr6 ts >>= (\ (e, ts1) -> restExpr5 ts1 >>= (\ (es, ts2) -> return (e : es, ts2)))    
-  restExpr5 ((KeywordToken Minus, _) : ts) = expr6 ts >>= (\ (e, ts1) -> return ([UnaryMin e], ts1))
-  restExpr5 ts                             = return ([], ts)
+  restExpr5 ((KeywordToken Plus, _) : ts)  = do
+    (e, ts1) <- expr6 ts
+    case ts1 of
+      (KeywordToken Plus, _) : ts2  -> restExpr5 ts1 >>= \ (es, ts3) -> return (e : es, ts3)
+      (KeywordToken Minus, _) : ts2 -> expr6 ts2 >>= \ (e1, ts3) -> return (e : [UnaryMin e1], ts3)
+      _                             -> return ([e], ts1)
+  restExpr5 ((KeywordToken Minus, _) : ts) = expr6 ts >>= \ (e, ts1) -> return ([UnaryMin e], ts1)
+  restExpr5 ((token, line) : _)            = Left $ "Syntax error in line " ++ show line ++ ": Keywords '+' or '-' expected but found '" ++ show token ++ "'."
+  restExpr5 []                             = Left "Syntax error at end of program: Keywords '+' or '-' expected."
 
-  restExpr7 ((KeywordToken Times, _) : ts) = expr8 ts >>= (\ (e, ts1) -> restExpr7 ts1 >>= (\ (es, ts2) -> return (e : es, ts2)))
+  restExpr7 ((KeywordToken Times, _) : ts) = expr8 ts >>= \ (e, ts1) -> restExpr7 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
   restExpr7 ts                             = return ([], ts)
 
-  restExpr8 rest@((token, line) : ts) = case token of
-    NameToken _           -> atomicExpr ts >>= (\ (e, ts1) -> restExpr8 ts1 >>= (\ (es, ts2) -> return (e : es, ts2)))
-    BooleanToken _        -> atomicExpr ts >>= (\ (e, ts1) -> restExpr8 ts1 >>= (\ (es, ts2) -> return (e : es, ts2)))
-    NumberToken _         -> atomicExpr ts >>= (\ (e, ts1) -> restExpr8 ts1 >>= (\ (es, ts2) -> return (e : es, ts2)))
-    KeywordToken LBracket -> atomicExpr ts >>= (\ (e, ts1) -> restExpr8 ts1 >>= (\ (es, ts2) -> return (e : es, ts2)))
-    _                     -> return ([], rest)
-  restExpr8 []                        = return ([], []) 
+  restExpr8 r@((token, line) : ts) = case token of
+    NameToken _           -> atomicExpr r >>= \ (e, ts) -> restExpr8 ts >>= \ (es, ts1) -> return (e : es, ts1)
+    BooleanToken _        -> atomicExpr r >>= \ (e, ts) -> restExpr8 ts >>= \ (es, ts1) -> return (e : es, ts1)
+    NumberToken _         -> atomicExpr r >>= \ (e, ts) -> restExpr8 ts >>= \ (es, ts1) -> return (e : es, ts1)
+    KeywordToken LBracket -> atomicExpr r >>= \ (e, ts) -> restExpr8 ts >>= \ (es, ts1) -> return (e : es, ts1)
+    _                     -> return ([], r)
+  restExpr8 []                     = return ([], []) 
