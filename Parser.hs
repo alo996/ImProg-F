@@ -120,4 +120,4 @@ module Parser where
     NumberToken _         -> atomicExpr r >>= \ (e, ts) -> restExpr8 ts >>= \ (es, ts1) -> return (e : es, ts1)
     KeywordToken LBracket -> atomicExpr r >>= \ (e, ts) -> restExpr8 ts >>= \ (es, ts1) -> return (e : es, ts1)
     _                     -> return ([], r)
-  restExpr8 []                     = return ([], [])
+  restExpr8 ts                     = return ([], ts)
