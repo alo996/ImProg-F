@@ -43,7 +43,7 @@ module Parser where
     case ts1 of
       (KeywordToken In, _) : ts2 -> expr ts2 >>= \ (e1, ts3) -> return (LetIn e e1, ts3)
       (token, line) : _          -> Left $ "Syntax error in line " ++ show line ++ ": Keyword 'in' expected but found '" ++ show token ++ "'."
-  expr ((KeywordToken If, _) : ts) = do
+  expr ((KeywordToken If, _) : ts)  = do
     (e, ts1) <- expr ts
     case ts1 of
       (KeywordToken Then, _) : ts2 -> do
