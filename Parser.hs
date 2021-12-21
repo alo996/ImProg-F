@@ -106,18 +106,13 @@ module Parser where
   variable []                         = Left "Syntax error at end of program: Identifier expected."
 
   restExpr5, restExpr7, restExpr8 :: Parser [Expr]
-  restExpr5 ((KeywordToken Plus, _) : ts)  = do
-    (e, ts1) <- expr6 ts
-    case ts1 of
-      (KeywordToken Plus, _) : ts2  -> restExpr5 ts1 >>= \ (es, ts3) -> return (e : es, ts3)
-      (KeywordToken Minus, _) : ts2 -> expr6 ts2 >>= \ (e1, ts3) -> return (e : [UnaryMin e1], ts3)
-      _                             -> return ([e], ts1)
+  restExpr5 ((KeywordToken Plus, _) : ts)  = expr6 ts >>= \ (e, ts1) -> restExpr5 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
   restExpr5 ((KeywordToken Minus, _) : ts) = expr6 ts >>= \ (e, ts1) -> return ([UnaryMin e], ts1)
-  restExpr5 ((token, line) : _)            = Left $ "Syntax error in line " ++ show line ++ ": Keywords '+' or '-' expected but found '" ++ show token ++ "'."
-  restExpr5 []                             = Left "Syntax error at end of program: Keywords '+' or '-' expected."
+  restExpr5 ts                             = return ([], ts)
 
   restExpr7 ((KeywordToken Times, _) : ts) = expr8 ts >>= \ (e, ts1) -> restExpr7 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
   restExpr7 ts                             = return ([], ts)
+
 
   restExpr8 r@((token, line) : ts) = case token of
     NameToken _           -> atomicExpr r >>= \ (e, ts) -> restExpr8 ts >>= \ (es, ts1) -> return (e : es, ts1)
@@ -125,4 +120,4 @@ module Parser where
     NumberToken _         -> atomicExpr r >>= \ (e, ts) -> restExpr8 ts >>= \ (es, ts1) -> return (e : es, ts1)
     KeywordToken LBracket -> atomicExpr r >>= \ (e, ts) -> restExpr8 ts >>= \ (es, ts1) -> return (e : es, ts1)
     _                     -> return ([], r)
-  restExpr8 []                     = return ([], []) 
+  restExpr8 []                     = return ([], [])
