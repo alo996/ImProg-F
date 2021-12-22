@@ -36,6 +36,7 @@ module Parser where
     case ts1 of
       (KeywordToken Assign, _) : ts2 -> expr ts2 >>= \ (e1, ts2) -> return (LocalDef e e1, ts2)
       (token, line) : _              -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' expected but found '" ++ show token ++ "'."
+      []                             -> Left "Syntax error at end of program: Keyword '=' expected."
 
   expr, expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, atomicExpr, variable :: Parser Expr
   expr ((KeywordToken Let, _) : ts) = do
@@ -43,6 +44,7 @@ module Parser where
     case ts1 of
       (KeywordToken In, _) : ts2 -> expr ts2 >>= \ (e1, ts3) -> return (LetIn e e1, ts3)
       (token, line) : _          -> Left $ "Syntax error in line " ++ show line ++ ": Keyword 'in' expected but found '" ++ show token ++ "'."
+      []                         -> Left "Syntax error at end of program: Keyword 'in' expected."
   expr ((KeywordToken If, _) : ts)  = do
     (e, ts1) <- expr ts
     case ts1 of
@@ -51,7 +53,9 @@ module Parser where
         case ts3 of
           (KeywordToken Else, _) : ts3 -> expr ts3 >>= \ (e2, ts4) -> return (IfThenElse e e1 e2, ts4)
           (token, line) : _            -> Left $ "Syntax error in line " ++ show line ++ ": Keyword 'else' expected but found '" ++ show token ++ "'."
+          []                           -> Left "Syntax error at end of program: Keyword 'else' expected."
       (token, line) : _            -> Left $ "Syntax error in line " ++ show line ++ ": Keyword 'then' expected but found '" ++ show token ++ "'."
+      []                           -> Left "Syntax error at end of program: Keyword 'then' expected."
   expr ts                           = expr1 ts
 
   expr1 ts = do
@@ -113,11 +117,9 @@ module Parser where
   restExpr7 ((KeywordToken Times, _) : ts) = expr8 ts >>= \ (e, ts1) -> restExpr7 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
   restExpr7 ts                             = return ([], ts)
 
-
-  restExpr8 r@((token, line) : ts) = case token of
-    NameToken _           -> atomicExpr r >>= \ (e, ts) -> restExpr8 ts >>= \ (es, ts1) -> return (e : es, ts1)
-    BooleanToken _        -> atomicExpr r >>= \ (e, ts) -> restExpr8 ts >>= \ (es, ts1) -> return (e : es, ts1)
-    NumberToken _         -> atomicExpr r >>= \ (e, ts) -> restExpr8 ts >>= \ (es, ts1) -> return (e : es, ts1)
-    KeywordToken LBracket -> atomicExpr r >>= \ (e, ts) -> restExpr8 ts >>= \ (es, ts1) -> return (e : es, ts1)
-    _                     -> return ([], r)
-  restExpr8 ts                     = return ([], ts)
+  restExpr8 ts = case ts of
+    (NameToken _, _) : _    -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
+    (BooleanToken _, _) : _ -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
+    (NumberToken _, _) : _  -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
+    (KeywordToken _, _) : _ -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
+    _                       -> return ([], ts)
