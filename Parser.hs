@@ -5,7 +5,7 @@ module Parser where
   import Debug.Trace
 
   program :: Parser Prog
-  program d@((NameToken name, _) : ts) = do
+  program d@((NameToken _, _) : ts) = do
     (d, ts1) <- def d
     case ts1 of
       (KeywordToken Semicolon, _) : ts2 -> program ts2 >>= \ (Prog ds, ts3) -> return (Prog (d : ds), ts3)
@@ -18,23 +18,23 @@ module Parser where
   def ts = do
     (e, ts1) <- variable ts
     case ts1 of
-      d@((NameToken name1, lc1) : ts2) -> def d >>= \ (Def es e1, ts3) -> return (Def (e : es) e1, ts3)
-      (KeywordToken Assign, lc) : ts2  -> expr ts2 >>= \ (e1, ts3) -> return (Def [e] e1, ts3)
-      (token , line) : _               -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' or expression expected but found '" ++ show token ++ "'."
-      []                               -> Left "Syntax error at end of program: Keyword '=' or expression expected."
+      d@((NameToken _, _) : ts2)     -> def d >>= \ (Def es e1, ts3) -> return (Def (e : es) e1, ts3)
+      (KeywordToken Assign, _) : ts2 -> expr ts2 >>= \ (e1, ts3) -> return (Def [e] e1, ts3)
+      (token , line) : _             -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' or expression expected but found '" ++ show token ++ "'."
+      []                             -> Left "Syntax error at end of program: Keyword '=' or expression expected."
     
   localDefs :: Parser LocalDefs
   localDefs ts = do
-    (e, ts1) <- localDef ts
+    (d, ts1) <- localDef ts
     case ts1 of
-      (KeywordToken Semicolon, _) : ts2 -> localDefs ts2
-      _                                 -> return ([e], ts1)
+      (KeywordToken Semicolon, _) : ts2 -> localDefs ts2 >>= \ (ds, ts3) -> return (d : ds, ts3)
+      _                                 -> return ([d], ts1)
   
   localDef :: Parser LocalDef
   localDef ts = do
     (e, ts1) <- variable ts
     case ts1 of
-      (KeywordToken Assign, _) : ts2 -> expr ts2 >>= \ (e1, ts2) -> return (LocalDef e e1, ts2)
+      (KeywordToken Assign, _) : ts2 -> expr ts2 >>= \ (e1, ts3) -> return (LocalDef e e1, ts3)
       (token, line) : _              -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' expected but found '" ++ show token ++ "'."
       []                             -> Left "Syntax error at end of program: Keyword '=' expected."
 
@@ -93,10 +93,10 @@ module Parser where
 
   expr8 ts = atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (foldl Func e es, ts2)
     
-  atomicExpr n@((NameToken name, _) : _)             = variable n
-  atomicExpr ((BooleanToken b@(BoolF bool), _) : ts) = Right (AtomicExpr (LitBool b), ts)
-  atomicExpr ((NumberToken num, _) : ts)             = Right (AtomicExpr (LitNum num), ts)
-  atomicExpr ((KeywordToken LBracket, line) : ts)    = do
+  atomicExpr n@((NameToken _, _) : _)             = variable n
+  atomicExpr ((BooleanToken bool, _) : ts)        = Right (AtomicExpr (LitBool bool), ts)
+  atomicExpr ((NumberToken num, _) : ts)          = Right (AtomicExpr (LitNum num), ts)
+  atomicExpr ((KeywordToken LBracket, _) : ts) = do
     (e, ts1) <- expr ts
     case ts1 of
       (KeywordToken RBracket, _) : ts2 -> return (e, ts2)
@@ -118,8 +118,8 @@ module Parser where
   restExpr7 ts                             = return ([], ts)
 
   restExpr8 ts = case ts of
-    (NameToken _, _) : _    -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
-    (BooleanToken _, _) : _ -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
-    (NumberToken _, _) : _  -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
-    (KeywordToken _, _) : _ -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
-    _                       -> return ([], ts)
+    (NameToken _, _) : _           -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
+    (BooleanToken _, _) : _        -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
+    (NumberToken _, _) : _         -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
+    (KeywordToken LBracket, _) : _ -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
+    _                              -> return ([], ts)
