@@ -118,8 +118,8 @@ module Parser where
   restExpr7 ts                             = return ([], ts)
 
   restExpr8 ts = case ts of
-    (NameToken _, _) : _           -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
-    (BooleanToken _, _) : _        -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
-    (NumberToken _, _) : _         -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
-    (KeywordToken LBracket, _) : _ -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts >>= \ (es, ts2) -> return (e : es, ts2)
+    (NameToken _, _) : _           -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
+    (BooleanToken _, _) : _        -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
+    (NumberToken _, _) : _         -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
+    (KeywordToken LBracket, _) : _ -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
     _                              -> return ([], ts)
