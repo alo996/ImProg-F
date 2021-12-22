@@ -11,8 +11,8 @@ module Parser where
       (KeywordToken Semicolon, _) : ts2 -> program ts2 >>= \ (Prog ds, ts3) -> return (Prog (d : ds), ts3)
       (token , line) : _                -> Left $ "Syntax error in line " ++ show line ++ ": Keyword ';' expected but found '" ++ show token ++ "'."
       []                                -> Left "Syntax error at end of program: Keyword ';' expected."
-  program ((token, line) : _)          = Left $ "Syntax error in line " ++ show line ++ ": Identifier expected but found '" ++ show token ++ "'."
-  program []                           = Right (Prog [], [])
+  program ((token, line) : _)       = Left $ "Syntax error in line " ++ show line ++ ": Identifier expected but found '" ++ show token ++ "'."
+  program []                        = Right (Prog [], [])
 
   def :: Parser Def
   def ts = do

@@ -5,7 +5,7 @@ module Tokenizer where
 
     -- tokenize receives user input and transforms it to a list of tuples, each containing a token and its respective line in the source code.
     tokenize :: String -> [(Token, Int)]
-    tokenize ""      = error "Can not compile empty program."
+    tokenize ""      = error "Compile error: Can not compile empty program."
     tokenize program = tokenize' program [] 1
 
     -- tokenize' deals with spaces and tokenizes keywords and booleans.
