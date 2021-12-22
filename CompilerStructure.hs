@@ -1,5 +1,4 @@
-
-data Istruction = Reset | Pushfun ____ | Pushvan __ __ | Pushparam __ | Makeapp | Slide __ | Reduce | Return | Halt deriving (Eq, Show)
+data Instruction = Reset | Pushfun ____ | Pushval __ __ | Pushparam __ | Makeapp | Slide __ | Reduce | Return | Halt deriving (Eq, Show)
 
 data State = State 
 {
