@@ -93,17 +93,17 @@ module Parser where
 
   expr8 ts = atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (foldl Func e es, ts2)
     
-  atomicExpr n@((NameToken _, _) : _)             = variable n
-  atomicExpr ((BooleanToken bool, _) : ts)        = Right (AtomicExpr (LitBool bool), ts)
-  atomicExpr ((NumberToken num, _) : ts)          = Right (AtomicExpr (LitNum num), ts)
+  atomicExpr n@((NameToken _, _) : _)          = variable n
+  atomicExpr ((BooleanToken bool, _) : ts)     = Right (AtomicExpr (LitBool bool), ts)
+  atomicExpr ((NumberToken num, _) : ts)       = Right (AtomicExpr (LitNum num), ts)
   atomicExpr ((KeywordToken LBracket, _) : ts) = do
     (e, ts1) <- expr ts
     case ts1 of
       (KeywordToken RBracket, _) : ts2 -> return (e, ts2)
       (token, line) : _                -> Left $ "Syntax error in line " ++ show line ++ ": Right bracket expected but found '" ++ show token ++ "'."
       _                                -> Left "Syntax error at end of program: Right bracket expected."
-  atomicExpr ((token, line) : _)                     = Left $ "Syntax error in line " ++ show line ++ ": Expression expected but found '" ++ show token ++ "'."
-  atomicExpr []                                      = Left "Syntax error at end of program: Expression expected."
+  atomicExpr ((token, line) : _)               = Left $ "Syntax error in line " ++ show line ++ ": Expression expected but found '" ++ show token ++ "'."
+  atomicExpr []                                = Left "Syntax error at end of program: Expression expected."
 
   variable ((NameToken name, _) : ts) = Right (AtomicExpr (Var name), ts)
   variable ((token , line) : _)       = Left $ "Syntax error in line " ++ show line ++ ": Identifier expected but found '" ++ show token ++ "'."
