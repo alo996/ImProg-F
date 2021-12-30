@@ -4,6 +4,29 @@ module Parser where
   import Declarations
   import Debug.Trace
 
+  {-
+  The idea of the parser is the following: for each rule in the non-left recursive grammar, create a function that implements that rule.
+  Each function returns our parametrized parser type (see Declarations file). Implementing a rule means the following: 
+  If there is some structure in the rule, check whether that structure occurs in the tokenized input stream. 
+  If the structure is violated, we return an error. If the structure is respected, evaluate the token stream as far as possible 
+  with the given function. 
+  The parser works with the principle of recursive descent: Each function calls some more special function 
+  (for example expr calls expr1, expr1 calls expr2 etc.), until we reach the 'base-cases', like atomicExpr.
+  The final return value is an abstract syntax tree, which we will work with in the upcoming steps.
+  -}
+
+
+  {-
+  The most general function in our parser is program. It works as follows:
+  The first token has to be a definition, which has to start with a variable according to our grammar. 
+  That means it starts with a NameToken. So if we detect a NameToken, we apply the function def on the tokenstream. 
+  After the definition function did its job (we do not need to care about its implementation here and can just assume it returns a definition), 
+  we must find a semicolon, otherwise this wouldn't be a valid definition. 
+  So we use cases to deal with this fact: 
+    - If we detect a semicolon, then we call prog recursively, as we can expect more definitions and semicolons according to the grammar.
+    - If we don't find a semicolon but anything else, then there must be something wrong and we return an error.
+    - If we don't detect any further tokens, we are at the end of the program and we return an error as we need this f*cking semicolon. 
+  -}
   program :: Parser Prog
   program d@((NameToken _, _) : ts) = do
     (d, ts1) <- def d
