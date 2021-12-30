@@ -35,7 +35,7 @@ typ _             = -1
 
 
 reset :: State -> State
-reset s@State {pc = pc} = s {pc = pc + 1}
+reset s@State{pc = pc} = s {pc = pc + 1}
 
 
 --compileProgram :: [Definition] -> State
