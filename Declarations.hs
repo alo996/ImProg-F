@@ -1,6 +1,7 @@
 -- This module contains all necessary types, aliases and type class instantiations.
 module Declarations where 
 
+
     -- LEXICAL ANALYSIS
 
     {-
@@ -11,7 +12,7 @@ module Declarations where
         = BooleanToken BoolF 
         | KeywordToken Keyword 
         | NameToken String 
-        | NumberToken Int 
+        | NumberToken Int
 
     
     {-
@@ -36,7 +37,8 @@ module Declarations where
         | RBracket 
         | Semicolon 
         | Times 
-        | Then               
+        | Then 
+        deriving Eq              
 
     -- BoolF adresses the fact that boolean values in F are lowercase.
     newtype BoolF = BoolF Bool
@@ -51,6 +53,7 @@ module Declarations where
     instance Show BoolF where
         show (BoolF True)  = "true"
         show (BoolF False) = "false"
+
 
     instance Show Keyword where
         show And       = "&"
@@ -83,19 +86,11 @@ module Declarations where
     e.g. "expr8 $ tokenize "y * 8; f x = 3;" --> Right (AtomicExpr (Var "y"),[(*,1),(8,1),(;,1),("f",1),("x",1),(=,1),(3,1),(;,1)]))
     -}
     type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
-
-    -- A program is just a list of definitions.
-    newtype Prog = 
-        Prog [Def] 
-        deriving Show
     
     -- A definition is just a list of expressions and one more expression.
-    data Def = 
-        Def [Expr] Expr 
+    data Def 
+        = Def [Expr] Expr 
         deriving Show
-
-    -- LocalDefs are just a list of local definitions.
-    type LocalDefs = [LocalDef]
 
     -- A local definition consists of two expressions.
     data LocalDef 
@@ -114,7 +109,7 @@ module Declarations where
         | LogicalAnd Expr Expr
         | LogicalOr Expr Expr
         | LogicalNot Expr
-        | LetIn LocalDefs Expr
+        | LetIn [LocalDef] Expr
         | IfThenElse Expr Expr Expr
         | AtomicExpr AtomicExpr
         deriving Show
@@ -128,6 +123,7 @@ module Declarations where
         deriving Show
 
     type Var = String
+
 
     -- F-CODE DEVELOPMENT
 
