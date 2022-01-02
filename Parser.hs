@@ -17,10 +17,7 @@ module Parser where
   That means it starts with a NameToken. So if we detect a NameToken, we apply the function def on the tokenstream. 
   After the definition function did its job (we do not need to care about its implementation here and can just assume it returns a definition), 
   we must find a semicolon, otherwise this wouldn't be a valid definition. 
-  So we use cases to deal with this fact: 
-    - If we detect a semicolon, then we call prog recursively, as we can expect more definitions and semicolons according to the grammar.
-    - If we don't find a semicolon but anything else, then there must be something wrong and we return an error.
-    - If we don't detect any further tokens, we are at the end of the program and we return an error as we need this f*cking semicolon. 
+  So we call the helper function match, which is defined and explained at the end of the module to deal with this fact.
   -}
   program :: Parser [Def]
   program [] = return ([], [])
@@ -28,14 +25,20 @@ module Parser where
     (d, ts1) <- def ts
     match (KeywordToken Semicolon) ts1 >>= \ (_, ts2) -> program ts2 >>= \ (ds, ts3) -> return (d : ds, ts3)
 
-  def :: Parser Def
-  def ts = do
-    (e, ts1) <- variable ts
-    case ts1 of
-      d@((NameToken _, _) : ts2)     -> def d >>= \ (Def es e1, ts3) -> return (Def (e : es) e1, ts3)
-      (KeywordToken Assign, _) : ts2 -> expr ts2 >>= \ (e1, ts3) -> return (Def [e] e1, ts3)
-      (token , line) : _             -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' or expression expected but found '" ++ show token ++ "'."
-      []                             -> Left "Syntax error at end of program: Keyword '=' or expression expected."
+  {-
+  Let's see how def works. The corresponding rule in the grammar is 'Variable {Variable} "=" Expression'.
+  So a valid definition consists of at least one variable, the '=' symbol and one expression. 
+  We again assume that we have two functions, variable and expr, that correctly parse variables and expressions, 
+  without knowing their concrete implementations at the moment.
+  -}
+  def :: Parser Def -- the return value is Either String (Def, [(Token, Int)])
+  def ts = do -- as we have to do some calculations in the Either monad, we directly jump into a do block
+    (e, ts1) <- variable ts -- as our parser only looks ahead one symbol, we apply the function variable on the tokenstream ts. It returns the tuple (e, ts1), with e being the parsed expression (a variable) and ts1 the remaining tokenstream.
+    case ts1 of -- We have to check what the first symbol of ts1 is to continue with the correct calculation
+      d@((NameToken _, _) : ts2)     -> def d >>= \ (Def es e1, ts3) -> return (Def (e : es) e1, ts3) -- we found a NameToken at the beginning of ts1. That means we find at least one more variable, on the left hand side of '=' and call def recursively. At the end we return (Def (e : es) e1, ts3), where we concatenate all variables that we found with (e : es).
+      (KeywordToken Assign, _) : ts2 -> expr ts2 >>= \ (e1, ts3) -> return (Def [e] e1, ts3) -- We found the Keyword '='. That means we call expr on the remaining tokenstream, as our rule states that we need to find exactly one more expression.  
+      (token , line) : _             -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' or expression expected but found '" ++ show token ++ "'." -- We neither found a NameToken nor the Keyword '='. That means there is something wrong with the input and we tell the user what we would have expexcted instead.
+      []                             -> Left "Syntax error at end of program: Keyword '=' or expression expected." -- The tokenstream has suddenly ended. This is also incorrect.
     
   localDefs :: Parser [LocalDef]
   localDefs ts = do
@@ -55,9 +58,13 @@ module Parser where
     match (KeywordToken In) ts1 >>= \ (_, ts2) -> expr ts2 >>= \ (e1, ts3) -> return (LetIn e e1, ts3)
   expr ((KeywordToken If, _) : ts)  = do
     (e, ts1) <- expr ts 
-    match (KeywordToken Then) ts1 >>= \ (_, ts2) -> expr ts2 >>= \ (e1, ts3) -> match (KeywordToken Else) ts3 >>= \ (_, ts4) -> expr ts4 >>= \ (e2, ts5) -> return (IfThenElse e e1 e2, ts5)
+    (_ , ts2) <- match (KeywordToken Then) ts1
+    (e1, ts3) <- expr ts2
+    (_, ts4) <- match (KeywordToken Else) ts3
+    (e2, ts5) <- expr ts4
+    return (IfThenElse e e1 e2, ts5)
   expr ts                           = expr1 ts
-
+  
   expr1 ts = do
     (e, ts1) <- expr2 ts
     case ts1 of
@@ -123,13 +130,13 @@ module Parser where
 
   {-
   match is a helper function suggested by Zhu as we often encounter the following scenario:
-  We want to do further calculations, but only if we detect an expexted keyword at the beginning of our remaining tokenstream. 
+  We want to do further calculations, but only if we detect an expected keyword at the beginning of our remaining tokenstream. 
   If we detect anything else, or the input stream has ended, we want to return two standardized error messages.
     -}
   match :: Token -> Parser ()  
   -- match :: Token -> [(Token, Int)] -> Either String ((), [(Token, Int)]) is identical
   match (KeywordToken key1) ((KeywordToken key2, line) : ts)
     | key1 == key2 = return ((), ts) -- If the tokenstream begins with the expected keyword, we return the Right value to do further calculations.
-    | otherwise    = Left $ "Syntax error in line " ++ show line ++ ": Keyword " ++ show (KeywordToken key1) ++ " expected but found '" ++ show (KeywordToken key2) ++ "'."
+    | otherwise    = Left $ "Syntax error in line " ++ show line ++ ": Keyword '" ++ show (KeywordToken key1) ++ "' expected but found '" ++ show (KeywordToken key2) ++ "'."
   match t1 ((t2 , line) : _) = Left $ "Syntax error in line " ++ show line ++ ": Keyword " ++ show t1 ++ " expected but found '" ++ show t2 ++ "'."
-  match t1 []                = Left $ "Syntax error at end of program: Keyword " ++ show t1 ++ " expected."
+  match t1 []                = Left $ "Syntax error at end of program: Keyword '" ++ show t1 ++ "' expected."
