@@ -1,9 +1,6 @@
 -- This module contains all necessary types, aliases and type class instantiations.
 module Declarations where 
-
-
     -- LEXICAL ANALYSIS
-
     {-
     A token (or symbol) is a sequence of characters with some inherent structure 
     (e.g. a reserved F-keyword, a name, a multi-character number).
@@ -43,6 +40,16 @@ module Declarations where
     -- BoolF adresses the fact that boolean values in F are lowercase.
     newtype BoolF = BoolF Bool
 
+    {-
+    We may need notions of (In-) equality for the token type.
+        instance Eq Token where
+        (==) (BooleanToken (BoolF bool1)) (BooleanToken (BoolF bool2)) = bool1 == bool2
+        (==) (KeywordToken key1) (KeywordToken key2)                   = key1 == key2
+        (==) (NameToken name1) (NameToken name2)                       = name1 == name2
+        (==) (NumberToken num1) (NumberToken num2)                     = num1 == num2
+        (==) _ _                                                       = False
+    -}
+            
     -- We need customized representations of our tokens, depending on their type.
     instance Show Token where
         show (BooleanToken bool)    = show bool
@@ -53,7 +60,6 @@ module Declarations where
     instance Show BoolF where
         show (BoolF True)  = "true"
         show (BoolF False) = "false"
-
 
     instance Show Keyword where
         show And       = "&"
@@ -75,9 +81,7 @@ module Declarations where
         show Times     = "*"
         show Then      = "then" 
 
-
     -- SYNTACTICAL ANALYSIS
-
     {-
     A parser is a parametrized function, that takes a list of tuples. 
     Each tuple contains a token and its line in the source code for error-handling purposes (e.g. [(NameToken f, 1), (NameToken x, 1)]).
@@ -124,9 +128,7 @@ module Declarations where
 
     type Var = String
 
-
     -- F-CODE DEVELOPMENT
-
     {-
     We have four kinds of stores to deal with: code (for instructions), stack (for references), 
     heap (for applications) and global (for definitions of non-local functions).
@@ -165,18 +167,14 @@ module Declarations where
         | Halt 
         deriving Show
 
-    {-
-    A heap is a list of heap cells.
-    -}
+    -- A heap is a list of heap cells.
     data HeapCell 
         = APP Int Int 
         | VALNum Int Int
         | VALBool Int Bool
         deriving (Show, Eq)
 
-    {-
-    A stack is a list of stack cells.
-    -}
+    -- A stack is a list of stack cells.
     newtype StackCell 
         = StackCell Int 
         deriving (Show, Eq)
