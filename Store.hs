@@ -3,7 +3,7 @@ module Store where
 
     -- create empty store
     emptyCode, emptyStack, emptyHeap, emptyGlobalEnv :: Store a
-    emptyCode      = Code [] 
+    emptyCode      = Code []
     emptyStack     = Stack []
     emptyHeap      = Heap []
     emptyGlobalEnv = GlobalEnv []
@@ -21,7 +21,7 @@ module Store where
     pop (Stack (x : xs))     = return x
     pop (Heap (x : xs))      = return x
     pop (GlobalEnv (x : xs)) = return x
-    pop _                    = Nothing 
+    pop _                    = Nothing
 
     -- return depth of store
     depth :: Store a -> Int
@@ -36,6 +36,11 @@ module Store where
     access s@(Stack scells) int     = if int < depth s then Just (scells !! int) else Nothing
     access h@(Heap hcells) int      = if int < depth h then Just (hcells !! int) else Nothing
     access g@(GlobalEnv gcells) int = if int < depth g then Just (gcells !! int) else Nothing
+
+    assignStackCellAdr :: Store StackCell -> Int -> Int -> Maybe Store StackCell -- Fehler beheben..
+    assignStackCellAdr s@(Stack scells) int adr    = if int < depth s
+        then Just Stack (map (\x -> if elemIndex x == int then StackCell adr else x) scells)
+        else Nothing
 
     -- reverse store
     reverseStore :: Store a -> Maybe (Store a)

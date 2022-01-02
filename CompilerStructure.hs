@@ -6,6 +6,7 @@ import Data.List
 import Declarations
 import Store
 
+
 address :: Store GlobalCell -> String -> Maybe Int
 address (GlobalEnv gcells) f = address' gcells 0 f where
     address' (x : xs) acc f = case x of
@@ -33,9 +34,46 @@ typ (VALNum _ _)  = 0
 typ (VALBool _ _) = 1
 typ _             = -1
 
+-- error state einführen, der in Loop abgefangen wird
+
+-- let beginningState = State 0 emptyCode emptyStack emptyHeap emptyGlobalEnv
 
 reset :: State -> State
-reset s@State{pc = pc} = s {pc = pc + 1}
+reset s@State{pc = pc} = s{pc = -1}
+
+pushFun :: State -> String -> State
+pushFun s@State{pc = pc, stack = stack, global = global} f = do
+    funAdr <- address global f
+    newStack <- assignStackCellAdr stack pc funAdr -- TODO: error-state kreieren, wenn nothing zurückkommt
+    if isNothing newStack then
+        s -- errorstate
+    else
+        s{pc = pc+1, stack = newStack}
+
+
+pushValNum :: State -> Int -> State
+pushValNum s@State{pc = pc, stack = stack, heap = heap} val = do
+    let heapadr@(adr, newheap) = newVALNum heap val
+    newStack <- assignStackCellAdr stack pc heapadr
+    if isNothing newStack then
+        s -- errorstate
+    else
+        s{pc = pc+1, heap = newheap, stack = newStack}
+
+
+pushValNum :: State -> Bool -> State
+pushValNum s@State{pc = pc, stack = stack, heap = heap} val = do
+    let heapadr@(adr, newheap) = newVALBool heap val
+    newStack <- assignStackCellAdr stack pc heapadr
+    if isNothing newStack then
+        s -- errorstate
+    else
+        s{pc = pc+1, heap = newheap, stack = newStack}
+
+
+pushParam :: State -> Int -> State 
+-- ...
+
 
 
 --compileProgram :: [Definition] -> State
