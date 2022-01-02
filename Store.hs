@@ -3,7 +3,7 @@ module Store where
 
     -- create empty store
     emptyCode, emptyStack, emptyHeap, emptyGlobalEnv :: Store a
-    emptyCode      = Code [] 
+    emptyCode      = Code []
     emptyStack     = Stack []
     emptyHeap      = Heap []
     emptyGlobalEnv = GlobalEnv []
@@ -21,7 +21,7 @@ module Store where
     pop (Stack (x : xs))     = return x
     pop (Heap (x : xs))      = return x
     pop (GlobalEnv (x : xs)) = return x
-    pop _                    = Nothing 
+    pop _                    = Nothing
 
     -- return depth of store
     depth :: Store a -> Int
@@ -44,6 +44,9 @@ module Store where
     reverseStore (Heap hcells)      = Just $ Heap (reverse hcells)
     reverseStore (GlobalEnv gcells) = Just $ GlobalEnv (reverse gcells)
 
-
-
-
+    -- save element at n-th position in a store
+    save :: Store a -> a -> Int -> Store a
+    save (Code ccells) ccell pos      = Code (take (pos - 1) ccells ++ [ccell] ++ drop pos ccells)
+    save (Stack scells) scell pos     = Stack (take (pos - 1) scells ++ [scell] ++ drop pos scells)
+    save (Heap hcells) hcell pos      = Heap (take (pos - 1) hcells ++ [hcell] ++ drop pos hcells)
+    save (GlobalEnv gcells) gcell pos = Stack (take (pos - 1) gcells ++ [gcell] ++ drop pos gcells)
