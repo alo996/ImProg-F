@@ -147,6 +147,7 @@ module Declarations where
     data State 
         = State {
         pc :: Int,
+        sp :: Int,
         code :: Store Instruction,
         stack :: Store StackCell,
         heap :: Store HeapCell,
