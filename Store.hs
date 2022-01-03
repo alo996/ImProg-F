@@ -43,13 +43,13 @@ module Store where
         else Nothing
 
     -- reverse store
-    reverseStore :: Store a -> Maybe (Store a)
-    reverseStore (Code ccells)      = Just $ Code (reverse ccells)
-    reverseStore (Stack scells)     = Just $ Stack (reverse scells)
-    reverseStore (Heap hcells)      = Just $ Heap (reverse hcells)
-    reverseStore (GlobalEnv gcells) = Just $ GlobalEnv (reverse gcells)
+    reverseStore :: Store a -> Store a
+    reverseStore (Code ccells)      = Code (reverse ccells)
+    reverseStore (Stack scells)     = Stack (reverse scells)
+    reverseStore (Heap hcells)      = Heap (reverse hcells)
+    reverseStore (GlobalEnv gcells) = GlobalEnv (reverse gcells)
 
-    -- save element at n-th position in a store
+-- overwrite n-th element in a store
     save :: Store a -> a -> Int -> Store a
     save (Code ccells) ccell pos      = Code (take (pos - 1) ccells ++ [ccell] ++ drop pos ccells)
     save (Stack scells) scell pos     = Stack (take (pos - 1) scells ++ [scell] ++ drop pos scells)
