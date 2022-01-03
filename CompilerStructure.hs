@@ -8,32 +8,30 @@ import Store
 import Declarations (State(State))
 
 
-address :: Store GlobalCell -> String -> Maybe Int
+address :: Store GlobalCell -> String -> Either String Int
 address (GlobalEnv gcells) f = address' gcells 0 f where
     address' (x : xs) acc f = case x of
-        DEF f _ _ -> acc
+        DEF f _ _ -> return acc
         _         -> address' xs (acc + 1) f
-    address' [] _ _         = -1 -- not nice
-address _ _                 = -1 -- not nice
+    address' [] _ _         = Left $ "Compile error: Global environment does not contain definition of function '" ++ show f ++ "'."
+address _ _                 = Left "Function 'address' not called on global environment."
 
-add2arg :: Store HeapCell -> Int -> Maybe Int
-add2arg (Heap hcells) addr = let APP addr1 addr2 = hcells !! addr in return addr2 -- unsafe
-add2arg _ _                = Nothing
+add2arg :: Store HeapCell -> Int -> Either String Int
+add2arg h@(Heap hcells) addr = if addr < depth h then let APP addr1 addr2 = hcells !! addr in return addr2 else Left $ "Compile error: Heap does not contain cell at address " ++ show addr ++ "'."
+add2arg _ _                = Left "Function 'add2arg' not called on heap."
 
-newAPP :: Store HeapCell -> Int -> Int -> Maybe (Int, Store HeapCell)
-newAPP h@(Heap hcells) n m = return (depth h, push h (APP n m))
-newAPP _ _ _               = Nothing
-
-newVALNum :: Store HeapCell -> Int -> (Int, Store HeapCell)
-newVALNum heap num = (depth heap, push heap (VALNum 0 num))
-
-newVALBool :: Store HeapCell -> Bool -> (Int, Store HeapCell)
-newVALBool heap bool = (depth heap, push heap (VALBool 1 bool))
+new :: Store HeapCell -> Int -> Int -> Int -> (Int, Store HeapCell)
+new heap typ a b 
+    | typ == 0  = (depth heap, push heap (APP a b))
+    | typ == 1  = (depth heap, push heap (VALNum 1 b))
+    | otherwise = case b of
+        0 -> (depth heap, push heap (VALBool 2 False))
+        _ -> (depth heap, push heap (VALBool 2 True))
 
 typ :: HeapCell -> Int
-typ (VALNum _ _)  = 0
-typ (VALBool _ _) = 1
-typ _             = -1 -- not nice
+typ (APP _ _)     = 0
+typ (VALNum _ _)  = 1
+typ (VALBool _ _) = 2
 
 -- error state einführen, der in Loop abgefangen wird
 
@@ -50,6 +48,8 @@ pushFun s@State{pc = pc, stack = stack, global = global} f = do
         s -- errorstate
     else
         s{pc = pc+1, stack = newStack}
+-- pushfun s name = s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell (fromRight (-1) (address (global s) name)))}
+
 
 
 pushValNum :: State -> Int -> State
@@ -70,6 +70,9 @@ pushValNum s@State{pc = pc, stack = stack, heap = heap} val = do
         s -- errorstate
     else
         s{pc = pc+1, heap = newheap, stack = newStack}
+
+-- pushval :: State -> Int -> Int -> Int -> State
+pushval s typ a b = s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell (fst (new (heap s) typ a b))), heap = snd (new (heap s) typ a b)}
 
 
 pushParam :: State -> Int -> State
