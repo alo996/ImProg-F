@@ -145,14 +145,17 @@ module Declarations where
     Do we also need a stack pointer? If so, why didn't Zhu include one?
     -} 
     data State 
-        = State {
-        pc :: Int,
-        sp :: Int,
-        code :: Store Instruction,
-        stack :: Store StackCell,
-        heap :: Store HeapCell,
-        global :: Store GlobalCell
-        } deriving Show
+        = State 
+        {
+            pc :: Int,
+            sp :: Int,
+            code :: Store Instruction,
+            stack :: Store StackCell,
+            heap :: Store HeapCell,
+            global :: Store GlobalCell
+        } 
+        | ErrorState String
+        deriving Show
 
     -- The instruction type has several constructors, each one indicating some kind of functionality.
     data Instruction 
@@ -183,5 +186,10 @@ module Declarations where
     its arity ("Stelligkeit") and the address, where the function body code can be found (code adress).
     -}
     data GlobalCell 
-        = DEF {id :: String, arity :: Int, caddr :: Int} 
+        = DEF 
+        {
+            id :: String, 
+            arity :: Int, 
+            caddr :: Int
+        } 
         deriving (Show, Eq)
