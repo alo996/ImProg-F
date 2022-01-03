@@ -154,9 +154,7 @@ module Declarations where
         global :: Store GlobalCell
         } deriving Show
 
-    {-
-    The instruction type has several constructors, each one indicating some kind of functionality.
-    -}
+    -- The instruction type has several constructors, each one indicating some kind of functionality.
     data Instruction 
         = Reset 
         | Pushfun String 
@@ -182,7 +180,7 @@ module Declarations where
 
     {-
     A global environment is a list of global cells. A global cell consists the identifier (id) of a function, 
-    its arity ("Stelligkeit") and the adress, where the function body code can be found (code adress)
+    its arity ("Stelligkeit") and the address, where the function body code can be found (code adress).
     -}
     data GlobalCell 
         = DEF {id :: String, arity :: Int, caddr :: Int} 

@@ -32,15 +32,10 @@ module Store where
 
     -- access n-th element in store
     access :: Store a -> Int -> Maybe a
-    access c@(Code ccells) int      = if int < depth c then Just (ccells !! int) else Nothing
-    access s@(Stack scells) int     = if int < depth s then Just (scells !! int) else Nothing
-    access h@(Heap hcells) int      = if int < depth h then Just (hcells !! int) else Nothing
-    access g@(GlobalEnv gcells) int = if int < depth g then Just (gcells !! int) else Nothing
-
-    assignStackCellAdr :: Store StackCell -> Int -> Int -> Maybe Store StackCell -- Fehler beheben..
-    assignStackCellAdr s@(Stack scells) int adr    = if int < depth s
-        then Just Stack (map (\x -> if elemIndex x == int then StackCell adr else x) scells)
-        else Nothing
+    access c@(Code ccells) pos      = if pos < depth c then Just (ccells !! pos) else Nothing
+    access s@(Stack scells) pos     = if pos < depth s then Just (scells !! pos) else Nothing
+    access h@(Heap hcells) pos      = if pos < depth h then Just (hcells !! pos) else Nothing
+    access g@(GlobalEnv gcells) pos = if pos < depth g then Just (gcells !! pos) else Nothing
 
     -- reverse store
     reverseStore :: Store a -> Store a
@@ -49,7 +44,7 @@ module Store where
     reverseStore (Heap hcells)      = Heap (reverse hcells)
     reverseStore (GlobalEnv gcells) = GlobalEnv (reverse gcells)
 
--- overwrite n-th element in a store
+    -- overwrite n-th element in a store
     save :: Store a -> a -> Int -> Store a
     save (Code ccells) ccell pos      = Code (take (pos - 1) ccells ++ [ccell] ++ drop pos ccells)
     save (Stack scells) scell pos     = Stack (take (pos - 1) scells ++ [scell] ++ drop pos scells)
