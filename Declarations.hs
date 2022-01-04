@@ -152,7 +152,7 @@ module Declarations where
             code :: Store Instruction,
             stack :: Store StackCell,
             heap :: Store HeapCell,
-            global :: Store GlobalCell
+            global :: Store HeapCell
         } 
         | ErrorState String
         deriving Show
@@ -169,27 +169,22 @@ module Declarations where
         | Halt 
         deriving Show
 
-    -- A heap is a list of heap cells.
+    {-A heap is a list of heap cells. 
+    As the global environment is not changed during runtime, it can be stored at one end of the data store consisting of stack, heap and global environment after compiling.
+    -}
     data HeapCell 
         = APP Int Int 
         | VALNum Int Int
         | VALBool Int Bool
+        | DEF 
+        {
+            id :: String, 
+            arity :: Int, 
+            caddr :: Int
+        }
         deriving (Show, Eq)
 
     -- A stack is a list of stack cells.
     newtype StackCell 
         = StackCell Int 
-        deriving (Show, Eq)
-
-    {-
-    A global environment is a list of global cells. A global cell consists the identifier (id) of a function, 
-    its arity ("Stelligkeit") and the address, where the function body code can be found (code adress).
-    -}
-    data GlobalCell 
-        = DEF 
-        {
-            id :: String, 
-            arity :: Int, 
-            caddr :: Int
-        } 
         deriving (Show, Eq)
