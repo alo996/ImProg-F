@@ -32,10 +32,10 @@ module Store where
 
     -- access n-th element in store
     access :: Store a -> Int -> Maybe a
-    access c@(Code ccells) pos      = if pos < depth c then Just (ccells !! pos) else Nothing
-    access s@(Stack scells) pos     = if pos < depth s then Just (scells !! pos) else Nothing
-    access h@(Heap hcells) pos      = if pos < depth h then Just (hcells !! pos) else Nothing
-    access g@(GlobalEnv gcells) pos = if pos < depth g then Just (gcells !! pos) else Nothing
+    access c@(Code ccells) pos      = if (pos < depth c) && (pos >= 0) then Just (ccells !! pos) else Nothing
+    access s@(Stack scells) pos     = if (pos < depth s) && (pos >= 0) then Just (scells !! pos) else Nothing
+    access h@(Heap hcells) pos      = if (pos < depth h) && (pos >= 0) then Just (hcells !! pos) else Nothing
+    access g@(GlobalEnv gcells) pos = if (pos < depth g) && (pos >= 0) then Just (gcells !! pos) else Nothing
 
     -- reverse store
     reverseStore :: Store a -> Store a
@@ -45,8 +45,8 @@ module Store where
     reverseStore (GlobalEnv gcells) = GlobalEnv (reverse gcells)
 
     -- overwrite n-th element in a store
-    save :: Store a -> a -> Int -> Store a
-    save (Code ccells) ccell pos      = Code (take (pos - 1) ccells ++ [ccell] ++ drop pos ccells)
-    save (Stack scells) scell pos     = Stack (take (pos - 1) scells ++ [scell] ++ drop pos scells)
-    save (Heap hcells) hcell pos      = Heap (take (pos - 1) hcells ++ [hcell] ++ drop pos hcells)
-    save (GlobalEnv gcells) gcell pos = Stack (take (pos - 1) gcells ++ [gcell] ++ drop pos gcells)
+    save :: Store a -> a -> Int -> Maybe (Store a)
+    save c@(Code ccells) ccell pos      = if (pos <= depth c) && (pos >= 0) then Just (Code (take (pos - 1) ccells ++ [ccell] ++ drop pos ccells)) else Nothing
+    save s@(Stack scells) scell pos     = if (pos <= depth s) && (pos >= 0) then Just (Stack (take (pos - 1) scells ++ [scell] ++ drop pos scells)) else Nothing
+    save h@(Heap hcells) hcell pos      = if (pos <= depth h) && (pos >= 0) then Just (Heap (take (pos - 1) hcells ++ [hcell] ++ drop pos hcells)) else Nothing
+    save g@(GlobalEnv hcells) hcell pos = if (pos <= depth g) && (pos >= 0) then Just (GlobalEnv (take (pos - 1) hcells ++ [hcell] ++ drop pos hcells)) else Nothing
