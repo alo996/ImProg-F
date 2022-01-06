@@ -35,8 +35,8 @@ module Parser where
   def ts = do -- as we have to do some calculations in the Either monad, we directly jump into a do block
     (e, ts1) <- variable ts -- as our parser only looks ahead one symbol, we apply the function variable on the tokenstream ts. It returns the tuple (e, ts1), with e being the parsed expression (a variable) and ts1 the remaining tokenstream.
     case ts1 of -- We have to check what the first symbol of ts1 is to continue with the correct calculation
-      d@((NameToken _, _) : ts2)     -> def d >>= \ (Def es e1, ts3) -> return (Def (e : es) e1, ts3) -- we found a NameToken at the beginning of ts1. That means we find at least one more variable, on the left hand side of '=' and call def recursively. At the end we return (Def (e : es) e1, ts3), where we concatenate all variables that we found with (e : es).
-      (KeywordToken Assign, _) : ts2 -> expr ts2 >>= \ (e1, ts3) -> return (Def [e] e1, ts3) -- We found the Keyword '='. That means we call expr on the remaining tokenstream, as our rule states that we need to find exactly one more expression.  
+      d@((NameToken _, _) : ts2)     -> restDef d >>= \ (es, ts3) -> match (KeywordToken Assign) ts3 >>= \ (_, ts4) -> expr ts4 >>= \ (e1, ts5) -> return (Def e es e1, ts5) 
+      (KeywordToken Assign, _) : ts2 -> expr ts2 >>= \ (e1, ts3) -> return (Def e [] e1, ts3) -- We found the Keyword '='. That means we call expr on the remaining tokenstream, as our rule states that we need to find exactly one more expression.  
       (token , line) : _             -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' or expression expected but found '" ++ show token ++ "'." -- We neither found a NameToken nor the Keyword '='. That means there is something wrong with the input and we tell the user what we would have expexcted instead.
       []                             -> Left "Syntax error at end of program: Keyword '=' or expression expected." -- The tokenstream has suddenly ended. This is also incorrect.
     
@@ -98,7 +98,7 @@ module Parser where
       (KeywordToken Divide, _) : ts2 -> expr8 ts2 >>= \ (e1, ts3) -> return (Div e e1, ts3)
       _                              -> restExpr7 ts1 >>= \ (es, ts3) -> return (foldl Mult e es, ts3)
 
-  expr8 ts = atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (foldl Func e es, ts2)
+  expr8 ts = atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (Func e es, ts2)
     
   atomicExpr n@((NameToken _, _) : _)          = variable n
   atomicExpr ((BooleanToken bool, _) : ts)     = return (AtomicExpr (LitBool bool), ts)
@@ -113,7 +113,11 @@ module Parser where
   variable ((token , line) : _)       = Left $ "Syntax error in line " ++ show line ++ ": Identifier expected but found '" ++ show token ++ "'."
   variable []                         = Left "Syntax error at end of program: Identifier expected."
 
-  restExpr5, restExpr7, restExpr8 :: Parser [Expr]
+  restDef, restExpr5, restExpr7, restExpr8 :: Parser [Expr]
+  restDef ts = case ts of
+    (NameToken _, _) : _ -> variable ts >>= \ (e, ts1) -> restDef ts1 >>= \ (es, ts2) -> return (e : es, ts2)
+    _                    -> return ([], ts)
+
   restExpr5 ((KeywordToken Plus, _) : ts)  = expr6 ts >>= \ (e, ts1) -> restExpr5 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
   restExpr5 ((KeywordToken Minus, _) : ts) = expr6 ts >>= \ (e, ts1) -> return ([UnaryMin e], ts1)
   restExpr5 ts                             = return ([], ts)

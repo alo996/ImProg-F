@@ -91,9 +91,14 @@ module Declarations where
     -}
     type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
     
-    -- A definition is just a list of expressions and one more expression.
+    {-
+    NEW: A definition consists of one expression (the function name), a list of expressions (the function's formal arguments) and the defining expression on the right hand side of the '=',
+    e.g.  f    x1 x2 x3 = x1 + x2
+         Expr   [Expr]     Expr
+    -}
+    
     data Def 
-        = Def [Expr] Expr 
+        = Def Expr [Expr] Expr 
         deriving Show
 
     -- A local definition consists of two expressions.
@@ -104,7 +109,7 @@ module Declarations where
     -- A lot of stuff can be an expression, for example '2 + 2'. All possible combinations are summed up in the Expr type.
     data Expr
         = Add Expr Expr
-        | Func Expr Expr -- Func means function application
+        | Func Expr [Expr] -- NEW: now list of Expr 
         | Mult Expr Expr
         | Div Expr Expr 
         | UnaryMin Expr
@@ -117,6 +122,35 @@ module Declarations where
         | IfThenElse Expr Expr Expr
         | AtomicExpr AtomicExpr
         deriving Show
+
+    instance Eq LocalDef where
+        (==) (LocalDef e1 e2) (LocalDef e3 e4) = e1 == e3 && e2 == e4
+
+    instance Eq Expr where
+        (==) (Add e1 e2) (Add e3 e4)                     = e1 == e3 && e2 == e4
+        (==) (Func e1 e2) (Func e3 e4)                   = e1 == e3 && e2 == e4
+        (==) (Mult e1 e2) (Mult e3 e4)                   = e1 == e3 && e2 == e4
+        (==) (Div e1 e2) (Div e3 e4)                     = e1 == e3 && e2 == e4
+        (==) (UnaryMin e1) (UnaryMin e2)                 = e1 == e2
+        (==) (Equal e1 e2) (Equal e3 e4)                 = e1 == e3 && e2 == e4
+        (==) (LessThan e1 e2) (LessThan e3 e4)           = e1 == e3 && e2 == e4
+        (==) (LogicalAnd e1 e2) (LogicalAnd e3 e4)       = e1 == e3 && e2 == e4
+        (==) (LogicalOr e1 e2) (LogicalOr e3 e4)         = e1 == e3 && e2 == e4
+        (==) (LogicalNot e1) (LogicalNot e2)             = e1 == e2
+        (==) (LetIn e1 e2) (LetIn e3 e4)                 = e1 == e3 && e2 == e4
+        (==) (IfThenElse e1 e2 e3) (IfThenElse e4 e5 e6) = e1 == e4 && e2 == e5 && e3 == e6
+        (==) (AtomicExpr a1) (AtomicExpr a2)             = a1 == a2
+        (==) _ _                                         = False
+
+    instance Eq AtomicExpr where
+        (==) (Var s1) (Var s2)         = s1 == s2
+        (==) (LitBool b1) (LitBool b2) = b1 == b2
+        (==) (LitNum n1) (LitNum n2)   = n1 == n2
+        (==) (Expr e1) (Expr e2)       = e1 == e2
+        (==) _ _                       = False 
+
+    instance Eq BoolF where
+        (==) (BoolF b1) (BoolF b2) = b1 == b2
 
     -- An atomic expression is the most basic kind of expression. It is either a name, a numeral or a boolean.
     data AtomicExpr 
@@ -162,11 +196,14 @@ module Declarations where
         = Reset 
         | Pushfun String 
         | Pushval String Int 
-        | Pushparam Int 
+        | Pushparam Int
+        | Pushpre String 
         | Makeapp 
         | Slide Int 
         | Reduce 
+        | Return
         | Halt 
+        | Error
         deriving Show
 
     {-A heap is a list of heap cells. 
