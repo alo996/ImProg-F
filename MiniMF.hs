@@ -4,7 +4,6 @@ module MiniMF where
     import Store
     import Data.Either
     import Data.Maybe
-    import Distribution.Types.Lens (_Impl)
     
     address :: Store HeapCell -> String -> Either String Int
     address (GlobalEnv gcells) f = address' gcells 0 f where
@@ -51,14 +50,18 @@ module MiniMF where
 
     pushparam :: State -> Int -> State
     pushparam s n = case add2arg (heap s) ((sp s + 1) - n - 2) of
-        Right addr -> s {pc = (pc s) + 1, sp = (sp s) + 1, stack = save (stack s) (StackCell addr) (sp s)}
+        Right addr -> case save (stack s) (StackCell addr) (sp s) of
+            Just stack -> s {pc = pc s + 1, sp = sp s + 1, stack = stack}
+            _          -> ErrorState "error"
         Left error -> ErrorState $ show error
 
     makeapp :: State -> State
     makeapp s = case access (stack s) (sp s) of
         Just (StackCell a) -> case access (stack s) (sp s - 1) of
             Just (StackCell b) -> case new (heap s) 0 a b of
-                Right (addr, heap) -> s {pc = pc s + 1, sp = sp s - 1, stack = save (stack s) (StackCell addr) (sp s - 1), heap = heap}
+                Right (addr, heap) -> case save (stack s) (StackCell addr) (sp s - 1) of
+                    Just stack -> s {pc = pc s + 1, sp = sp s - 1, stack = stack, heap = heap}
+                    _          -> ErrorState "error"
                 Left error         -> ErrorState $ show error
             _                   -> ErrorState "error"
         _                  -> ErrorState "error"
@@ -66,8 +69,11 @@ module MiniMF where
     slide :: State -> Int -> State
     slide s n = case access (stack s) (sp s - 1) of -- stack[T - 1] existiert
         Just t1 -> case access (stack s) (sp s) of -- stack[T] existiert
-            Just t2 -> let Stack cells = save (save (stack s) t1 (sp s - n - 1)) t2 (sp s - n) -- speichere den umsortierten stack in Stack cells 
-                            in s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n) cells)} -- initialisiere Rückgabezustand, wobei die letzten n elemente gelöscht werden
+            Just t2 -> case save (stack s) t1 (sp s - n - 1) of -- stack[T - 1] kann an stack[T - n - 1] gespeichert werden
+                Just stack_1 -> case save stack_1 t2 (sp s - n) of -- stack[T] kann an stack[T - n] gespeichert werden
+                    Just (Stack scells) -> s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n) scells)}
+                    _                   -> ErrorState "error"
+                _       -> ErrorState "error"
             _       -> ErrorState "error"
         _       -> ErrorState "error"
 
@@ -77,42 +83,33 @@ module MiniMF where
             Just elem -> case elem of
                 (APP addr1 addr2) -> s {pc = pc s - 1, sp = sp s + 1, stack = push (stack s) (StackCell addr1)}
                 (DEF f n addr1)   -> s {pc = addr1, sp = sp s + 1, stack = push (stack s) (StackCell (pc s))}
-                (VALNum typ val)  -> case access (stack s) (sp s - 1) of
+                _                 -> case access (stack s) (sp s - 1) of
                     Just (StackCell addr1) -> case access (stack s) (sp s) of
-                        Just scell -> let Stack cells = save (stack s) scell (sp s - 1)
-                                            in s {pc = addr1, sp = sp s - 1, stack = Stack (init cells)}
-                        _          -> ErrorState "error"                    
-                    _         -> ErrorState "error" 
-                (VALBool typ val) -> undefined
+                        Just scell -> case save (stack s) scell (sp s - 1) of
+                            Just (Stack scells) -> s {pc = addr1, sp = sp s - 1, stack = Stack (init scells)}
+                            _                   -> ErrorState "error"                    
+                        _          -> ErrorState "error"
+                    _                      -> ErrorState "error"     
             _         -> ErrorState "error"
         _         -> ErrorState "error"
 
-    
+    return' :: State -> State
+    return' s = case access (stack s) (sp s - 1) of
+        Just s1@(StackCell addr1) -> case access (stack s) (sp s) of
+            Just s2@(StackCell addr2) -> case save (stack s) s2 addr1 of
+                Just stack -> s {pc = addr1, sp = sp s - 1, stack = stack}
+                _          -> ErrorState "error" 
+            _                         -> ErrorState "error" 
+        _                         -> ErrorState "error"
 
-    {-
-    let beginningState = State 0 emptyCode emptyStack emptyHeap emptyGlobalEnv
-
-    return' :: State -> State -- access :: Stack Stackcell -> Int -> Maybe Stackcell
-    return' s = do
-        StackCell adr <- access (stack s) (sp s - 1)
-        if isNothing adrfromstack then 
-            ErrorState "fehler"
-        else -- save :: Store a -> a -> Int -> Store a
-            s {pc = adr, sp = (sp s) - 1, stack = save (stack s) (StackCell 1) (sp s)}
-
-
-    slide :: State -> Int -> State
-    slide s n = do
-    stackCellLast <- access (stack s) (sp s - 1)
-    stackCellAct <- access (stack s) (sp s)
-    let newStack = save (stack s) () (sp s - n - 1)
+    -- halt implementieren
+    -- let beginningState = State 0 emptyCode emptyStack emptyHeap emptyGlobalEnv
 
 
-    pushvalnum :: State -> Bool -> State
-    pushvalnum s val = let heapadr@(adr, newheap) = newVALNum (heap s) val in s {pc = pc s + 1, sp = sp s + 1, stack = save (stack s) (StackCell adr) (sp s), heap = newheap}
-    -- update pc, update sp, save adress of the newly generated HeapCell with its number variable in stack and update heap
+    -- run :: State -> State
+    -- page 71 hauptzyklus
 
-    pushvalbool :: State -> Bool -> State
-    pushvalnum s val = let heapadr@(adr, newheap) = newVALBool (heap s) val in s {pc = pc s + 1, sp = sp s + 1, stack = save (stack s) (StackCell adr) (sp s), heap = newheap}
-    -- update pc, update sp, save adress of the newly generated HeapCell with its boolean variable in stack and update heap
-    -}
+    -- executeInstruction
+
+
+

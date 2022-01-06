@@ -109,7 +109,7 @@ module Declarations where
     -- A lot of stuff can be an expression, for example '2 + 2'. All possible combinations are summed up in the Expr type.
     data Expr
         = Add Expr Expr
-        | Func Expr [Expr] -- NEW: now list of Expr 
+        | Func Expr Expr
         | Mult Expr Expr
         | Div Expr Expr 
         | UnaryMin Expr

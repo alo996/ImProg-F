@@ -98,7 +98,7 @@ module Parser where
       (KeywordToken Divide, _) : ts2 -> expr8 ts2 >>= \ (e1, ts3) -> return (Div e e1, ts3)
       _                              -> restExpr7 ts1 >>= \ (es, ts3) -> return (foldl Mult e es, ts3)
 
-  expr8 ts = atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (Func e es, ts2)
+  expr8 ts = atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (foldl Func e es, ts2)
     
   atomicExpr n@((NameToken _, _) : _)          = variable n
   atomicExpr ((BooleanToken bool, _) : ts)     = return (AtomicExpr (LitBool bool), ts)
