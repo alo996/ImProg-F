@@ -4,13 +4,13 @@ module Tokenizer where
     import Declarations
 
     -- tokenize receives user input and transforms it to a list of tuples, each containing a token and its respective line in the source code.
-    tokenize :: String -> [(Token, Int)]
-    tokenize ""      = error "Compile error: Can not compile empty program."
+    tokenize :: String -> Either String [(Token, Int)]
+    tokenize ""      = Left "Compile error: Can not compile empty program."
     tokenize program = tokenize' program [] 1
 
     -- tokenize' deals with spaces and tokenizes keywords and booleans.
-    tokenize' :: String -> [(Token, Int)] -> Int -> [(Token, Int)]
-    tokenize' [] tokenAcc lineAcc = reverse tokenAcc
+    tokenize' :: String -> [(Token, Int)] -> Int -> Either String [(Token, Int)]
+    tokenize' [] tokenAcc lineAcc = Right $ reverse tokenAcc
 
     -- Next character is a space.
     tokenize' (' ' : xs) tokenAcc lineAcc         = tokenize' xs tokenAcc lineAcc
@@ -57,22 +57,22 @@ module Tokenizer where
                     then if isDigit x
                         then tokenizeNumbers (x:xs) tokenAcc lineAcc ""
                         else tokenizeNames (x:xs) tokenAcc lineAcc ""
-                    else error $ "Syntax error in line " ++ show lineAcc ++ ": Illegal character '" ++ show x ++ "'."
+                    else Left $ "Syntax error in line " ++ show lineAcc ++ ": Illegal character '" ++ show x ++ "'."
 
     -- Tokenize integers or identifiers.
-    tokenizeNumbers, tokenizeNames :: String -> [(Token, Int)] -> Int -> String -> [(Token, Int)]
-    tokenizeNumbers [x] tokenAcc lineAcc number = reverse $ (NumberToken (read (number ++ [x]) :: Int), lineAcc) : tokenAcc
+    tokenizeNumbers, tokenizeNames :: String -> [(Token, Int)] -> Int -> String -> Either String [(Token, Int)]
+    tokenizeNumbers [x] tokenAcc lineAcc number = Right $ reverse $ (NumberToken (read (number ++ [x]) :: Int), lineAcc) : tokenAcc
     tokenizeNumbers (x : y : ys) tokenAcc lineAcc number 
         | isDigit y = tokenizeNumbers (y : ys) tokenAcc lineAcc (number ++ [x])
-        | isAlpha y = error $ "Syntax error in line " ++ show lineAcc ++ ": Identifiers can not begin with a digit."
+        | isAlpha y = Left $ "Syntax error in line " ++ show lineAcc ++ ": Identifiers can not begin with a digit."
         | otherwise = tokenize' (y : ys) ((NumberToken (read (number ++ [x]) :: Int), lineAcc) : tokenAcc) lineAcc
-    tokenizeNumbers _ _ _ _                     = undefined -- This case can never be reached.
+    tokenizeNumbers _ _ _ _                     = Left "Syntax error." -- This case can never be reached.
 
-    tokenizeNames [x] tokenAcc lineAcc name = reverse $ (NameToken $ name ++ [x], lineAcc) : tokenAcc
+    tokenizeNames [x] tokenAcc lineAcc name = Right $ reverse $ (NameToken $ name ++ [x], lineAcc) : tokenAcc
     tokenizeNames (x : y : ys) tokenAcc lineAcc name 
         | isAlphaNum y = tokenizeNames (y : ys) tokenAcc lineAcc (name ++ [x])
         | otherwise    = tokenize' (y : ys) ((NameToken $ name ++ [x], lineAcc) : tokenAcc) lineAcc
-    tokenizeNames _ _ _ _                   = undefined -- This case can never be reached.
+    tokenizeNames _ _ _ _                   = Left "Syntax error." -- This case can never be reached.
 
     -- Helper function validateChar checks whether a character either belongs to the set of reserved special characters of F or is a space.
     validateChar :: Char -> Bool
