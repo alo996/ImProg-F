@@ -40,68 +40,70 @@ module MiniMF where
     pushfun :: State -> String -> State
     pushfun s name = case address (global s) name of
         Right int  -> s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell int)}
-        Left error -> ErrorState $ show error
+        Left error -> ErrorState error
     -- update pc, update sp, save a new stack that now has the address of function 'name' in the global environment at position 'sp s'
 
     pushval :: State -> Int -> Int -> State
     pushval s typ field = case new (heap s) typ 0 field of
         Right (addr, heap) -> s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell addr), heap = heap}
-        Left error         -> ErrorState $ show error
+        Left error         -> ErrorState error
 
     pushparam :: State -> Int -> State
     pushparam s n = case add2arg (heap s) ((sp s + 1) - n - 2) of
         Right addr -> case save (stack s) (StackCell addr) (sp s) of
-            Just stack -> s {pc = pc s + 1, sp = sp s + 1, stack = stack}
-            _          -> ErrorState "error"
-        Left error -> ErrorState $ show error
+            Right stack -> s {pc = pc s + 1, sp = sp s + 1, stack = stack}
+            Left error  -> ErrorState error
+        Left error -> ErrorState error
 
     makeapp :: State -> State
     makeapp s = case access (stack s) (sp s) of
-        Just (StackCell a) -> case access (stack s) (sp s - 1) of
-            Just (StackCell b) -> case new (heap s) 0 a b of
+        Right (StackCell a) -> case access (stack s) (sp s - 1) of
+            Right (StackCell b) -> case new (heap s) 0 a b of
                 Right (addr, heap) -> case save (stack s) (StackCell addr) (sp s - 1) of
-                    Just stack -> s {pc = pc s + 1, sp = sp s - 1, stack = stack, heap = heap}
-                    _          -> ErrorState "error"
-                Left error         -> ErrorState $ show error
-            _                   -> ErrorState "error"
-        _                  -> ErrorState "error"
+                    Right stack -> s {pc = pc s + 1, sp = sp s - 1, stack = stack, heap = heap}
+                    Left error  -> ErrorState error
+                Left error         -> ErrorState error
+            Left error         -> ErrorState error
+        Left error         -> ErrorState error
     
     slide :: State -> Int -> State
     slide s n = case access (stack s) (sp s - 1) of -- stack[T - 1] existiert
-        Just t1 -> case access (stack s) (sp s) of -- stack[T] existiert
-            Just t2 -> case save (stack s) t1 (sp s - n - 1) of -- stack[T - 1] kann an stack[T - n - 1] gespeichert werden
-                Just stack_1 -> case save stack_1 t2 (sp s - n) of -- stack[T] kann an stack[T - n] gespeichert werden
-                    Just (Stack scells) -> s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n) scells)}
-                    _                   -> ErrorState "error"
-                _       -> ErrorState "error"
-            _       -> ErrorState "error"
-        _       -> ErrorState "error"
+        Right t1   -> case access (stack s) (sp s) of -- stack[T] existiert
+            Right t2  -> case save (stack s) t1 (sp s - n - 1) of -- stack[T - 1] kann an stack[T - n - 1] gespeichert werden
+                Right stack_1 -> case save stack_1 t2 (sp s - n) of -- stack[T] kann an stack[T - n] gespeichert werden
+                    Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n) scells)}
+                    Left error           -> ErrorState error
+                    _                    -> ErrorState "slide called on wrong store"
+                Left error    -> ErrorState error
+            Left error -> ErrorState error
+        Left error -> ErrorState error
 
     reduce :: State -> State
     reduce s = case access (stack s) (sp s) of 
-        Just (StackCell addr) -> case access (heap s) addr of
-            Just elem -> case elem of
+        Right (StackCell addr) -> case access (heap s) addr of
+            Right elem -> case elem of
                 (APP addr1 addr2) -> s {pc = pc s - 1, sp = sp s + 1, stack = push (stack s) (StackCell addr1)}
                 (DEF f n addr1)   -> s {pc = addr1, sp = sp s + 1, stack = push (stack s) (StackCell (pc s))}
                 _                 -> case access (stack s) (sp s - 1) of
-                    Just (StackCell addr1) -> case access (stack s) (sp s) of
-                        Just scell -> case save (stack s) scell (sp s - 1) of
-                            Just (Stack scells) -> s {pc = addr1, sp = sp s - 1, stack = Stack (init scells)}
-                            _                   -> ErrorState "error"                    
-                        _          -> ErrorState "error"
-                    _                      -> ErrorState "error"     
-            _         -> ErrorState "error"
-        _         -> ErrorState "error"
+                    Right (StackCell addr1) -> case access (stack s) (sp s) of
+                        Right scell -> case save (stack s) scell (sp s - 1) of
+                            Right (Stack scells) -> s {pc = addr1, sp = sp s - 1, stack = Stack (init scells)}
+                            Left error           -> ErrorState error
+                            _                    -> ErrorState "save called on wrong store"                
+                        Left error           -> ErrorState error
+                        _                    -> ErrorState "save called on wrong store"
+                    Left error           -> ErrorState error
+                    _                    -> ErrorState "save called on wrong store"
+        Left error           -> ErrorState error
 
     return' :: State -> State
     return' s = case access (stack s) (sp s - 1) of
-        Just s1@(StackCell addr1) -> case access (stack s) (sp s) of
-            Just s2@(StackCell addr2) -> case save (stack s) s2 addr1 of
-                Just stack -> s {pc = addr1, sp = sp s - 1, stack = stack}
-                _          -> ErrorState "error" 
-            _                         -> ErrorState "error" 
-        _                         -> ErrorState "error"
-
+        Right s1@(StackCell addr1) -> case access (stack s) (sp s) of
+            Right s2@(StackCell addr2) -> case save (stack s) s2 addr1 of
+                Right stack -> s {pc = addr1, sp = sp s - 1, stack = stack}
+                Left error           -> ErrorState error
+            Left error           -> ErrorState error 
+        Left error           -> ErrorState error
     -- halt implementieren
     -- let beginningState = State 0 emptyCode emptyStack emptyHeap emptyGlobalEnv
 
