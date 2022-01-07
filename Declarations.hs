@@ -203,7 +203,7 @@ module Declarations where
         | Reduce 
         | Return
         | Halt 
-        | Error
+        | Error String
         deriving Show
 
     {-A heap is a list of heap cells. 
