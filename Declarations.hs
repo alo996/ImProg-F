@@ -98,7 +98,7 @@ module Declarations where
     -}
     
     data Def 
-        = Def Expr [Expr] Expr 
+        = Def Expr [Expr] Expr  -- f x1 x2 x3 = x1
         deriving Show
 
     -- A local definition consists of two expressions.
@@ -143,9 +143,9 @@ module Declarations where
         (==) _ _                                         = False
 
     instance Eq AtomicExpr where
-        (==) (Var s1) (Var s2)         = s1 == s2
+        (==) (Var s1) (Var s2)         = s1 == s2 
         (==) (LitBool b1) (LitBool b2) = b1 == b2
-        (==) (LitNum n1) (LitNum n2)   = n1 == n2
+        (==) (LitNum n1) (LitNum n2)   = n1 == n2 -- LitNum 3 == Litnum 4 
         (==) (Expr e1) (Expr e2)       = e1 == e2
         (==) _ _                       = False 
 
@@ -170,8 +170,8 @@ module Declarations where
     data Store a 
         = Code [a] 
         | Stack [a]
-        | Heap [a] 
         | GlobalEnv [a] 
+        | Heap [a] 
         deriving (Show, Eq)
 
     {- 
@@ -185,8 +185,8 @@ module Declarations where
             sp :: Int,
             code :: Store Instruction,
             stack :: Store StackCell,
-            heap :: Store HeapCell,
-            global :: Store HeapCell
+            global :: Store HeapCell,
+            heap :: Store HeapCell
         } 
         | ErrorState String
         deriving Show
