@@ -5,15 +5,13 @@ module MiniMF where
     import Store
     import Data.Either
     import Data.Maybe
-=======
-
     import Compiler
     import Debug.Trace
 
     -- interpret recursively takes instruction in code at programm-counter and runs it with the given state
     interpret :: State -> State
-    interpret s@State{pc, code} = case trace ("interpret calls access with code = " ++ show code ++ " and pc = " ++ show pc) (access code pc) of
-        Right instruction -> case trace ("interpret calls run with instruction = " ++ show instruction) run instruction s of
+    interpret s@State{pc, sp, code = Code ccells, stack, heap} = case trace (show (ccells !! pc) ++ ", pc = " ++ show pc ++ ", sp = " ++ show sp ++ ", stack = " ++ show stack ++ ", heap = " ++ show heap) (access (Code ccells) pc) of
+        Right instruction -> case run instruction s of
             ErrorState error -> ErrorState error
             state            -> interpret state
         Left error        -> ErrorState error
@@ -80,23 +78,30 @@ module MiniMF where
     -- pushfun pushes/loads the address of a DEF-celll of a function on the stack
     pushfun :: State -> String -> State
     pushfun s name = case address (heap s) name of
-        Right int  -> s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell int)}
+        Right int  -> case save (stack s) (StackCell int) (sp s + 1) of
+            Right stack -> s {pc = pc s + 1, sp = sp s + 1, stack = trace ("pushfun saves stack = " ++ show stack) stack}
+            Left error  -> ErrorState error
         Left error -> ErrorState error
     -- update pc, update sp, save a new stack that now has the address of function 'name' in the global environment at position 'sp s'
 
     -- pushval loads the address of a VAL-cell on the stack
     pushval :: State -> Int -> Int -> State
     pushval s typ field = case new (heap s) typ 0 field of
-        Right (addr, heap) -> s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell addr), heap = heap}
+        Right (addr, heap) -> case save (stack s) (StackCell addr) (sp s + 1) of
+            Right stack -> s {pc = pc s + 1, sp = sp s + 1, stack = stack, heap = heap}
+            Left error  -> ErrorState error
         Left error         -> ErrorState error
 
     -- pushparam loads the value of an argument of a function on the stack
     pushparam :: State -> Int -> State
-    pushparam s n = case add2arg (heap s) ((sp s + 1) - n - 2) of
-        Right addr -> case save (stack s) (StackCell addr) (sp s) of
-            Right stack -> s {pc = pc s + 1, sp = sp s + 1, stack = stack}
-            Left error  -> ErrorState error
+    pushparam s n = case access (stack s) (sp s - n - 1) of
+        Right (StackCell addr) -> case add2arg (heap s) addr of
+            Right addr -> case save (stack s) (StackCell addr) (sp s + 1) of
+                Right stack -> s {pc = pc s + 1, sp = sp s + 1, stack = stack}
+                Left error  -> ErrorState error
+            Left error -> ErrorState error
         Left error -> ErrorState error
+        
 
     -- makeapp creates an APP-cell in the heap and loads its address on the stack
     makeapp :: State -> State
@@ -113,30 +118,32 @@ module MiniMF where
     -- slide deletes the stack cells two beneath the last two cells and replaces them by the last two cells ("abräumen")
     -- common function structure: pattern match result of function with case of to extract monad value and apply to next function
     slide :: State -> Int -> State
-    slide s n = case access (stack s) (sp s - 1) of -- stack[T - 1] exists
-        Right t1   -> case access (stack s) (sp s) of -- stack[T] exists
-            Right t2  -> case save (stack s) t1 (sp s - n - 1) of -- stack[T - 1] saved at stack[T - n - 1]
-                Right stack_1 -> case save stack_1 t2 (sp s - n) of -- stack[T] saved at stack[T - n]
-                    Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n) scells)}
+    slide s n = case access (stack s) (sp s - 1) of
+        Right scell_1 -> case save (stack s) scell_1 (sp s - n - 1) of
+            Right stack_1 -> case access stack_1 (sp s) of
+                Right scell_2 -> case save stack_1 scell_2 (sp s - n) of
+                    Right stack_2 -> s {pc = pc s + 1, sp = sp s - n, stack = stack_2}
                     Left error           -> ErrorState error
-                    _                    -> ErrorState "slide called on wrong store"
                 Left error    -> ErrorState error
             Left error -> ErrorState error
         Left error -> ErrorState error
 
     -- reduce reduces the imaginated "stack graph" and transforms its structure (eg. call, jump back after procedure)
     reduce :: State -> State
-    reduce s = case trace ("reduce calls access with store = " ++ show (stack s) ++ " and address = " ++ show (sp s)) access (stack s) (sp s) of
-        Right (StackCell addr) -> case trace ("reduce calls access with store = " ++ show (heap s) ++ " and address = " ++ show addr) access (heap s) addr of
-            Right elem -> case trace ("reduce: Right elem of = " ++ show elem) elem of
-                (APP addr1 addr2) -> s {pc = pc s - 1, sp = sp s + 1, stack = push (stack s) (StackCell addr1)}
-                (DEF f n addr1)   -> s {pc = addr1, sp = sp s + 1, stack = push (stack s) (StackCell (pc s))}
+    reduce s = case access (stack s) (sp s) of
+        Right (StackCell addr) -> case access (heap s) addr of
+            Right elem -> case elem of
+                (APP addr1 addr2) -> case save (stack s) (StackCell addr1) (sp s + 1) of
+                    Right stack -> s {pc = pc s - 1, sp = sp s + 1, stack = stack}
+                    Left error -> ErrorState error
+                (DEF f n addr)    -> case save (stack s) (StackCell (pc s)) (sp s + 1) of
+                    Right stack -> s {pc = addr, sp = sp s + 1, stack = stack}
+                    Left error  -> ErrorState error
                 _                 -> case access (stack s) (sp s - 1) of
-                    Right (StackCell addr1) -> case trace ("reduce calls access with store = " ++ show (stack s) ++ " and address = " ++ show (sp s)) access (stack s) (sp s) of
-                        Right scell -> case trace ("reduce calls save with store = " ++ show (stack s) ++ " and cell = " ++ show scell ++ " and index = " ++ show (sp s - 1)) save (stack s) scell (sp s - 1) of
-                            Right (Stack scells) -> s {pc = addr1, sp = sp s - 1, stack = Stack (init scells)}
+                    Right (StackCell addr1) -> case access (stack s) (sp s) of
+                        Right scell -> case save (stack s) scell (sp s - 1) of
+                            Right stack -> s {pc = addr1, sp = sp s - 1, stack = stack}
                             Left error           -> ErrorState error
-                            _                    -> ErrorState "save called on wrong store"
                         Left error           -> ErrorState error
                     Left error           -> ErrorState error
             Left error -> ErrorState error
@@ -145,8 +152,8 @@ module MiniMF where
     -- return jumps back to saved address (result and address saved!)
     return' :: State -> State
     return' s = case access (stack s) (sp s - 1) of
-        Right s1@(StackCell addr1) -> case access (stack s) (sp s) of
-            Right s2@(StackCell addr2) -> case save (stack s) s2 addr1 of
+        Right (StackCell addr1) -> case access (stack s) (sp s) of
+            Right scell -> case save (stack s) scell (sp s - 1) of
                 Right stack -> s {pc = addr1, sp = sp s - 1, stack = stack}
                 Left error           -> ErrorState error
             Left error           -> ErrorState error

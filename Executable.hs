@@ -28,4 +28,3 @@ module Executable where
                 Right ast  -> return $ show ast
                 Left error -> return error
             Left error -> return error
-        
