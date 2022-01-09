@@ -1,12 +1,38 @@
+{-# LANGUAGE NamedFieldPuns #-}
 module MiniMF where
     import Data.List
     import Declarations
     import Store
     import Data.Either
     import Data.Maybe
+    import Compiler
+    import Debug.Trace
+
+    interpret :: State -> State
+    interpret s@State{pc, code} = case trace ("interpret calls access with code = " ++ show code ++ " and pc = " ++ show pc) (access code pc) of
+        Right instruction -> case trace ("interpret calls run with instruction = " ++ show instruction) run instruction s of
+            ErrorState error -> ErrorState error
+            state            -> interpret state
+        Left error        -> ErrorState error
+    interpret (ErrorState error) = ErrorState error 
+    
+    -- Given an instruction, execute the respective MiniMF function. 
+    run :: Instruction -> State -> State
+    run Reset state               = reset state
+    run (Pushfun fname) state     = pushfun state fname
+    run (Pushval typ field) state = case typ of
+        "Bool" -> pushval state 2 field
+        _      -> pushval state 1 field
+    run (Pushparam addr) state    = pushparam state addr
+    run Makeapp state             = makeapp state
+    run (Slide n) state           = slide state n
+    run Reduce state              = reduce state
+    run Return state              = return' state
+    run Halt state                = halt state
+    run (Error error) state       = ErrorState error
     
     address :: Store HeapCell -> String -> Either String Int
-    address (GlobalEnv gcells) f = address' gcells 0 f where
+    address (Heap hcells) f = address' hcells 0 f where
         address' (x : xs) acc f = case x of
             (DEF f _ _) -> return acc
             _           -> address' xs (acc + 1) f
@@ -38,7 +64,7 @@ module MiniMF where
     reset s = s {sp = -1, pc = pc s + 1}
 
     pushfun :: State -> String -> State
-    pushfun s name = case address (global s) name of
+    pushfun s name = case address (heap s) name of
         Right int  -> s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell int)}
         Left error -> ErrorState error
     -- update pc, update sp, save a new stack that now has the address of function 'name' in the global environment at position 'sp s'
@@ -79,21 +105,20 @@ module MiniMF where
         Left error -> ErrorState error
 
     reduce :: State -> State
-    reduce s = case access (stack s) (sp s) of 
-        Right (StackCell addr) -> case access (heap s) addr of
-            Right elem -> case elem of
+    reduce s = case trace ("reduce calls access with store = " ++ show (stack s) ++ " and address = " ++ show (sp s)) access (stack s) (sp s) of 
+        Right (StackCell addr) -> case trace ("reduce calls access with store = " ++ show (heap s) ++ " and address = " ++ show addr) access (heap s) addr of
+            Right elem -> case trace ("reduce: Right elem of = " ++ show elem) elem of
                 (APP addr1 addr2) -> s {pc = pc s - 1, sp = sp s + 1, stack = push (stack s) (StackCell addr1)}
                 (DEF f n addr1)   -> s {pc = addr1, sp = sp s + 1, stack = push (stack s) (StackCell (pc s))}
                 _                 -> case access (stack s) (sp s - 1) of
-                    Right (StackCell addr1) -> case access (stack s) (sp s) of
-                        Right scell -> case save (stack s) scell (sp s - 1) of
+                    Right (StackCell addr1) -> case trace ("reduce calls access with store = " ++ show (stack s) ++ " and address = " ++ show (sp s)) access (stack s) (sp s) of
+                        Right scell -> case trace ("reduce calls save with store = " ++ show (stack s) ++ " and cell = " ++ show scell ++ " and index = " ++ show (sp s - 1)) save (stack s) scell (sp s - 1) of
                             Right (Stack scells) -> s {pc = addr1, sp = sp s - 1, stack = Stack (init scells)}
                             Left error           -> ErrorState error
                             _                    -> ErrorState "save called on wrong store"                
                         Left error           -> ErrorState error
-                        _                    -> ErrorState "save called on wrong store"
                     Left error           -> ErrorState error
-                    _                    -> ErrorState "save called on wrong store"
+            Left error -> ErrorState error
         Left error           -> ErrorState error
 
     return' :: State -> State
@@ -104,14 +129,6 @@ module MiniMF where
                 Left error           -> ErrorState error
             Left error           -> ErrorState error 
         Left error           -> ErrorState error
-    -- halt implementieren
-    -- let beginningState = State 0 emptyCode emptyStack emptyHeap emptyGlobalEnv
 
-
-    -- run :: State -> State
-    -- page 71 hauptzyklus
-
-    -- executeInstruction
-
-
-
+    halt :: State -> State
+    halt s = s
