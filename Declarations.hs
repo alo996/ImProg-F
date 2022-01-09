@@ -170,7 +170,6 @@ module Declarations where
     data Store a 
         = Code [a] 
         | Stack [a]
-        | GlobalEnv [a] 
         | Heap [a] 
         deriving (Show, Eq)
 
@@ -185,7 +184,6 @@ module Declarations where
             sp :: Int,
             code :: Store Instruction,
             stack :: Store StackCell,
-            global :: Store HeapCell,
             heap :: Store HeapCell
         } 
         | ErrorState String
@@ -197,7 +195,6 @@ module Declarations where
         | Pushfun String 
         | Pushval String Int 
         | Pushparam Int
-        | Pushpre String 
         | Makeapp 
         | Slide Int 
         | Reduce 
