@@ -4,7 +4,12 @@ module MiniMF where
     import Store
     import Data.Either
     import Data.Maybe
-    
+
+    -- kept code tightly to functions described in the script
+
+    -- help procedures:
+
+    -- address takes the function name and delivers the address of its DEF-cell in the global environment
     address :: Store HeapCell -> String -> Either String Int
     address (GlobalEnv gcells) f = address' gcells 0 f where
         address' (x : xs) acc f = case x of
@@ -13,41 +18,50 @@ module MiniMF where
         address' [] _ _         = Left $ "Compile error: Global environment does not contain definition of function '" ++ show f ++ "'."
     address _ _                 = Left "Function 'address' not called on global environment."
 
-    add2arg :: Store HeapCell -> Int -> Either String Int 
+    -- add2arg takes the address of an APP-cell and delivers the heapaddress of its argument
+    add2arg :: Store HeapCell -> Int -> Either String Int
     add2arg h@(Heap hcells) addr = if (addr >= 0) && (addr < depth h) then let APP addr1 addr2 = hcells !! addr in return addr2 else Left $ "Compile error: Heap does not contain cell at address " ++ show addr ++ "'."
     add2arg _ _                  = Left "Function 'add2arg' not called on heap."
 
+    -- new creates a new node (Typ APP/VAL) and delivers its address
     new :: Store HeapCell -> Int -> Int -> Int -> Either String (Int, Store HeapCell)
-    -- new :: heap -> type (0: APP, 1: VALNum, 2: VALBool) -> field a -> field b -> (heap adress, updated heap)
+    -- new :: heap -> typ (0: APP, 1: VALNum, 2: VALBool) -> field a -> field b -> (heap adress, updated heap)
     new heap typ a b
         | typ == 0  = return (depth heap, push heap (APP a b))
         | typ == 1  = return (depth heap, push heap (VALNum 1 b))
         | typ == 2 = case b of
-            0 -> return (depth heap, push heap (VALBool 2 False))
+            0 -> return (depth heap, push heap (VALBool 2 False)) -- VAL Typ Wert
             1 -> return (depth heap, push heap (VALBool 2 True))
             _ -> Left "Invalid input in 'new'"
         | otherwise = Left "Invalid input in 'new'"
 
+    -- typ delivers the type of a heapcell as a number
     typ :: HeapCell -> Int
     typ (APP _ _)     = 0
     typ (VALNum _ _)  = 1
     typ (VALBool _ _) = 2
     typ DEF {}        = 3
 
+    -- machine functions:
+
+    -- reset initializes programm-state
     reset :: State -> State
     reset s = s {sp = -1, pc = pc s + 1}
 
+    -- pushfun pushes/loads the address of a DEF-celll of a function on the stack
     pushfun :: State -> String -> State
     pushfun s name = case address (global s) name of
         Right int  -> s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell int)}
         Left error -> ErrorState error
     -- update pc, update sp, save a new stack that now has the address of function 'name' in the global environment at position 'sp s'
 
+    -- pushval loads the address of a VAL-cell on the stack
     pushval :: State -> Int -> Int -> State
     pushval s typ field = case new (heap s) typ 0 field of
         Right (addr, heap) -> s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell addr), heap = heap}
         Left error         -> ErrorState error
 
+    -- pushparam loads the value of an argument of a function on the stack
     pushparam :: State -> Int -> State
     pushparam s n = case add2arg (heap s) ((sp s + 1) - n - 2) of
         Right addr -> case save (stack s) (StackCell addr) (sp s) of
@@ -55,6 +69,7 @@ module MiniMF where
             Left error  -> ErrorState error
         Left error -> ErrorState error
 
+    -- makeapp creates an APP-cell in the heap and loads its address on the stack
     makeapp :: State -> State
     makeapp s = case access (stack s) (sp s) of
         Right (StackCell a) -> case access (stack s) (sp s - 1) of
@@ -65,12 +80,14 @@ module MiniMF where
                 Left error         -> ErrorState error
             Left error         -> ErrorState error
         Left error         -> ErrorState error
-    
+
+    -- slide deletes the stack cells two beneath the last two cells and replaces them by the last two cells ("abräumen")
+    -- common function structure: pattern match result of function with case of to extract monad value and apply to next function
     slide :: State -> Int -> State
-    slide s n = case access (stack s) (sp s - 1) of -- stack[T - 1] existiert
-        Right t1   -> case access (stack s) (sp s) of -- stack[T] existiert
-            Right t2  -> case save (stack s) t1 (sp s - n - 1) of -- stack[T - 1] kann an stack[T - n - 1] gespeichert werden
-                Right stack_1 -> case save stack_1 t2 (sp s - n) of -- stack[T] kann an stack[T - n] gespeichert werden
+    slide s n = case access (stack s) (sp s - 1) of -- stack[T - 1] exists
+        Right t1   -> case access (stack s) (sp s) of -- stack[T] exists
+            Right t2  -> case save (stack s) t1 (sp s - n - 1) of -- stack[T - 1] saved at stack[T - n - 1]
+                Right stack_1 -> case save stack_1 t2 (sp s - n) of -- stack[T] saved at stack[T - n]
                     Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n) scells)}
                     Left error           -> ErrorState error
                     _                    -> ErrorState "slide called on wrong store"
@@ -78,8 +95,9 @@ module MiniMF where
             Left error -> ErrorState error
         Left error -> ErrorState error
 
+    -- reduce reduces the imaginated "stack graph" and transforms its structure (eg. call, jump back after procedure)
     reduce :: State -> State
-    reduce s = case access (stack s) (sp s) of 
+    reduce s = case access (stack s) (sp s) of
         Right (StackCell addr) -> case access (heap s) addr of
             Right elem -> case elem of
                 (APP addr1 addr2) -> s {pc = pc s - 1, sp = sp s + 1, stack = push (stack s) (StackCell addr1)}
@@ -89,23 +107,23 @@ module MiniMF where
                         Right scell -> case save (stack s) scell (sp s - 1) of
                             Right (Stack scells) -> s {pc = addr1, sp = sp s - 1, stack = Stack (init scells)}
                             Left error           -> ErrorState error
-                            _                    -> ErrorState "save called on wrong store"                
+                            _                    -> ErrorState "save called on wrong store"
                         Left error           -> ErrorState error
                         _                    -> ErrorState "save called on wrong store"
                     Left error           -> ErrorState error
                     _                    -> ErrorState "save called on wrong store"
         Left error           -> ErrorState error
 
+    -- return jumps back to saved address (result and address saved!)
     return' :: State -> State
     return' s = case access (stack s) (sp s - 1) of
         Right s1@(StackCell addr1) -> case access (stack s) (sp s) of
             Right s2@(StackCell addr2) -> case save (stack s) s2 addr1 of
                 Right stack -> s {pc = addr1, sp = sp s - 1, stack = stack}
                 Left error           -> ErrorState error
-            Left error           -> ErrorState error 
+            Left error           -> ErrorState error
         Left error           -> ErrorState error
     -- halt implementieren
-    -- let beginningState = State 0 emptyCode emptyStack emptyHeap emptyGlobalEnv
 
 
     -- run :: State -> State
@@ -113,5 +131,4 @@ module MiniMF where
 
     -- executeInstruction
 
-
-
+    -- we have to implement a few more functions and the instruction-loop bevor we test them and their behaviour
