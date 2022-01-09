@@ -10,6 +10,7 @@ module MiniMF where
     import Compiler
     import Debug.Trace
 
+    -- interpret recursively takes instruction in code at programm-counter and runs it with the given state
     interpret :: State -> State
     interpret s@State{pc, code} = case trace ("interpret calls access with code = " ++ show code ++ " and pc = " ++ show pc) (access code pc) of
         Right instruction -> case trace ("interpret calls run with instruction = " ++ show instruction) run instruction s of
