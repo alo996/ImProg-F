@@ -13,7 +13,7 @@ module Executable where
         input <- getLine
         case tokenize input of
             Right tokens -> case program tokens of
-                Right ast  -> return $ show $ compileProgram $ trace ("execute calls fst ast with " ++ show (fst ast)) (fst ast) 
+                Right ast  -> return $ show $ compileProgram $ fst ast 
                 Left error -> return error
             Left error -> return error
 
