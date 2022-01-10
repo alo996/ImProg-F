@@ -116,7 +116,7 @@ module MiniMF where
         Right (StackCell a) -> case access (stack s) (sp s - 1) of
             Right (StackCell b) -> case new (heap s) 0 a b of
                 Right (addr, heap) -> case save (stack s) (StackCell addr) (sp s - 1) of
-                    Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s + 1) scells), heap = heap}
+                    Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap} -- sp s + 1 davor
                     Left error           -> ErrorState error
                     _                    -> ErrorState "Compile error: save not called on stack in function 'makeapp'"
                 Left error         -> ErrorState error
@@ -142,12 +142,12 @@ module MiniMF where
     reduce s = case access (stack s) (sp s) of
         Right (StackCell addr) -> case access (heap s) addr of
             Right elem -> case elem of
-                (APP addr1 addr2) -> s {pc = pc s - 1, sp = sp s + 1, stack = push (stack s) (StackCell addr1)}
-                (DEF f n addr3)    ->  s {pc = addr3, sp = sp s + 1, stack = push (stack s) (StackCell (pc s + 1))}
+                (APP addr1 addr2) -> s {sp = sp s + 1, stack = push (stack s) (StackCell addr1)}
+                (DEF f n addr3)   ->  s {pc = addr3, sp = sp s + 1, stack = push (stack s) (StackCell (pc s + 1))}
                 _                 -> case access (stack s) (sp s - 1) of
                     Right (StackCell addr4) -> case access (stack s) (sp s) of
                         Right scell -> case save (stack s) scell (sp s - 1) of
-                            Right (Stack scells) -> s {pc = addr4, sp = sp s - 1, stack = Stack (take (sp s + 1) scells)}
+                            Right (Stack scells) -> s {pc = addr4, sp = sp s - 1, stack = Stack (take (sp s) scells)}
                             Left error           -> ErrorState error
                             _                    -> ErrorState "Compile error: save not called on stack in function 'reduce'"
                         Left error           -> ErrorState error
@@ -160,7 +160,7 @@ module MiniMF where
     return' s = case access (stack s) (sp s - 1) of
         Right (StackCell addr) -> case access (stack s) (sp s) of
             Right scell -> case save (stack s) scell (sp s - 1) of
-                Right (Stack scells) -> s {pc = addr, sp = sp s - 1, stack = Stack (take (sp s + 1) scells)}
+                Right (Stack scells) -> s {pc = addr, sp = sp s - 1, stack = Stack (take (sp s) scells)}
                 Left error           -> ErrorState error
                 _                    -> ErrorState "Compile error in return'"
             Left error           -> ErrorState error

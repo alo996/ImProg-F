@@ -20,9 +20,9 @@ module Compiler where
 
     -- Compile a definition. 'compileDefinition' takes the definition to compile and the current machine state and returns the updated machine state with the new stack and global environment.
     compileDefinition :: Def -> State -> State
-    compileDefinition (Def e1 es e2) s@State{code = Code ccells, heap = Heap hcells} =
+    compileDefinition (Def e1@(AtomicExpr (Var fname)) es e2) s@State{code = Code ccells, heap = Heap hcells} =
         let localenv = createPos es in
-        s {code = Code (ccells ++ compileExpression e2 0 localenv ++ [Slide (length localenv + 1), Reduce, Return]), heap = Heap (hcells ++ [DEF (show e1) (length localenv) (depth (code s))])}
+        s {code = Code (ccells ++ compileExpression e2 0 localenv ++ [Slide (length localenv + 1), Reduce, Return]), heap = Heap (hcells ++ [DEF fname (length localenv) (depth (code s))])}
     compileDefinition def state                                                      = ErrorState $ "Compile error: compileDefinition called with " ++ show def ++ " and " ++ show state ++ "."
 
     -- Compile an expression. 'compileExpression' takes the expression to compile, an offset for the local environment (see pos+i(x) in the script) and a local environment.
@@ -35,7 +35,7 @@ module Compiler where
                 Right ind  -> [Pushparam ind]
                 Left error -> [Error error]
             AtomicExpr (Expr expr)             -> compileExpression expr num pos
-            Func (AtomicExpr e1) e2            -> compileExpression e2 num pos ++ [Pushfun $ show e1, Makeapp]
+            Func (AtomicExpr (Var fname)) e2   -> compileExpression e2 num pos ++ [Pushfun $ fname, Makeapp]
             Func e1 e2                         -> compileExpression e2 num pos ++ compileExpression e1 (num + 1) pos ++ [Makeapp]
             _                                  -> [Error $ "Compile error: Invalid MiniF expression " ++ show e ++ "."]
 
