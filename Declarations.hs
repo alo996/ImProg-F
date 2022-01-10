@@ -10,6 +10,7 @@ module Declarations where
         | KeywordToken Keyword 
         | NameToken String 
         | NumberToken Int
+        deriving Eq
 
     
     {-
@@ -38,7 +39,7 @@ module Declarations where
         deriving Eq              
 
     -- BoolF adresses the fact that boolean values in F are lowercase.
-    newtype BoolF = BoolF Bool
+    newtype BoolF = BoolF Bool deriving Eq
 
     {-
     We may need notions of (In-) equality for the token type.
@@ -99,12 +100,12 @@ module Declarations where
     
     data Def 
         = Def Expr [Expr] Expr  -- f x1 x2 x3 = x1
-        deriving Show
+        deriving (Eq, Show)
 
     -- A local definition consists of two expressions.
     data LocalDef 
         = LocalDef Expr Expr 
-        deriving Show
+        deriving (Eq, Show)
 
     -- A lot of stuff can be an expression, for example '2 + 2'. All possible combinations are summed up in the Expr type.
     data Expr
@@ -121,44 +122,36 @@ module Declarations where
         | LetIn [LocalDef] Expr
         | IfThenElse Expr Expr Expr
         | AtomicExpr AtomicExpr
-        deriving Show
+        deriving Eq 
 
-    instance Eq LocalDef where
-        (==) (LocalDef e1 e2) (LocalDef e3 e4) = e1 == e3 && e2 == e4
-
-    instance Eq Expr where
-        (==) (Add e1 e2) (Add e3 e4)                     = e1 == e3 && e2 == e4
-        (==) (Func e1 e2) (Func e3 e4)                   = e1 == e3 && e2 == e4
-        (==) (Mult e1 e2) (Mult e3 e4)                   = e1 == e3 && e2 == e4
-        (==) (Div e1 e2) (Div e3 e4)                     = e1 == e3 && e2 == e4
-        (==) (UnaryMin e1) (UnaryMin e2)                 = e1 == e2
-        (==) (Equal e1 e2) (Equal e3 e4)                 = e1 == e3 && e2 == e4
-        (==) (LessThan e1 e2) (LessThan e3 e4)           = e1 == e3 && e2 == e4
-        (==) (LogicalAnd e1 e2) (LogicalAnd e3 e4)       = e1 == e3 && e2 == e4
-        (==) (LogicalOr e1 e2) (LogicalOr e3 e4)         = e1 == e3 && e2 == e4
-        (==) (LogicalNot e1) (LogicalNot e2)             = e1 == e2
-        (==) (LetIn e1 e2) (LetIn e3 e4)                 = e1 == e3 && e2 == e4
-        (==) (IfThenElse e1 e2 e3) (IfThenElse e4 e5 e6) = e1 == e4 && e2 == e5 && e3 == e6
-        (==) (AtomicExpr a1) (AtomicExpr a2)             = a1 == a2
-        (==) _ _                                         = False
-
-    instance Eq AtomicExpr where
-        (==) (Var s1) (Var s2)         = s1 == s2 
-        (==) (LitBool b1) (LitBool b2) = b1 == b2
-        (==) (LitNum n1) (LitNum n2)   = n1 == n2 -- LitNum 3 == Litnum 4 
-        (==) (Expr e1) (Expr e2)       = e1 == e2
-        (==) _ _                       = False 
-
-    instance Eq BoolF where
-        (==) (BoolF b1) (BoolF b2) = b1 == b2
+    instance Show Expr where
+        show (Add e1 e2)           = show e1 ++ " + " ++ show e2
+        show (Func e1 e2)          = "Func " ++ show e1 ++ " " ++ show e2
+        show (Mult e1 e2)          = show e1 ++ " * " ++ show e2
+        show (Div e1 e2)           = show e1 ++ " / " ++ show e2
+        show (UnaryMin e)          = "UnaryMin " ++ show e
+        show (Equal e1 e2)         = show e1 ++ " == " ++ show e2
+        show (LessThan e1 e2)      = show e1 ++ " < " ++ show e2
+        show (LogicalAnd e1 e2)    = show e1 ++ " & " ++ show e2
+        show (LogicalOr e1 e2)     = show e1 ++ " | " ++ show e2
+        show (LogicalNot e)        = " ! " ++ show e
+        show (LetIn e1 e2)         = "let" ++ show e1 ++ " in " ++ show e2
+        show (IfThenElse e1 e2 e3) = "if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3
+        show (AtomicExpr e)        = show e
 
     -- An atomic expression is the most basic kind of expression. It is either a name, a numeral or a boolean.
     data AtomicExpr 
         = Var String
         | LitBool BoolF 
         | LitNum Int 
-        | Expr Expr 
-        deriving Show
+        | Expr Expr
+        deriving Eq 
+    
+    instance Show AtomicExpr where
+        show (Var s)                = show s
+        show (LitBool (BoolF bool)) = show bool
+        show (LitNum n)             = show n
+        show (Expr e)               = show e
 
     type Var = String
 
