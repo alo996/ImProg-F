@@ -7,10 +7,8 @@ module Executable where
     import MiniMF
     import Debug.Trace
 
-    execute :: IO String
-    execute = do
-        print "Please enter F program:"
-        input <- getLine
+    execute :: String -> IO String
+    execute input = 
         case tokenize input of
             Right tokens -> case program tokens of
                 Right ast  -> case compileProgram (fst ast) of
@@ -19,14 +17,11 @@ module Executable where
                 Left error -> return error
             Left error -> return error
 
-    execute' :: IO String
-    execute' = do 
-        print "Please enter F program:"
-        input <- getLine
-        case tokenize input of
-            Right tokens -> case program tokens of
-                Right ast  -> case compileProgram (fst ast) of
+    execute' :: String -> IO String
+    execute' input = case tokenize input of
+        Right tokens -> case program tokens of
+            Right ast  -> case compileProgram (fst ast) of
                     ErrorState error -> return error
                     state            -> return $ show state
-                Left error -> return error
             Left error -> return error
+        Left error -> return error
