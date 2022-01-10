@@ -21,10 +21,12 @@ module Executable where
 
     execute' :: IO String
     execute' = do 
-        print "F program"
+        print "Please enter F program:"
         input <- getLine
         case tokenize input of
             Right tokens -> case program tokens of
-                Right ast  -> return $ show ast
+                Right ast  -> case compileProgram (fst ast) of
+                    ErrorState error -> return error
+                    state            -> return $ show state
                 Left error -> return error
             Left error -> return error
