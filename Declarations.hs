@@ -212,7 +212,7 @@ module Declarations where
         | VALBool Int Bool
         | DEF 
         {
-            id :: String, 
+            fname :: String, 
             arity :: Int, 
             caddr :: Int
         }
