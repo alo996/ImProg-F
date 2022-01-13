@@ -209,8 +209,24 @@ module Declarations where
             arity :: Int, 
             caddr :: Int
         }
+        | IND Int 
+        | PRE Keyword Int
         deriving (Show, Eq)
 
+    {-
+        data Op
+        = IfOp
+        | NotOp
+        | AndOp
+        | OrOp
+        | EquOp
+        | LtOp
+        | PlusOp
+        | MinusOp
+        | DivOp
+        deriving Eq
+    -}
+    
     -- A stack is a list of stack cells.
     newtype StackCell 
         = StackCell Int 
