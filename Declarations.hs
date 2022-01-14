@@ -201,8 +201,8 @@ module Declarations where
     -}
     data HeapCell 
         = APP Int Int 
-        | VALNum Int Int
-        | VALBool Int Bool
+        | VALNum Int
+        | VALBool Bool
         | DEF 
         {
             fname :: String, 
@@ -212,20 +212,6 @@ module Declarations where
         | IND Int 
         | PRE Keyword Int
         deriving (Show, Eq)
-
-    {-
-        data Op
-        = IfOp
-        | NotOp
-        | AndOp
-        | OrOp
-        | EquOp
-        | LtOp
-        | PlusOp
-        | MinusOp
-        | DivOp
-        deriving Eq
-    -}
     
     -- A stack is a list of stack cells.
     newtype StackCell 
