@@ -9,6 +9,7 @@ module MiniMF where
     import Debug.Trace
     import Tokenizer
     import Parser
+    import Data.Char
 
     -- interpret recursively takes instruction in code at programm-counter and runs it with the given state
     interpret :: State -> State
@@ -55,26 +56,36 @@ module MiniMF where
     add2arg h@(Heap hcells) addr = if (addr >= 0) && (addr < depth h) then let APP addr1 addr2 = hcells !! addr in return addr2 else Left $ "Compile error: Heap does not contain cell at address " ++ show addr ++ "'."
     add2arg _ _                  = Left "Compile error: Function 'add2arg' not called on heap."
 
-    -- new creates a new node (Typ APP/VAL) and delivers its address"
-    new :: Store HeapCell -> Int -> Int -> Int -> Either String (Int, Store HeapCell)
-    -- new :: heap -> typ (0: APP, 1: VALNum, 2: VALBool) -> field a -> field b -> (heap adress, updated heap)
-    new heap typ a b
-        | typ == 0  = return (depth heap, push heap (APP a b))
-        | typ == 1  = return (depth heap, push heap (VALNum 1 b))
-        | typ == 2  = case b of
-            0 -> return (depth heap, push heap (VALBool 2 False)) -- VAL Typ Wert
-            1 -> return (depth heap, push heap (VALBool 2 True))
-            _ -> Left "Compile error: Invalid input in 'new'"
-        | otherwise = Left "Compile error: Invalid input in 'new'"
+    newAPP :: Store HeapCell -> Int -> Int -> (Int, Store HeapCell)
+    newAPP heap a b = (depth heap, push heap (APP a b))
 
-    -- typ delivers the type of a heapcell as a number
-    typ :: HeapCell -> Int
-    typ (APP _ _)     = 0
-    typ (VALNum _ _)  = 1
-    typ (VALBool _ _) = 2
-    typ DEF {}        = 3
+    newVAL :: Store HeapCell -> Int -> Int -> (Int, Store HeapCell)
+    newVAL heap t w 
+            | t == 0    = (depth heap, push heap (VALNum w))
+            | otherwise = if w == 0 
+                            then (depth heap, push heap (VALBool False))
+                            else (depth heap, push heap (VALBool True))
 
-    -- machine functions:
+    newIND :: Store HeapCell -> Int -> (Int, Store HeapCell)
+    newIND heap a = (depth heap, push heap (IND a))
+
+    newPRE :: Store HeapCell -> Keyword -> Int -> Either String (Int, Store HeapCell)
+    newPRE heap kw n = case arity' kw of
+        Just n  -> return (depth heap, push heap (PRE kw n))
+        Nothing -> Left "Compile error: 'arity' called with illegal keyword."
+    
+    arity' :: Keyword -> Maybe Int
+    arity' kw = case kw of
+        And    -> Just 2
+        Or     -> Just 2
+        Equals -> Just 2
+        Less   -> Just 2
+        Plus   -> Just 2
+        Minus  -> Just 1
+        Times  -> Just 2
+        Divide -> Just 2
+        Not    -> Just 1
+        _      -> Nothing
 
     -- reset initializes programm-state
     reset :: State -> State
@@ -84,20 +95,10 @@ module MiniMF where
     pushfun :: State -> String -> State
     pushfun s name = case address (heap s) name of
         Right int  -> s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell int)}
-            -- case save (stack s) (StackCell int) (sp s + 1) of
-            -- Right stack -> s {pc = pc s + 1, sp = sp s + 1, stack = trace ("pushfun saves stack = " ++ show stack) stack}
-            -- Left error  -> ErrorState error
         Left error -> ErrorState error
-    -- update pc, update sp, save a new stack that now has the address of function 'name' in the global environment at position 'sp s'
 
-    -- pushval loads the address of a VAL-cell on the stack
     pushval :: State -> Int -> Int -> State
-    pushval s typ field = case new (heap s) typ 0 field of
-        Right (addr, heap) -> s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell addr), heap = heap}
-            --case save (stack s) (StackCell addr) (sp s + 1) of
-            --Right stack -> s {pc = pc s + 1, sp = sp s + 1, stack = stack, heap = heap}
-            --Left error  -> ErrorState error
-        Left error         -> ErrorState error
+    pushval s t w = let tuple = newVAL (heap s) t w in s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell (fst tuple)), heap = snd tuple}
 
     -- pushparam loads the value of an argument of a function on the stack
     pushparam :: State -> Int -> State
@@ -109,17 +110,15 @@ module MiniMF where
             Left error -> ErrorState error
         Left error -> ErrorState error
         
-
     -- makeapp creates an APP-cell in the heap and loads its address on the stack
     makeapp :: State -> State
     makeapp s = case access (stack s) (sp s) of
         Right (StackCell a) -> case access (stack s) (sp s - 1) of
-            Right (StackCell b) -> case new (heap s) 0 a b of
-                Right (addr, heap) -> case save (stack s) (StackCell addr) (sp s - 1) of
-                    Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap} -- sp s + 1 davor
+            Right (StackCell b) -> let tuple = newAPP (heap s) a b in 
+                case save (stack s) (StackCell (fst tuple)) (sp s - 1) of
+                    Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = snd tuple}
                     Left error           -> ErrorState error
                     _                    -> ErrorState "Compile error: save not called on stack in function 'makeapp'"
-                Left error         -> ErrorState error
             Left error         -> ErrorState error
         Left error         -> ErrorState error
 
