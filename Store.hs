@@ -36,13 +36,3 @@ module Store where
     save c@(Code ccells) ccell ind  = if (ind <= depth c) && (ind >= 0) then return $ Code (take ind ccells ++ [ccell] ++ drop (ind + 1) ccells) else Left $ "Compile error in 'save': " ++ show c ++ " has no index " ++ show ind ++ "."
     save s@(Stack scells) scell ind = if (ind <= depth s) && (ind >= 0) then return $ Stack (take ind scells ++ [scell] ++ drop (ind + 1) scells) else Left $ "Compile error in 'save': " ++ show s ++ " has no index " ++ show ind ++ "."
     save h@(Heap hcells) hcell ind  = if (ind <= depth h) && (ind >= 0) then return $ Heap (take ind hcells ++ [hcell] ++ drop (ind + 1) hcells) else Left $ "Compile error in 'save': " ++ show h ++ " has no index " ++ show ind ++ "."
-
-    {-
-    pop and push functions not really needed at the moment
-    pop :: Store a -> Maybe a
-    pop (Code (x : xs))      = return x
-    pop (Stack (x : xs))     = return x
-    pop (Heap (x : xs))      = return x
-    pop (GlobalEnv (x : xs)) = return x
-    pop _                    = Nothing
-    -}
