@@ -202,7 +202,7 @@ module Declarations where
     data HeapCell 
         = APP Int Int 
         | VALNum Int
-        | VALBool Bool
+        | VALBool Int
         | DEF 
         {
             fname :: String, 

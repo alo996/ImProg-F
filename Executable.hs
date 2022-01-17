@@ -25,3 +25,10 @@ module Executable where
                     state            -> return $ show state
             Left error -> return error
         Left error -> return error
+    
+    execute'' :: String -> IO String
+    execute'' input = case tokenize input of
+        Right tokens -> case program tokens of
+            Right ast  -> return $ show ast
+            Left error -> return error
+        Left error -> return error
