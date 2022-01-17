@@ -62,30 +62,26 @@ module MiniMF where
     newVAL :: Store HeapCell -> Int -> Int -> (Int, Store HeapCell)
     newVAL heap t w 
             | t == 0    = (depth heap, push heap (VALNum w))
-            | otherwise = if w == 0 
-                            then (depth heap, push heap (VALBool False))
-                            else (depth heap, push heap (VALBool True))
+            | otherwise = (depth heap, push heap (VALBool w))
 
     newIND :: Store HeapCell -> Int -> (Int, Store HeapCell)
     newIND heap a = (depth heap, push heap (IND a))
 
-    newPRE :: Store HeapCell -> Keyword -> Int -> Either String (Int, Store HeapCell)
-    newPRE heap kw n = case arity' kw of
-        Just n  -> return (depth heap, push heap (PRE kw n))
-        Nothing -> Left "Compile error: 'arity' called with illegal keyword."
+    newPRE :: Store HeapCell -> Keyword -> Int -> (Int, Store HeapCell)
+    newPRE heap kw n = (depth heap, push heap $ PRE kw $ arity' kw)
     
-    arity' :: Keyword -> Maybe Int
+    arity' :: Keyword -> Int
     arity' kw = case kw of
-        And    -> Just 2
-        Or     -> Just 2
-        Equals -> Just 2
-        Less   -> Just 2
-        Plus   -> Just 2
-        Minus  -> Just 1
-        Times  -> Just 2
-        Divide -> Just 2
-        Not    -> Just 1
-        _      -> Nothing
+        If     -> 3
+        And    -> 2
+        Or     -> 2
+        Equals -> 2
+        Less   -> 2
+        Plus   -> 2
+        Minus  -> 1
+        Times  -> 2
+        Divide -> 2
+        Not    -> 1
 
     -- reset initializes programm-state
     reset :: State -> State
