@@ -5,6 +5,7 @@ module MF where
     import Compiler
     import Store
     import MiniMF
+    import Data.Bits
     
     value :: Store HeapCell -> Int -> Either String HeapCell
     value heap adr1 = case access heap adr1 of
@@ -35,6 +36,7 @@ module MF where
             Right nstack -> s {pc = 21, sp = sp s + 1, stack = nstack}
             Left error   -> ErrorState error           
         Left error          -> ErrorState error
+        _                   -> ErrorState "error in 'call'"
     
     return'' :: State -> State
     return'' s = case access (stack s) (sp s - 1) of
@@ -46,13 +48,10 @@ module MF where
         Left error            -> ErrorState error
 
     pushpre :: State -> Keyword -> State
-    pushpre s kw = case arity' kw of
-        Just n  -> case newPRE (heap s) kw n of
-            Right (adr, nheap) -> case save (stack s) (StackCell adr) (sp s + 1) of
-                Right nstack -> s{pc = pc s + 1, sp = sp s + 1, stack = nstack}
+    pushpre s kw = let tuple = newPRE (heap s) kw (arity' kw) in
+        case save (stack s) (StackCell (fst tuple)) (sp s + 1) of
+                Right stack -> s{pc = pc s + 1, sp = sp s + 1, stack = stack, heap = snd tuple}
                 Left error   -> ErrorState error
-            Left error         -> ErrorState error
-        Nothing -> ErrorState "Stelligkeit von Keyword konnte nicht ermittelt werden!"
 
     funcUpdate :: State -> Int -> State
     funcUpdate s arg = case access (stack s) (sp s) of -- wir schauen ob stack[T]=addr1 existiert
@@ -73,7 +72,8 @@ module MF where
                             Right scell -> case save (stack s) scell (sp s - 2) of
                                 Right nstack -> case save nstack aux (sp s - 1) of
                                     Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap}
-                                    Left error   -> ErrorState error
+                                    Left error           -> ErrorState error
+                                    _                    -> ErrorState "Error in 'opUpdate'"
                                 Left error             -> ErrorState error
                             Left error            -> ErrorState error 
                         Left error            -> ErrorState error
@@ -91,7 +91,7 @@ module MF where
                         Right stack -> case access stack (sp s) of
                             Right (StackCell addr2) -> case value (heap s) addr2 of
                                 Right (VALBool w) -> case op of
-                                    Not -> if not w
+                                    Not -> if fromEnum w == 1
                                                 then let tuple = newVAL (heap s) 1 1 in case save stack (StackCell (fst tuple)) (sp s - 1) of
                                                     Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = snd tuple}
                                                     Left error           -> ErrorState error
@@ -100,7 +100,7 @@ module MF where
                                                     Left error           -> ErrorState error
                                     _   -> ErrorState "Compile error: 'operator' calls value with wrong arguments." 
                                 Right (VALNum w)   -> case op of
-                                    Minus -> let tuple = newVAL (heap s) 0 (-w) in case save stack (StackCell (fst tuple)) (sp s - 1) of
+                                    Minus -> let tuple = newVAL (heap s) 0 (- w) in case save stack (StackCell (fst tuple)) (sp s - 1) of
                                         Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = snd tuple}
                                         _     -> ErrorState "Compile error: 'operator' calls value with wrong arguments." 
                                     _         -> ErrorState "Compile error: 'operator' calls value with wrong arguments." 
@@ -108,4 +108,90 @@ module MF where
                             Left error  -> ErrorState error
                         Left error  -> ErrorState error
                 Left error               -> ErrorState error
-        _ -> ErrorState "error zum testen"
+        2 -> case access (stack s) (sp s - 3) of
+            Right (StackCell addr) -> case value (heap s) addr of
+                Right (PRE op 2) -> case access (stack s) (sp s - 2) of
+                    Right scell -> case save (stack s) scell (sp s - 4) of
+                        Right stack -> case access stack (sp s - 1) of
+                            Right (StackCell addr2) -> let hcell1 = value (heap s) addr2 in
+                                case access stack (sp s) of
+                                    Right (StackCell addr3) -> let hcell2 = value (heap s) addr3 in
+                                        case hcell1 of
+                                            Right (VALBool bool1) -> case hcell2 of
+                                                Right (VALBool bool2) -> case op of
+                                                    And    -> let tuple = newVAL (heap s) 1 (bool1 .&. bool2) in
+                                                        case save stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right stack -> s {sp = sp s - 3, stack = stack, heap = snd tuple}
+                                                            Left error  -> ErrorState error 
+                                                    Or     -> let tuple = newVAL (heap s) 1 (bool1 .|. bool2) in
+                                                        case save stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right stack -> s {sp = sp s - 3, stack = stack, heap = snd tuple}
+                                                            Left error  -> ErrorState error
+                                                    Equals -> let tuple = newVAL (heap s) 1 (0 .&. xor bool1 bool2) in
+                                                        case save stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right stack -> s {sp = sp s - 3, stack = stack, heap = snd tuple}
+                                                            Left error  -> ErrorState error
+                                                    Less   -> let tuple = newVAL (heap s) 1 (fromEnum $ bool1 < bool2) in
+                                                        case save stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right stack -> s {sp = sp s - 3, stack = stack, heap = snd tuple}
+                                                            Left error  -> ErrorState error
+                                                    _      -> ErrorState "Type error."
+                                                Left error            -> ErrorState error
+                                            Right (VALNum num1) -> case hcell2 of
+                                                Right (VALNum num2) -> case op of
+                                                    Equals -> let tuple = newVAL (heap s) 1 (fromEnum $ num1 == num2) in
+                                                        case save stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right stack -> s {sp = sp s - 3, stack = stack, heap = snd tuple}
+                                                            Left error  -> ErrorState error
+                                                    Less   -> let tuple = newVAL (heap s) 1 (fromEnum $ num1 < num2) in
+                                                        case save stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right stack -> s {sp = sp s - 3, stack = stack, heap = snd tuple}
+                                                            Left error  -> ErrorState error
+                                                    Plus   -> let tuple = newVAL (heap s) 0 (num1 + num2) in
+                                                        case save stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right stack -> s {sp = sp s - 3, stack = stack, heap = snd tuple}
+                                                            Left error  -> ErrorState error
+                                                    Times  -> let tuple = newVAL (heap s) 0 (num1 * num2) in
+                                                        case save stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right stack -> s {sp = sp s - 3, stack = stack, heap = snd tuple}
+                                                            Left error  -> ErrorState error
+                                                    Divide -> let tuple = newVAL (heap s) 0 (num1 `div` num2) in
+                                                        case save stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right stack -> s {sp = sp s - 3, stack = stack, heap = snd tuple}
+                                                            Left error  -> ErrorState error
+                                                    _      -> ErrorState "Type error."
+                                                _                   -> ErrorState "Type error."
+                                            Left error          -> ErrorState error
+                                    Left error          -> ErrorState error
+                            Left error          -> ErrorState error
+                    Left error          -> ErrorState error
+            Left error          -> ErrorState error
+        3 -> case access (stack s) (sp s) of
+            Right (StackCell addr) -> case value (heap s) addr of
+                Right (VALBool bool) -> case bool of
+                    1  -> case access (stack s) (sp s - 4) of
+                        Right (StackCell addr1) -> case add2arg (heap s) addr1 of
+                            Right addr2 -> case save (stack s) (StackCell addr2) (sp s - 3) of
+                                Right stack -> case access stack (sp s - 1) of
+                                    Right scell -> case save stack scell (sp s - 4) of
+                                        Right (Stack scells) -> s {sp = sp s - 3, stack = Stack $(take $ sp s - 3) scells}
+                                        Left error           -> ErrorState error
+                                    Left error  -> ErrorState error
+                                Left error  -> ErrorState error
+                            Left error  -> ErrorState error
+                        Left error              -> ErrorState error
+                    0 -> case access (stack s) (sp s - 5) of
+                        Right (StackCell addr1) -> case add2arg (heap s) addr1 of
+                            Right addr2 -> case save (stack s) (StackCell addr2) (sp s - 3) of
+                                Right stack -> case access stack (sp s - 1) of
+                                    Right scell -> case save stack scell (sp s - 4) of
+                                        Right (Stack scells) -> s {sp = sp s - 3, stack = Stack $(take $ sp s - 3) scells}
+                                        Left error           -> ErrorState error
+                                    Left error  -> ErrorState error
+                                Left error  -> ErrorState error
+                            Left error  -> ErrorState error
+                        Left error              -> ErrorState error
+                    _ -> ErrorState "Type error"
+                Left error           -> ErrorState error
+            Left error              -> ErrorState error
+        _ -> ErrorState "type error"
