@@ -21,14 +21,14 @@ module Tokenizer where
 
     -- Next characters form a multiple character keyword or a boolean value, followed by a reserved special character or space.
     tokenize' token@('=' : '=' : xs) tokenAcc lineAcc                       = tokenize' xs ((KeywordToken Equals , lineAcc) : tokenAcc) lineAcc
-    tokenize' token@('e' : 'l' : 's' : 'e' : x : xs) tokenAcc lineAcc       = if validateChar x then tokenize' (x : xs) ((KeywordToken Else , lineAcc) : tokenAcc) lineAcc         else tokenizeNames token tokenAcc lineAcc ""
-    tokenize' token@('f' : 'a' : 'l' : 's' : 'e' : x : xs) tokenAcc lineAcc = if validateChar x then tokenize' (x : xs) ((BooleanToken $ BoolF False, lineAcc) : tokenAcc) lineAcc else tokenizeNames token tokenAcc lineAcc ""
-    tokenize' token@('i' : 'f' : x : xs) tokenAcc lineAcc                   = if validateChar x then tokenize' (x : xs) ((KeywordToken If , lineAcc) : tokenAcc) lineAcc           else tokenizeNames token tokenAcc lineAcc ""
-    tokenize' token@('i' : 'n' : x : xs) tokenAcc lineAcc                   = if validateChar x then tokenize' (x : xs) ((KeywordToken In , lineAcc) : tokenAcc) lineAcc           else tokenizeNames token tokenAcc lineAcc ""
-    tokenize' token@('l' : 'e' : 't' : x : xs) tokenAcc lineAcc             = if validateChar x then tokenize' (x : xs) ((KeywordToken Let , lineAcc) : tokenAcc) lineAcc          else tokenizeNames token tokenAcc lineAcc ""
-    tokenize' token@('n' : 'o' : 't' : x : xs) tokenAcc lineAcc             = if validateChar x then tokenize' (x : xs) ((KeywordToken Not , lineAcc) : tokenAcc) lineAcc          else tokenizeNames token tokenAcc lineAcc ""
-    tokenize' token@('t' : 'h' : 'e' : 'n' : x : xs) tokenAcc lineAcc       = if validateChar x then tokenize' (x : xs) ((KeywordToken Then , lineAcc) : tokenAcc) lineAcc         else tokenizeNames token tokenAcc lineAcc ""
-    tokenize' token@('t' : 'r' : 'u' : 'e' : x : xs) tokenAcc lineAcc       = if validateChar x then tokenize' (x : xs) ((BooleanToken $ BoolF True, lineAcc) : tokenAcc) lineAcc  else tokenizeNames token tokenAcc lineAcc ""
+    tokenize' token@('e' : 'l' : 's' : 'e' : x : xs) tokenAcc lineAcc       = evaluate x (KeywordToken Else) (x : xs) token tokenAcc lineAcc
+    tokenize' token@('f' : 'a' : 'l' : 's' : 'e' : x : xs) tokenAcc lineAcc = evaluate x (BooleanToken $ BoolF False) (x : xs) token tokenAcc lineAcc
+    tokenize' token@('i' : 'f' : x : xs) tokenAcc lineAcc                   = evaluate x (KeywordToken If) (x : xs) token tokenAcc lineAcc
+    tokenize' token@('i' : 'n' : x : xs) tokenAcc lineAcc                   = evaluate x (KeywordToken In) (x : xs) token tokenAcc lineAcc
+    tokenize' token@('l' : 'e' : 't' : x : xs) tokenAcc lineAcc             = evaluate x (KeywordToken Let) (x : xs) token tokenAcc lineAcc
+    tokenize' token@('n' : 'o' : 't' : x : xs) tokenAcc lineAcc             = evaluate x (KeywordToken Not) (x : xs) token tokenAcc lineAcc
+    tokenize' token@('t' : 'h' : 'e' : 'n' : x : xs) tokenAcc lineAcc       = evaluate x (KeywordToken Then) (x : xs) token tokenAcc lineAcc
+    tokenize' token@('t' : 'r' : 'u' : 'e' : x : xs) tokenAcc lineAcc       = evaluate x (BooleanToken $ BoolF True) (x : xs) token tokenAcc lineAcc
 
     -- If multiple character keyword is either at the end of an identifier or the program.
     tokenize' ('e' : 'l' : 's' : 'e' : xs) tokenAcc lineAcc           = tokenize' xs ((KeywordToken Else , lineAcc) : tokenAcc) lineAcc
@@ -62,14 +62,14 @@ module Tokenizer where
     -- Tokenize integers or identifiers.
     tokenizeNumbers, tokenizeNames :: String -> [(Token, Int)] -> Int -> String -> Either String [(Token, Int)]
     tokenizeNumbers [x] tokenAcc lineAcc number = Right $ reverse $ (NumberToken (read (number ++ [x]) :: Int), lineAcc) : tokenAcc
-    tokenizeNumbers (x : y : ys) tokenAcc lineAcc number 
+    tokenizeNumbers (x : y : ys) tokenAcc lineAcc number
         | isDigit y = tokenizeNumbers (y : ys) tokenAcc lineAcc (number ++ [x])
         | isAlpha y = Left $ "Syntax error in line " ++ show lineAcc ++ ": Identifiers can not begin with a digit."
         | otherwise = tokenize' (y : ys) ((NumberToken (read (number ++ [x]) :: Int), lineAcc) : tokenAcc) lineAcc
     tokenizeNumbers _ _ _ _                     = Left "Syntax error." -- This case can never be reached.
 
     tokenizeNames [x] tokenAcc lineAcc name = Right $ reverse $ (NameToken $ name ++ [x], lineAcc) : tokenAcc
-    tokenizeNames (x : y : ys) tokenAcc lineAcc name 
+    tokenizeNames (x : y : ys) tokenAcc lineAcc name
         | isAlphaNum y = tokenizeNames (y : ys) tokenAcc lineAcc (name ++ [x])
         | otherwise    = tokenize' (y : ys) ((NameToken $ name ++ [x], lineAcc) : tokenAcc) lineAcc
     tokenizeNames _ _ _ _                   = Left "Syntax error." -- This case can never be reached.
@@ -77,3 +77,7 @@ module Tokenizer where
     -- Helper function validateChar checks whether a character either belongs to the set of reserved special characters of F or is a space.
     validateChar :: Char -> Bool
     validateChar x = x `elem` [';', '=', '(', ')', '&', '|', '+', '-', '*', '/', '<', ' ', '\n', '\t', '\r']
+
+    --evaluate is a helper function to validate whether - based on the following char - a keyword is to be parsed or it is just part of a longer name
+    evaluate :: Char -> Token -> String -> String -> [(Token, Int)] -> Int -> Either String [(Token, Int)]
+    evaluate char checktoken list token tokenAcc lineAcc = if validateChar char then tokenize' list ((checktoken, lineAcc) : tokenAcc) lineAcc else tokenizeNames token tokenAcc lineAcc ""
