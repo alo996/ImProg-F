@@ -1,4 +1,4 @@
-module Executable where
+module Main where
     import Declarations
     import Tokenizer
     import Parser
