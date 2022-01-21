@@ -1,6 +1,7 @@
 -- This module contains all necessary types, aliases and type class instantiations.
-module Declarations where 
-    -- LEXICAL ANALYSIS
+module Declarations where
+
+    ---------------------------------------- LEXICAL ANALYSIS ----------------------------------------
     {-
     A token (or symbol) is a sequence of characters with some inherent structure 
     (e.g. a reserved F-keyword, a name, a multi-character number).
@@ -12,7 +13,6 @@ module Declarations where
         | NumberToken Int
         deriving Eq
 
-    
     {-
     A keyword is a sequence of characters that is 'reserved' by F. It cannot be used as a name, because F assumes it has a 
     predefined meaning (e.g. '+' is meant to be addition).
@@ -40,16 +40,6 @@ module Declarations where
 
     -- BoolF adresses the fact that boolean values in F are lowercase.
     newtype BoolF = BoolF Bool deriving Eq
-
-    {-
-    We may need notions of (In-) equality for the token type.
-        instance Eq Token where
-        (==) (BooleanToken (BoolF bool1)) (BooleanToken (BoolF bool2)) = bool1 == bool2
-        (==) (KeywordToken key1) (KeywordToken key2)                   = key1 == key2
-        (==) (NameToken name1) (NameToken name2)                       = name1 == name2
-        (==) (NumberToken num1) (NumberToken num2)                     = num1 == num2
-        (==) _ _                                                       = False
-    -}
             
     -- We need customized representations of our tokens, depending on their type.
     instance Show Token where
@@ -82,7 +72,8 @@ module Declarations where
         show Times     = "*"
         show Then      = "then" 
 
-    -- SYNTACTICAL ANALYSIS
+
+    ---------------------------------------- SYNTACTICAL ANALYSIS ----------------------------------------
     {-
     A parser is a parametrized function, that takes a list of tuples. 
     Each tuple contains a token and its line in the source code for error-handling purposes (e.g. [(NameToken f, 1), (NameToken x, 1)]).
@@ -92,14 +83,8 @@ module Declarations where
     -}
     type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
     
-    {-
-    NEW: A definition consists of one expression (the function name), a list of expressions (the function's formal arguments) and the defining expression on the right hand side of the '=',
-    e.g.  f    x1 x2 x3 = x1 + x2
-         Expr   [Expr]     Expr
-    -}
-    
     data Def 
-        = Def Expr [Expr] Expr  -- f x1 x2 x3 = x1
+        = Def Expr [Expr] Expr
         deriving (Eq, Show)
 
     -- A local definition consists of two expressions.
@@ -155,7 +140,7 @@ module Declarations where
 
     type Var = String
 
-    -- F-CODE DEVELOPMENT
+    ---------------------------------------- MF-CODE GENERATION AND INTERPRETATION ----------------------------------------
     {-
     We have four kinds of stores to deal with: code (for instructions), stack (for references), 
     heap (for applications) and global (for definitions of non-local functions).
@@ -192,7 +177,10 @@ module Declarations where
         | Slide Int 
         | Reduce 
         | Return
-        | Halt 
+        | Halt
+        | Alloc
+        | UpdateLet Int 
+        | SlideLet Int
         | Error String
         deriving Show
 
@@ -211,6 +199,7 @@ module Declarations where
         }
         | IND Int 
         | PRE Keyword Int
+        | UNINITIALIZED
         deriving (Show, Eq)
     
     -- A stack is a list of stack cells.

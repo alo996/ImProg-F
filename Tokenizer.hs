@@ -78,6 +78,6 @@ module Tokenizer where
     validateChar :: Char -> Bool
     validateChar x = x `elem` [';', '=', '(', ')', '&', '|', '+', '-', '*', '/', '<', ' ', '\n', '\t', '\r']
 
-    --evaluate is a helper function to validate whether - based on the following char - a keyword is to be parsed or it is just part of a longer name
+    -- Evaluate is a helper function to validate whether - based on the following char - a keyword is to be parsed or it is just part of a longer name
     evaluate :: Char -> Token -> String -> String -> [(Token, Int)] -> Int -> Either String [(Token, Int)]
     evaluate char checktoken list token tokenAcc lineAcc = if validateChar char then tokenize' list ((checktoken, lineAcc) : tokenAcc) lineAcc else tokenizeNames token tokenAcc lineAcc ""

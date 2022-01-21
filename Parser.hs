@@ -2,6 +2,7 @@
 module Parser where
   import Tokenizer
   import Declarations
+  
   {-
   The idea of the parser is the following: for each rule in the non-left recursive grammar, create a function that implements that rule.
   Each function returns our parametrized parser type (see Declarations file). Implementing a rule means the following: 
@@ -210,5 +211,3 @@ module Parser where
   compOp ((x:KeywordToken Less, _) : _) = LessThan x a
   compOp ((x:KeywordToken Equals, _) : _) =  Equal x a
 -}
-  
-
