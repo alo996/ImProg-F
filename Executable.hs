@@ -4,7 +4,7 @@ module Executable where
     import Parser
     import Store 
     import Compiler
-    import MiniMF
+    import MF
     import Debug.Trace
 
     execute :: String -> IO String

@@ -31,13 +31,13 @@ module MF where
     run (Pushparam addr) state    = pushparam state addr
     run Makeapp state             = makeapp state
     run (Slide n) state           = slide state n
-    run Reduce state              = reduce state
     run Return state              = return' state
     run Halt state                = halt state
     run Alloc state               = alloc state
     run (UpdateLet n) state       = updateLet state n
     run (SlideLet n) state        = slideLet state n
     run (Error error) state       = ErrorState error
+
 
 
     ---------------------------------------- HELPER FUNCTIONS ----------------------------------------
