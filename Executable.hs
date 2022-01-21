@@ -7,8 +7,8 @@ module Executable where
     import MiniMF
     import Debug.Trace
 
-    execute :: String -> IO String
-    execute input = 
+    main :: String -> IO String
+    main input = 
         case tokenize input of
             Right tokens -> case program tokens of
                 Right ast  -> case compileProgram (fst ast) of
@@ -17,8 +17,8 @@ module Executable where
                 Left error -> return error
             Left error -> return error
 
-    execute' :: String -> IO String
-    execute' input = case tokenize input of
+    main' :: String -> IO String
+    main' input = case tokenize input of
         Right tokens -> case program tokens of
             Right ast  -> case compileProgram (fst ast) of
                     ErrorState error -> return error
@@ -26,8 +26,8 @@ module Executable where
             Left error -> return error
         Left error -> return error
     
-    execute'' :: String -> IO String
-    execute'' input = case tokenize input of
+    main'' :: String -> IO String
+    main'' input = case tokenize input of
         Right tokens -> case program tokens of
             Right ast  -> return $ show ast
             Left error -> return error
