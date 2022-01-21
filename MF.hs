@@ -1,11 +1,166 @@
+{-# LANGUAGE NamedFieldPuns #-}
 module MF where
     import Declarations
     import Tokenizer
     import Parser
     import Compiler
     import Store
-    import MiniMF
     import Data.Bits
+    import Debug.Trace
+
+    ---------------------------------------- HAUPTZYKLUS ----------------------------------------
+    -- 'interpret' recursively executes a set of instructions either a HALT instruction or an error occurs.
+    interpret :: State -> State
+    interpret s@State{pc, sp, code = Code ccells, stack, heap} = case trace (show (ccells !! pc) ++ ", pc = " ++ show pc ++ ", sp = " ++ show sp ++ ", stack = " ++ show stack ++ ", heap = " ++ show heap) (access (Code ccells) pc) of
+        Right instruction -> case instruction of
+            Halt -> s
+            _    -> case run instruction s of
+                ErrorState error -> ErrorState error
+                state            -> interpret state
+        Left error        -> ErrorState error
+    interpret (ErrorState error) = ErrorState error
+    interpret _                  = ErrorState "Compile error: Function 'interpret' called with wrong argument."
+
+    -- Given an instruction, 'run' executes the respective MF function.
+    run :: Instruction -> State -> State
+    run Reset state               = reset state
+    run (Pushfun fname) state     = pushfun state fname
+    run (Pushval typ field) state = case typ of
+        "Bool" -> pushval state 2 field
+        _      -> pushval state 1 field
+    run (Pushparam addr) state    = pushparam state addr
+    run Makeapp state             = makeapp state
+    run (Slide n) state           = slide state n
+    run Reduce state              = reduce state
+    run Return state              = return' state
+    run Halt state                = halt state
+    run Alloc state               = alloc state
+    run (UpdateLet n) state       = updateLet state n
+    run (SlideLet n) state        = slideLet state n
+    run (Error error) state       = ErrorState error
+
+
+    ---------------------------------------- HELPER FUNCTIONS ----------------------------------------
+    -- 'address' takes the function name and delivers the address of its DEF-cell in the global environment.
+    address :: Store HeapCell -> String -> Either String Int
+    address (Heap hcells) f = address' hcells 0 f where
+        address' (x : xs) acc f = case x of
+            DEF {fname = fname} -> if f == fname then return acc else address' xs (acc + 1) f
+            _                   -> address' xs (acc + 1) f
+        address' [] _ _         = Left $ "Compile error: Heap does not contain definition of function '" ++ show f ++ "'."
+    address _ _                 = Left "Compile error: Function 'address' not called on heap."
+
+    -- 'add2arg' takes the address of an APP-cell and delivers the heap address of its argument.
+    add2arg :: Store HeapCell -> Int -> Either String Int
+    add2arg h@(Heap hcells) addr = if (addr >= 0) && (addr < depth h) then let APP addr1 addr2 = hcells !! addr in return addr2 else Left $ "Compile error: Heap does not contain cell at address " ++ show addr ++ "'."
+    add2arg _ _                  = Left "Compile error: Function 'add2arg' not called on heap."
+
+    -- 'arity'' returns the number of formal arguments of an operator.
+    arity' :: Keyword -> Int
+    arity' kw = case kw of
+        If     -> 3
+        And    -> 2
+        Or     -> 2
+        Equals -> 2
+        Less   -> 2
+        Plus   -> 2
+        Minus  -> 1
+        Times  -> 2
+        Divide -> 2
+        Not    -> 1
+        _      -> 0  -- not nice!!!!
+
+    -- 'new...' functions create different types of heap cells.
+    newAPP, newVAL :: Store HeapCell -> Int -> Int -> (Int, Store HeapCell)
+    newAPP heap a b = (depth heap, push heap (APP a b))
+
+    newVAL heap t w 
+            | t == 0    = (depth heap, push heap (VALNum w))
+            | otherwise = (depth heap, push heap (VALBool w))
+
+    newIND :: Store HeapCell -> Int -> (Int, Store HeapCell)
+    newIND heap a = (depth heap, push heap (IND a))
+
+    newPRE :: Store HeapCell -> Keyword -> Int -> (Int, Store HeapCell)
+    newPRE heap kw n = (depth heap, push heap $ PRE kw $ arity' kw)
+
+    newUNI :: Store HeapCell -> (Int, Store HeapCell)
+    newUNI heap = (depth heap, push heap UNINITIALIZED)
+
+
+    ---------------------------------------- MF FUNCTIONS ----------------------------------------
+    reset :: State -> State
+    reset s = s {sp = -1, pc = pc s + 1}
+
+    pushfun :: State -> String -> State
+    pushfun s name = case address (heap s) name of
+        Right int  -> s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell int)}
+        Left error -> ErrorState error
+
+    pushval :: State -> Int -> Int -> State
+    pushval s t w = let tuple = newVAL (heap s) t w in s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell (fst tuple)), heap = snd tuple}
+
+    pushparam :: State -> Int -> State
+    pushparam s n = case access (stack s) (sp s - n - 1) of
+        Right (StackCell addr) -> case add2arg (heap s) addr of
+            Right addr -> case save (stack s) (StackCell addr) (sp s + 1) of
+                Right stack -> s {pc = pc s + 1, sp = sp s + 1, stack = stack}
+                Left error  -> ErrorState error
+            Left error -> ErrorState error
+        Left error -> ErrorState error
+        
+    makeapp :: State -> State
+    makeapp s = case access (stack s) (sp s) of
+        Right (StackCell a) -> case access (stack s) (sp s - 1) of
+            Right (StackCell b) -> let tuple = newAPP (heap s) a b in 
+                case save (stack s) (StackCell (fst tuple)) (sp s - 1) of
+                    Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = snd tuple}
+                    Left error           -> ErrorState error
+                    _                    -> ErrorState "Compile error: save not called on stack in function 'makeapp'"
+            Left error         -> ErrorState error
+        Left error         -> ErrorState error
+
+    slide :: State -> Int -> State
+    slide s n = case access (stack s) (sp s - 1) of
+        Right scell_1 -> case save (stack s) scell_1 (sp s - n - 1) of
+            Right stack_1 -> case access stack_1 (sp s) of
+                Right scell_2 -> case save stack_1 scell_2 (sp s - n) of
+                    Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n + 1) scells)}
+                    Left error           -> ErrorState error
+                    _                    -> ErrorState "Compile error: save not called on stack in function 'slide'"
+                Left error    -> ErrorState error
+            Left error -> ErrorState error
+        Left error -> ErrorState error
+
+    reduce :: State -> State
+    reduce s = case access (stack s) (sp s) of
+        Right (StackCell addr) -> case access (heap s) addr of
+            Right elem -> case elem of
+                (APP addr1 addr2) -> s {sp = sp s + 1, stack = push (stack s) (StackCell addr1)}
+                (DEF f n addr3)   ->  s {pc = addr3, sp = sp s + 1, stack = push (stack s) (StackCell (pc s + 1))}
+                _                 -> case access (stack s) (sp s - 1) of
+                    Right (StackCell addr4) -> case access (stack s) (sp s) of
+                        Right scell -> case save (stack s) scell (sp s - 1) of
+                            Right (Stack scells) -> s {pc = addr4, sp = sp s - 1, stack = Stack (take (sp s) scells)}
+                            Left error           -> ErrorState error
+                            _                    -> ErrorState "Compile error: save not called on stack in function 'reduce'"
+                        Left error           -> ErrorState error
+                    Left error           -> ErrorState error
+            Left error -> ErrorState error
+        Left error           -> ErrorState error
+
+    return' :: State -> State
+    return' s = case access (stack s) (sp s - 1) of
+        Right (StackCell addr) -> case access (stack s) (sp s) of
+            Right scell -> case save (stack s) scell (sp s - 1) of
+                Right (Stack scells) -> s {pc = addr, sp = sp s - 1, stack = Stack (take (sp s) scells)}
+                Left error           -> ErrorState error
+                _                    -> ErrorState "Compile error in return'"
+            Left error           -> ErrorState error
+        Left error           -> ErrorState error
+
+    halt :: State -> State
+    halt s = s
     
     value :: Store HeapCell -> Int -> Either String HeapCell
     value heap adr1 = case access heap adr1 of
@@ -54,9 +209,9 @@ module MF where
                 Left error   -> ErrorState error
 
     funcUpdate :: State -> Int -> State
-    funcUpdate s arg = case access (stack s) (sp s) of -- wir schauen ob stack[T]=addr1 existiert
-        Right (StackCell addr1) -> case access (stack s) (sp s - arg - 2) of -- wir schauen ob stack[t - n - 2]=addr2 existiert
-            Right (StackCell addr2) -> let hcell = IND addr1 in case save (heap s) hcell addr2 of -- wir schauen, ob wir (IND addr1) an heap[addr2] speichern können
+    funcUpdate s arg = case access (stack s) (sp s) of 
+        Right (StackCell addr1) -> case access (stack s) (sp s - arg - 2) of 
+            Right (StackCell addr2) -> let hcell = IND addr1 in case save (heap s) hcell addr2 of
                 Right heap -> s {pc = pc s, heap = heap}
                 Left error -> ErrorState error 
             Left error              -> ErrorState error
@@ -195,3 +350,22 @@ module MF where
                 Left error           -> ErrorState error
             Left error              -> ErrorState error
         _ -> ErrorState "type error"
+    
+    alloc :: State -> State
+    alloc s = let tuple = newUNI (heap s) in s {sp = sp s + 1, stack = push (stack s) (StackCell (fst tuple)), heap = snd tuple}
+
+    updateLet :: State -> Int -> State
+    updateLet s n = case access (stack s) (sp s - n - 1) of
+        Right (StackCell addr) -> case add2arg (heap s) addr of
+            Right addr1 -> case save (heap s) (IND (sp s)) addr1 of
+                Right heap -> s {sp = sp s - 1, heap = heap}
+                Left error -> ErrorState error
+            Left error  -> ErrorState error
+        Left error             -> ErrorState error
+
+    slideLet :: State -> Int -> State
+    slideLet s n = case access (stack s) (sp s) of
+        Right scell -> case save (stack s) scell (sp s - n) of
+            Right stack -> s {sp = sp s - n, stack = stack}
+            Left error  -> ErrorState error
+        Left error  -> ErrorState error

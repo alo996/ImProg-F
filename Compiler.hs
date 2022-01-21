@@ -23,7 +23,16 @@ module Compiler where
     compileDefinition (Def e1@(AtomicExpr (Var fname)) es e2) s@State{code = Code ccells, heap = Heap hcells} =
         let localenv = createPos es in
         s {code = Code (ccells ++ compileExpression e2 0 localenv ++ [Slide (length localenv + 1), Reduce, Return]), heap = Heap (hcells ++ [DEF fname (length localenv) (depth (code s))])}
-    compileDefinition def state                                                      = ErrorState $ "Compile error: compileDefinition called with " ++ show def ++ " and " ++ show state ++ "."
+    compileDefinition def state = ErrorState $ "Compile error: compileDefinition called with " ++ show def ++ " and " ++ show state ++ "."
+
+    compileLocalDefinitions :: [LocalDef] -> State -> State
+    compileLocalDefinitions ldefs s@State{code = Code ccells} = let pos' = createPos' ldefs
+                                                                    n = length ldefs in 
+                                                                        compileLocalDefinitions' ldefs s{code = Code (ccells ++ replicate' [Alloc, Alloc, Makeapp] n)} n pos' where
+                                                                            compileLocalDefinitions' ((LocalDef e1 e2) : defs) s@State{code = Code ccells} offset pos' = s {code = Code (ccells ++ (compileExpression e2 offset pos') ++ [])}
+                                                                            compileLocalDefinitions' [] s _ _                                                  = s
+                                                                            compileLocalDefinitions' _ _ _ _                                                    = ErrorState "error"
+    compileLocalDefinitions _ _                               = ErrorState "error"
 
     -- Compile an expression. 'compileExpression' takes the expression to compile, an offset for the local environment (see pos+i(x) in the script) and a local environment.
     compileExpression :: Expr -> Int -> [(Expr, Int)] -> [Instruction]
@@ -41,12 +50,26 @@ module Compiler where
 
     -- Create a local environment for a given list of formal parameters.
     createPos :: [Expr] -> [(Expr, Int)]
-    createPos es = posList' es 1 where
-        posList' (x : xs) acc = (x, acc) : posList' xs (acc + 1)
-        posList' [] acc       = []
+    createPos es = zip es [1..]
 
     -- Get the index of the first occurence of a formal parameter in a given local environment.
     posInd :: Expr -> Int -> [(Expr, Int)] -> Either String Int
     posInd e offset pos = case lookup e pos of
         Just ind -> return (ind + offset)
         _        -> Left $ "Compile error: Local environment " ++ show pos ++ " does not contain formal parameter " ++ show e ++ " at position " ++ show pos ++ "."
+
+    -- Extend a local environment by adding let bindings to its front.
+    createPos' :: [LocalDef] -> [(Expr, Int)] -> [(Expr, Int)]
+    createPos' ldefs pos = posList' ldefs pos (length ldefs - 2) where
+        posList' ((LocalDef e1 e2) : ldefs) pos ind = posList' ldefs ((e1, ind) : pos) (ind - 1)
+        posList' [] pos ind                         = pos
+
+    posInd' :: Expr -> Int -> [(Expr, Int)] -> [(Expr, Int)] -> Either String Int
+    posInd' e offset pos' pos = case lookup e pos' of
+        Just ind -> return (ind + offset)
+        _        -> posInd e offset pos
+    
+    replicate' :: [a] -> Int -> [a]
+    replicate' xs n 
+        | n > 1     = xs ++ replicate' xs (n - 1)
+        | otherwise = xs
