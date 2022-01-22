@@ -4,6 +4,9 @@ module Compiler where
     import Store
     import Data.Either
     import Data.Maybe
+    import Tokenizer
+    import Parser
+    import Debug.Trace
 
     {-
     If successful, the parser output is of the form Right ([Def], []). In the executable, we access the first component of the tuple, which is our parsed F-program.
@@ -24,14 +27,6 @@ module Compiler where
         s {code = Code (ccells ++ compileExpression e2 0 localenv ++ [FuncUpdate (length localenv), Slide (length localenv + 1), Unwind, Call, Return]), heap = Heap (hcells ++ [DEF fname (length localenv) (depth (code s))])}
     compileDefinition def state = ErrorState $ "Compile error: compileDefinition called with " ++ show def ++ " and " ++ show state ++ "."
 
-    compileLocalDefinitions :: [LocalDef] -> Expr -> [(Expr, Int)] -> [Instruction]
-    compileLocalDefinitions ldefs e pos = 
-        let n = length ldefs in let pos' = createPos' ldefs pos n in
-            compileLocalDefinitions' ldefs e (replicate' [Alloc, Alloc, Makeapp] n) pos' n n where
-                compileLocalDefinitions' :: [LocalDef] -> Expr -> [Instruction] -> [(Expr, Int)] -> Int -> Int -> [Instruction]
-                compileLocalDefinitions' ((LocalDef e1 e2) : defs) e cells pos' n acc = compileLocalDefinitions' defs e (compileExpression e2 n pos' ++ [UpdateLet $ acc-1]) pos' n (acc-1)
-                compileLocalDefinitions' [] e ccells pos' n _                         = ccells ++ compileExpression e 0 pos' ++ [SlideLet n]
-
     -- Compile an expression. 'compileExpression' takes the expression to compile, an offset for the local environment (see pos+i(x) in the script) and a local environment.
     compileExpression :: Expr -> Int -> [(Expr, Int)] -> [Instruction]
     compileExpression e num pos = case e of
@@ -45,13 +40,24 @@ module Compiler where
             Func (AtomicExpr (Var fname)) e2   -> compileExpression e2 num pos ++ [Pushfun fname, Makeapp]
             Func e1 e2                         -> compileExpression e2 num pos ++ compileExpression e1 (num + 1) pos ++ [Makeapp]
             LetIn localdefs e                  -> compileLocalDefinitions localdefs e pos
-            _                                  -> [Error "Illegal MF instruction"]
+            Add e1 e2                          -> compileExpression e2 num pos ++ compileExpression e1 (num + 1) pos ++ [Pushpre Plus, Makeapp, Makeapp]
+            Mult e1 e2                         -> compileExpression e2 num pos ++ compileExpression e1 (num + 1) pos ++ [Pushpre Times, Makeapp, Makeapp]
+            Div e1 e2                          -> compileExpression e2 num pos ++ compileExpression e1 (num + 1) pos ++ [Pushpre Divide, Makeapp, Makeapp]
+            Equal e1 e2                        -> compileExpression e2 num pos ++ compileExpression e1 (num + 1) pos ++ [Pushpre Equals, Makeapp, Makeapp]
+            LessThan e1 e2                     -> compileExpression e2 num pos ++ compileExpression e1 (num + 1) pos ++ [Pushpre Less, Makeapp, Makeapp]
+            LogicalAnd e1 e2                   -> compileExpression e2 num pos ++ compileExpression e1 (num + 1) pos ++ [Pushpre And, Makeapp, Makeapp]
+            LogicalOr e1 e2                    -> compileExpression e2 num pos ++ compileExpression e1 (num + 1) pos ++ [Pushpre And, Makeapp, Makeapp]
+            UnaryMin e                         -> compileExpression e num pos ++ [Pushpre Minus, Makeapp]
+            LogicalNot e                       -> compileExpression e num pos ++ [Pushpre Not, Makeapp]
+            IfThenElse e1 e2 e3                -> compileExpression e3 num pos ++ compileExpression e2 (num + 1) pos ++ compileExpression e1 (num + 2) pos ++ [Pushpre If, Makeapp, Makeapp, Makeapp]
 
-            {-
-                data LocalDef 
-                = LocalDef Expr Expr 
-                deriving (Eq, Show)
-            -}
+    compileLocalDefinitions :: [LocalDef] -> Expr -> [(Expr, Int)] -> [Instruction] --     data LocalDef = LocalDef Expr Expr deriving (Eq, Show)
+    compileLocalDefinitions ldefs e pos = 
+        let n = length ldefs in let pos' = createPos' ldefs pos n in
+            compileLocalDefinitions' ldefs e (replicate' [Alloc, Alloc, Makeapp] n) pos' n n where
+                compileLocalDefinitions' :: [LocalDef] -> Expr -> [Instruction] -> [(Expr, Int)] -> Int -> Int -> [Instruction]
+                compileLocalDefinitions' ((LocalDef e1 e2) : defs) e ccells pos' n acc = compileLocalDefinitions' defs e (ccells ++ compileExpression e2 n pos' ++ [UpdateLet $ acc-1]) pos' n (acc-1)
+                compileLocalDefinitions' [] e ccells pos' n _                          = ccells ++ compileExpression e 0 pos' ++ [SlideLet n]
 
     -- Create a local environment for a given list of formal parameters.
     createPos :: [Expr] -> [(Expr, Int)]
