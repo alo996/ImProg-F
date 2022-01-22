@@ -187,12 +187,17 @@ module Declarations where
         | Pushfun String
         | Pushval String Int
         | Pushparam Int
+        | Pushpre Keyword
         | Makeapp
         | Slide Int
-        | Reduce
+        | Unwind
+        | Call
         | Return
         | Halt
+        | Operator Int
         | Alloc
+        | FuncUpdate Int
+        | OpUpdate
         | UpdateLet Int
         | SlideLet Int
         | Error String
