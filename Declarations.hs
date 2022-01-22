@@ -162,6 +162,8 @@ module Declarations where
       showCells' [] _ acc = acc
     showCells [] = ""
 
+    -- let testState = State {pc = 2, sp = 2,  code = Code [Pushval "Bool" 0, Pushval "Bool" 1, Pushval "Bool" 0], stack = Stack [StackCell 1, StackCell 3], heap = Heap [APP 1 2, VALNum 2]}
+
     {-
     A machine state consists of a program counter, a list of generated instructions, a stack, a heap and a global environment (see Zhu's example).
     Do we also need a stack pointer? If so, why didn't Zhu include one?
