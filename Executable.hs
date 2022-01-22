@@ -1,4 +1,4 @@
-module Main where
+module Executable where
     import Declarations
     import Tokenizer
     import Parser
@@ -6,9 +6,10 @@ module Main where
     import Compiler
     import MF
     import Debug.Trace
-
+    import Declarations (State(State))
+    
     main :: String -> IO String
-    main input = 
+    main input =
         case tokenize input of
             Right tokens -> case program tokens of
                 Right ast  -> case compileProgram (fst ast) of
@@ -25,6 +26,15 @@ module Main where
                     state            -> return $ show state
             Left error -> return error
         Left error -> return error
+    
+    test :: String -> State
+    test input = case tokenize input of
+        Right tokens -> case program tokens of
+            Right ast  -> case compileProgram (fst ast) of
+                    ErrorState error -> ErrorState error
+                    state            -> state
+            Left error -> ErrorState error
+        Left error -> ErrorState error
     
     main'' :: String -> IO String
     main'' input = case tokenize input of
