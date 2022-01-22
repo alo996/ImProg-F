@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 -- This module contains all necessary types, aliases and type class instantiations.
 module Declarations where
 
@@ -152,15 +153,14 @@ module Declarations where
         deriving Eq
 
     instance (Show a) => Show (Store a) where
-      show (Code ccells) = "Code: " ++ showCells ccells
+      show (Code ccells)  = "Code: " ++ showCells ccells
       show (Stack scells) = "Stack: " ++ showCells scells
-      show (Heap hcells) = "Heap: " ++ showCells hcells
+      show (Heap hcells)  = "Heap: " ++ showCells hcells
 
+    showCells :: (Show a) => [a] -> String
     showCells xs = showCells' xs 0 "" where
-      showCells' :: (Show a) => [a] -> Int -> String -> String
-      showCells' (x:xs) ind acc = showCells' xs (ind+1) (acc ++ "\n   " ++ show ind ++ ": " ++ show x)
-      showCells' [] _ acc = acc
-    showCells [] = ""
+      showCells' (x : xs) ind acc = showCells' xs (ind + 1) (acc ++ "\n   " ++ show ind ++ ": " ++ show x)
+      showCells' [] _ acc         = acc
 
     {-
     A machine state consists of a program counter, a list of generated instructions, a stack, a heap and a global environment (see Zhu's example).
@@ -177,9 +177,9 @@ module Declarations where
         }
         | ErrorState String
 
-
     instance Show State where
-        show State {pc=pc, sp=sp, code=Code ccells, stack = stack, heap=heap} = "I:  " ++ show (ccells !! pc) ++ "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show stack ++ "\n" ++ show heap
+        show State{pc, sp, code, stack, heap} = show code ++ "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show stack ++ "\n" ++ show heap
+        show (ErrorState error)               = error 
 
     -- The instruction type has several constructors, each one indicating some kind of functionality.
     data Instruction
