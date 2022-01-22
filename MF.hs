@@ -29,15 +29,20 @@ module MF where
         "Bool" -> pushval state 2 field
         _      -> pushval state 1 field
     run (Pushparam addr) state    = pushparam state addr
+    run (Pushpre kw) state        = pushpre state kw
     run Makeapp state             = makeapp state
     run (Slide n) state           = slide state n
+    run Unwind state              = unwind state
+    run Call state                = call state
     run Return state              = return' state
     run Halt state                = halt state
+    run (Operator n) state        = operator state n
     run Alloc state               = alloc state
+    run (FuncUpdate n) state      = funcUpdate state n
+    run OpUpdate state            = opUpdate state
     run (UpdateLet n) state       = updateLet state n
     run (SlideLet n) state        = slideLet state n
     run (Error error) state       = ErrorState error
-
 
 
     ---------------------------------------- HELPER FUNCTIONS ----------------------------------------
@@ -178,19 +183,10 @@ module MF where
 
     call :: State -> State
     call s = case value (heap s) (sp s) of
-        Right (DEF f n adr) -> case save (stack s) (StackCell (pc s)) (sp s + 1) of
-            Right nstack -> s {pc = adr, sp = sp s + 1, stack = nstack}
-            Left error   -> ErrorState error
-        Right (PRE op 2)    -> case save (stack s) (StackCell (pc s + 1)) (sp s + 1) of 
-            Right nstack -> s {pc = 4, sp = sp s + 1, stack = nstack}
-            Left error   -> ErrorState error
-        Right (PRE If 3)    -> case save (stack s) (StackCell (pc s + 1)) (sp s + 1) of
-            Right nstack -> s{pc = 13, sp = sp s + 1, stack = nstack}
-            Left error   -> ErrorState error
-        Right (PRE op 1)    -> case save (stack s) (StackCell (pc s + 1)) (sp s + 1) of
-            Right nstack -> s {pc = 21, sp = sp s + 1, stack = nstack}
-            Left error   -> ErrorState error           
-        Left error          -> ErrorState error
+        Right (DEF f n adr) -> s {pc = adr, sp = sp s + 1, stack = push (stack s) (StackCell (pc s + 1))}
+        Right (PRE op 2)    -> s {pc = 4, sp = sp s + 1, stack = push (stack s) (StackCell (pc s + 1))}
+        Right (PRE If 3)    -> s {pc = 13, sp = sp s + 1, stack = push (stack s) (StackCell (pc s + 1))}
+        Right (PRE op 1)    -> s {pc = 21, sp = sp s + 1, stack = push (stack s) (StackCell (pc s + 1))}
         _                   -> ErrorState "error in 'call'"
     
     return'' :: State -> State
@@ -243,26 +239,28 @@ module MF where
             Right (StackCell addr1) -> case value (heap s) addr1 of
                 Right (PRE op 1) -> case access (stack s) (sp s - 1) of
                     Right scell -> case save (stack s) scell (sp s - 2) of
-                        Right stack -> case access stack (sp s) of
+                        Right stack   -> case access stack (sp s) of
                             Right (StackCell addr2) -> case value (heap s) addr2 of
                                 Right (VALBool w) -> case op of
                                     Not -> if fromEnum w == 1
                                                 then let tuple = newVAL (heap s) 1 1 in case save stack (StackCell (fst tuple)) (sp s - 1) of
                                                     Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = snd tuple}
-                                                    Left error           -> ErrorState error
+                                                    _                    -> ErrorState "'operator: 4 error"
                                                 else let tuple = newVAL (heap s) 1 0 in case save stack (StackCell (fst tuple)) (sp s - 1) of
                                                     Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = snd tuple}
-                                                    Left error           -> ErrorState error
+                                                    _                    -> ErrorState "'operator: 4 error"
                                     _   -> ErrorState "Compile error: 'operator' calls value with wrong arguments." 
-                                Right (VALNum w)   -> case op of
+                                Right (VALNum w)  -> case op of
                                     Minus -> let tuple = newVAL (heap s) 0 (- w) in case save stack (StackCell (fst tuple)) (sp s - 1) of
                                         Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = snd tuple}
                                         _     -> ErrorState "Compile error: 'operator' calls value with wrong arguments." 
-                                    _         -> ErrorState "Compile error: 'operator' calls value with wrong arguments." 
-                                Left error -> ErrorState error
-                            Left error  -> ErrorState error
-                        Left error  -> ErrorState error
-                Left error               -> ErrorState error
+                                    _         -> ErrorState "Compile error: 'operator' calls value with wrong arguments."
+                                _                 -> ErrorState "'operator: 2 error"      
+                            Left error -> ErrorState error
+                        Left error -> ErrorState error
+                    Left error  -> ErrorState error
+                _               -> ErrorState "'operator: 1 error"
+            Left error  -> ErrorState error
         2 -> case access (stack s) (sp s - 3) of
             Right (StackCell addr) -> case value (heap s) addr of
                 Right (PRE op 2) -> case access (stack s) (sp s - 2) of
@@ -291,7 +289,7 @@ module MF where
                                                             Right stack -> s {sp = sp s - 3, stack = stack, heap = snd tuple}
                                                             Left error  -> ErrorState error
                                                     _      -> ErrorState "Type error."
-                                                Left error            -> ErrorState error
+                                                _                      -> ErrorState "'operator': 9 error"
                                             Right (VALNum num1) -> case hcell2 of
                                                 Right (VALNum num2) -> case op of
                                                     Equals -> let tuple = newVAL (heap s) 1 (fromEnum $ num1 == num2) in
@@ -315,11 +313,13 @@ module MF where
                                                             Right stack -> s {sp = sp s - 3, stack = stack, heap = snd tuple}
                                                             Left error  -> ErrorState error
                                                     _      -> ErrorState "Type error."
-                                                _                   -> ErrorState "Type error."
-                                            Left error          -> ErrorState error
+                                                _                    -> ErrorState "'operator': 8 error"
+                                            _                   -> ErrorState "Type error."
                                     Left error          -> ErrorState error
                             Left error          -> ErrorState error
+                        Left error          -> ErrorState error
                     Left error          -> ErrorState error
+                _                -> ErrorState "'operator': 7 error"
             Left error          -> ErrorState error
         3 -> case access (stack s) (sp s) of
             Right (StackCell addr) -> case value (heap s) addr of
@@ -330,7 +330,7 @@ module MF where
                                 Right stack -> case access stack (sp s - 1) of
                                     Right scell -> case save stack scell (sp s - 4) of
                                         Right (Stack scells) -> s {sp = sp s - 3, stack = Stack $(take $ sp s - 3) scells}
-                                        Left error           -> ErrorState error
+                                        _                    -> ErrorState "'operator: 6 error"
                                     Left error  -> ErrorState error
                                 Left error  -> ErrorState error
                             Left error  -> ErrorState error
@@ -341,13 +341,14 @@ module MF where
                                 Right stack -> case access stack (sp s - 1) of
                                     Right scell -> case save stack scell (sp s - 4) of
                                         Right (Stack scells) -> s {sp = sp s - 3, stack = Stack $(take $ sp s - 3) scells}
-                                        Left error           -> ErrorState error
+                                        _                    -> ErrorState "'operator: 6 error"
                                     Left error  -> ErrorState error
                                 Left error  -> ErrorState error
                             Left error  -> ErrorState error
                         Left error              -> ErrorState error
                     _ -> ErrorState "Type error"
-                Left error           -> ErrorState error
+                _                    -> ErrorState "'operator: 5 error"
+
             Left error              -> ErrorState error
         _ -> ErrorState "type error"
     

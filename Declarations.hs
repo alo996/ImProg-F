@@ -173,6 +173,7 @@ module Declarations where
         | Pushfun String 
         | Pushval String Int 
         | Pushparam Int
+        | Pushpre Keyword
         | Makeapp 
         | Slide Int 
         | Unwind
