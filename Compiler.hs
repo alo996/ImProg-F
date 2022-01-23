@@ -1,17 +1,6 @@
 module Compiler where
-    import Data.List
     import Declarations
     import Store
-    import Data.Either
-    import Data.Maybe
-    import Tokenizer
-    import Parser
-    import Debug.Trace
-
-    {-
-    If successful, the parser output is of the form Right ([Def], []). In the executable, we access the first component of the tuple, which is our parsed F-program.
-    This list of definitions is the input of the compiler. 
-    -}
 
     -- Compile a whole program. 'compileProgram' takes a program (a list of definitions) and returns the the initial machine state that is then interpreted by MiniMF.
     compileProgram :: [Def] -> State
