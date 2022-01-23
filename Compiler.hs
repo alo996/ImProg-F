@@ -1,17 +1,6 @@
 module Compiler where
-    import Data.List
     import Declarations
     import Store
-    import Data.Either
-    import Data.Maybe
-    import Tokenizer
-    import Parser
-    import Debug.Trace
-
-    {-
-    If successful, the parser output is of the form Right ([Def], []). In the executable, we access the first component of the tuple, which is our parsed F-program.
-    This list of definitions is the input of the compiler. 
-    -}
 
     -- Compile a whole program. 'compileProgram' takes a program (a list of definitions) and returns the the initial machine state that is then interpreted by MiniMF.
     compileProgram :: [Def] -> State
@@ -25,7 +14,7 @@ module Compiler where
     compileDefinition (Def e1@(AtomicExpr (Var fname)) es e2) s@State{code = Code ccells, heap = Heap hcells} =
         let localenv = createPos es in
         s {code = Code (ccells ++ compileExpression e2 0 localenv ++ [FuncUpdate (length localenv), Slide (length localenv + 1), Unwind, Call, Return]), heap = Heap (hcells ++ [DEF fname (length localenv) (depth (code s))])}
-    compileDefinition def state = ErrorState $ "Compile error: compileDefinition called with " ++ show def ++ " and " ++ show state ++ "."
+    compileDefinition def state = ErrorState "error"
 
     -- Compile an expression. 'compileExpression' takes the expression to compile, an offset for the local environment (see pos+i(x) in the script) and a local environment.
     compileExpression :: Expr -> Int -> [(Expr, Int)] -> [Instruction]
