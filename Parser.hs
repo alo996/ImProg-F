@@ -2,7 +2,7 @@
 module Parser where
   import Tokenizer
   import Declarations
-  
+
   {-
   The idea of the parser is the following: for each rule in the non-left recursive grammar, create a function that implements that rule.
   Each function returns our parametrized parser type (see Declarations file). Implementing a rule means the following: 
@@ -12,7 +12,7 @@ module Parser where
   The parser works with the principle of recursive descent: Each function calls some more special function 
   (for example expr calls expr1, expr1 calls expr2 etc.), until we reach the 'base-cases', like atomicExpr.
   The final return value is an abstract syntax tree, which we will work with in the upcoming steps.
-  
+
   The most general function in our parser is program. It works as follows:
   The first token has to be a definition, which has to start with a variable according to our grammar. 
   That means it starts with a NameToken. So if we detect a NameToken, we apply the function def on the tokenstream. 
@@ -47,7 +47,7 @@ module Parser where
     case ts1 of
       (KeywordToken Semicolon, _) : ts2 -> localDefs ts2 >>= \ (ds, ts3) -> return (d : ds, ts3)
       _                                 -> return ([d], ts1)
-  
+
   localDef :: Parser LocalDef
   localDef ts = do
     (e, ts1) <- variable ts
@@ -65,7 +65,7 @@ module Parser where
     (e2, ts5) <- expr ts4
     return (IfThenElse e e1 e2, ts5)
   expr ts                           = expr1 ts
-  
+
   expr1 ts = do
     (e, ts1) <- expr2 ts
     case ts1 of
@@ -80,14 +80,14 @@ module Parser where
 
   expr3 ((KeywordToken Not, _) : ts) = expr4 ts >>= \ (e, ts1) -> return (LogicalNot e, ts1)
   expr3 ts                           = expr4 ts
-{-same with my expr4}
+  {-same with my expr4}
   expr4 ts = do
     (e, ts1) <- expr5 ts
     case ts1 of
       (KeywordToken Equals, _) : ts2 -> expr5 ts2 >>= \ (e1, ts3) -> if valKlam (ts1, ts2) then return (Equal e e1, ts3) else Left $ "error oz"
       (KeywordToken Less, _) : ts2   -> expr5 ts2 >>= \ (e1, ts3) -> if valKlam (ts1, ts2) then return (LessThan e e1, ts3) else Left $ "error oz"
       _                              -> return (e, ts1)
--}
+  -}
 
   expr4 ts = do
     (e, ts1) <- expr5 ts
@@ -127,11 +127,11 @@ module Parser where
   restDef ts = case ts of
     (NameToken _, _) : _ -> variable ts >>= \ (e, ts1) -> restDef ts1 >>= \ (es, ts2) -> return (e : es, ts2)
     _                    -> return ([], ts)
-{-example how to use my restExpr5 with my function}
+  {-example how to use my restExpr5 with my function}
   restExpr5 ((KeywordToken Plus, _) : ts)  = expr6 ts >>= \ (e, ts1) -> restExpr5 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
   restExpr5 ((KeywordToken Minus, _) : ts) = if not (valKlam2 ts) then expr6 ts >>= \ (e, ts1) -> return ([UnaryMin e], ts1) else Left "false"
   restExpr5 ts                             = return ([], ts)
--}
+  -}
   restExpr5 ((KeywordToken Plus, _) : ts)  = expr6 ts >>= \ (e, ts1) -> restExpr5 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
   restExpr5 ((KeywordToken Minus, _) : ts) = expr6 ts >>= \ (e, ts1) -> return ([UnaryMin e], ts1)
   restExpr5 ts                             = return ([], ts)
@@ -159,7 +159,7 @@ module Parser where
   match t1 ((t2 , line) : _) = Left $ "Syntax error in line " ++ show line ++ ": Keyword " ++ show t1 ++ " expected but found '" ++ show t2 ++ "'."
   match t1 []                = Left $ "Syntax error at end of program: Keyword '" ++ show t1 ++ "' expected."
 
-{-}
+  {-}
 
   valKlam2 :: [(Token,Int)] -> Bool
   valKlam2 ((NumberToken a,_):xs) = case xs of 
@@ -167,7 +167,7 @@ module Parser where
       (NumberToken c,_) : xs2 -> case xs2 of
         (KeywordToken d,_) : xs3 -> case xs3 of
           (NumberToken e,_) : xs4 -> False 
-  
+
 
   So becouse we didnt think about this when we wrote our whole parser, so far the best solution i could think of, is to write a
   helper function valKlam: to see if a certain line of tokens are in line of the rules of klammern.
@@ -183,7 +183,7 @@ module Parser where
   valKlam ((KeywordToken LBracket, _) :xs)   = valKlam xs
   valKlam ((NumberToken _, _) :xs)   = valKlam xs
   valKlam (_:(KeywordToken RBracket, _) :xs) = case xs of
-               -> case xs1 of
+                -> case xs1 of
       (NumberToken _,_): xs2 -> case xs2 of 
         (KeywordToken RBracket,_):xs3 -> valKlam xs2
         (_, _) : _ -> return false
@@ -205,9 +205,9 @@ module Parser where
       (KeywordToken Less,_):xs2 -> valKlam xs1
       (KeywordToken Equals,_):xs2 -> valKlam xs1
       (_,_):xs2 -> true
--}
-{-
+  -}
+  {-
   compOp :: Parser Expr
   compOp ((x:KeywordToken Less, _) : _) = LessThan x a
   compOp ((x:KeywordToken Equals, _) : _) =  Equal x a
--}
+  -}
