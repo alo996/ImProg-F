@@ -5,7 +5,6 @@ module Executable where
     import Store 
     import Compiler
     import MF
-    import Debug.Trace
    
     main :: String -> IO String
     main input =

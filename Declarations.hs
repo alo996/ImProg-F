@@ -111,17 +111,17 @@ module Declarations where
         deriving Eq
 
     instance Show Expr where
-        show (Add e1 e2)           = show e1 ++ " + " ++ show e2
-        show (Func e1 e2)          = "Func " ++ show e1 ++ " " ++ show e2
-        show (Mult e1 e2)          = show e1 ++ " * " ++ show e2
-        show (Div e1 e2)           = show e1 ++ " / " ++ show e2
-        show (UnaryMin e)          = "UnaryMin " ++ show e
+        show (Add e1 e2)           = show e1 ++ "+" ++ show e2
+        show (Func e1 e2)          = show e1 ++ " " ++ show e2
+        show (Mult e1 e2)          = show e1 ++ "*" ++ show e2
+        show (Div e1 e2)           = show e1 ++ "/" ++ show e2
+        show (UnaryMin e)          = "-" ++ show e
         show (Equal e1 e2)         = show e1 ++ " == " ++ show e2
         show (LessThan e1 e2)      = show e1 ++ " < " ++ show e2
         show (LogicalAnd e1 e2)    = show e1 ++ " & " ++ show e2
         show (LogicalOr e1 e2)     = show e1 ++ " | " ++ show e2
-        show (LogicalNot e)        = " ! " ++ show e
-        show (LetIn e1 e2)         = "let" ++ show e1 ++ " in " ++ show e2
+        show (LogicalNot e)        = "!" ++ show e
+        show (LetIn e1 e2)         = "let " ++ show e1 ++ " in " ++ show e2
         show (IfThenElse e1 e2 e3) = "if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3
         show (AtomicExpr e)        = show e
 
@@ -178,8 +178,8 @@ module Declarations where
         | ErrorState String
 
     instance Show State where
-        show State{pc, sp, code, stack, heap} = show code ++ "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show stack ++ "\n" ++ show heap
-        show (ErrorState error)               = error 
+        show State{pc, sp, code, stack, heap} = "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show stack ++ "\n" ++ show heap
+        show (ErrorState error)               = error
 
     -- The instruction type has several constructors, each one indicating some kind of functionality.
     data Instruction
