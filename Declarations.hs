@@ -178,7 +178,7 @@ module Declarations where
         | ErrorState String
 
     instance Show State where
-        show State{pc, sp, code, stack, heap} = "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show stack ++ "\n" ++ show heap
+        show State{pc, sp, code, stack, heap} = show code ++ "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show stack ++ "\n" ++ show heap
         show (ErrorState error)               = error
 
     -- The instruction type has several constructors, each one indicating some kind of functionality.

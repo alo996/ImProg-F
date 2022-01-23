@@ -1,5 +1,0 @@
--- igor and oz:
-
-as we looked the wat definition is being parsed (example f x y = x +y) we noticed that our definition function takes all the variables
-and put them together in the same list. should we maybe redefine it, that the first variable will come as part of Def, and the rest will  be inserted to the list? 
-

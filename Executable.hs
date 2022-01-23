@@ -16,10 +16,10 @@ module Executable where
                 Left error -> return error
             Left error -> return error
     
-    main' :: String -> State
+    main' :: String -> Either String ([Def], [(Token, Int)])
     main' input =
         case tokenize input of
             Right tokens -> case program tokens of
-                Right ast  -> compileProgram (fst ast)
-                Left error -> ErrorState "error"
-            Left error -> ErrorState "error"
+                Right ast  -> Right ast
+                Left error -> Left error
+            Left error -> Left error
