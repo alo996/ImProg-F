@@ -3,11 +3,14 @@ module MF where
     import Declarations
     import Tokenizer
     import Parser
+    import Compiler
     import Store
     import Data.Bits
+    import Debug.Trace
 
     ---------------------------------------- HAUPTZYKLUS ----------------------------------------
     -- 'interpret' recursively executes a set of instructions either a HALT instruction or an error occurs.
+    -- trace (show (ccells !! pc) ++ ", pc = " ++ show pc ++ ", sp = " ++ show sp ++ ", stack = " ++ show stack ++ ", heap = " ++ show heap) use this to debug
     interpret :: State -> State
     interpret s@State{pc, sp, code = Code ccells, stack, heap} = case access (Code ccells) pc of
         Right instruction -> case instruction of
@@ -358,11 +361,11 @@ module MF where
     alloc s = let tuple = newUNI (heap s) in s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell (fst tuple)), heap = snd tuple}
 
     updateLet :: State -> Int -> State
-    updateLet s n = case access (stack s) (sp s - n - 1) of
+    updateLet s@State{stack = Stack scells} n = case access (stack s) (sp s - n - 1) of
         Right (StackCell addr) -> case add2arg (heap s) addr of
             Right addr1 -> case access (stack s) (sp s) of
                 Right (StackCell addr2) -> case save (heap s) (IND addr2) addr1 of
-                    Right heap -> s {pc = pc s + 1, sp = sp s - 1, heap = heap}
+                    Right heap -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap}
                     Left error -> ErrorState error
                 Left error              -> ErrorState error
             Left error  -> ErrorState error
@@ -371,6 +374,6 @@ module MF where
     slideLet :: State -> Int -> State
     slideLet s n = case access (stack s) (sp s) of
         Right scell -> case save (stack s) scell (sp s - n) of
-            Right stack -> s {pc = pc s + 1, sp = sp s - n, stack = stack}
-            Left error  -> ErrorState error
+            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n + 1) scells)}
+            Left error           -> ErrorState error
         Left error  -> ErrorState error
