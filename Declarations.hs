@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 -- This module contains all necessary types, aliases and type class instantiations.
 module Declarations where
 
@@ -110,17 +111,17 @@ module Declarations where
         deriving Eq
 
     instance Show Expr where
-        show (Add e1 e2)           = show e1 ++ " + " ++ show e2
-        show (Func e1 e2)          = "Func " ++ show e1 ++ " " ++ show e2
-        show (Mult e1 e2)          = show e1 ++ " * " ++ show e2
-        show (Div e1 e2)           = show e1 ++ " / " ++ show e2
-        show (UnaryMin e)          = "UnaryMin " ++ show e
+        show (Add e1 e2)           = show e1 ++ "+" ++ show e2
+        show (Func e1 e2)          = show e1 ++ " " ++ show e2
+        show (Mult e1 e2)          = show e1 ++ "*" ++ show e2
+        show (Div e1 e2)           = show e1 ++ "/" ++ show e2
+        show (UnaryMin e)          = "-" ++ show e
         show (Equal e1 e2)         = show e1 ++ " == " ++ show e2
         show (LessThan e1 e2)      = show e1 ++ " < " ++ show e2
         show (LogicalAnd e1 e2)    = show e1 ++ " & " ++ show e2
         show (LogicalOr e1 e2)     = show e1 ++ " | " ++ show e2
-        show (LogicalNot e)        = " ! " ++ show e
-        show (LetIn e1 e2)         = "let" ++ show e1 ++ " in " ++ show e2
+        show (LogicalNot e)        = "!" ++ show e
+        show (LetIn e1 e2)         = "let " ++ show e1 ++ " in " ++ show e2
         show (IfThenElse e1 e2 e3) = "if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3
         show (AtomicExpr e)        = show e
 
@@ -152,17 +153,14 @@ module Declarations where
         deriving Eq
 
     instance (Show a) => Show (Store a) where
-      show (Code ccells) = "Code: " ++ showCells ccells
+      show (Code ccells)  = "Code: " ++ showCells ccells
       show (Stack scells) = "Stack: " ++ showCells scells
-      show (Heap hcells) = "Heap: " ++ showCells hcells
+      show (Heap hcells)  = "Heap: " ++ showCells hcells
 
+    showCells :: (Show a) => [a] -> String
     showCells xs = showCells' xs 0 "" where
-      showCells' :: (Show a) => [a] -> Int -> String -> String
-      showCells' (x:xs) ind acc = showCells' xs (ind+1) (acc ++ "\n   " ++ show ind ++ ": " ++ show x)
-      showCells' [] _ acc = acc
-    showCells [] = ""
-
-    -- let testState = State {pc = 2, sp = 2,  code = Code [Pushval "Bool" 0, Pushval "Bool" 1, Pushval "Bool" 0], stack = Stack [StackCell 1, StackCell 3], heap = Heap [APP 1 2, VALNum 2]}
+      showCells' (x : xs) ind acc = showCells' xs (ind + 1) (acc ++ "\n   " ++ show ind ++ ": " ++ show x)
+      showCells' [] _ acc         = acc
 
     {-
     A machine state consists of a program counter, a list of generated instructions, a stack, a heap and a global environment (see Zhu's example).
@@ -179,9 +177,9 @@ module Declarations where
         }
         | ErrorState String
 
-
     instance Show State where
-        show State {pc=pc, sp=sp, code=Code ccells, stack = stack, heap=heap} = "I:  " ++ show (ccells !! pc) ++ "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show stack ++ "\n" ++ show heap
+        show State{pc, sp, code, stack, heap} = "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show stack ++ "\n" ++ show heap
+        show (ErrorState error)               = error
 
     -- The instruction type has several constructors, each one indicating some kind of functionality.
     data Instruction
