@@ -12,7 +12,7 @@ module MF where
     -- 'interpret' recursively executes a set of instructions either a HALT instruction or an error occurs.
     -- trace (show (ccells !! pc) ++ ", pc = " ++ show pc ++ ", sp = " ++ show sp ++ ", stack = " ++ show stack ++ ", heap = " ++ show heap) use this to debug
     interpret :: State -> State
-    interpret s@State{pc, sp, code = Code ccells, stack, heap} = case access (Code ccells) pc of
+    interpret s@State{pc, sp, code = Code ccells, stack, global, heap} = case trace (show (ccells !! pc) ++ ", pc = " ++ show pc ++ ", sp = " ++ show sp ++ ", stack = " ++ show stack ++ ", global = " ++ show global ++ ", heap = " ++ show heap) (access (Code ccells) pc) of
         Right instruction -> case instruction of
             Halt -> s
             _    -> case run instruction s of
@@ -47,14 +47,15 @@ module MF where
 
 
     ---------------------------------------- HELPER FUNCTIONS ----------------------------------------
-    -- 'address' takes the function name and delivers the address of its DEF-cell in the global environment.
-    address :: Store HeapCell -> String -> Either String Int
-    address (Heap hcells) f = address' hcells 0 f where
-        address' (x : xs) acc f = case x of
-            DEF {fname = fname} -> if f == fname then return acc else address' xs (acc + 1) f
-            _                   -> address' xs (acc + 1) f
-        address' [] _ _         = Left $ "Compile error: Heap does not contain definition of function '" ++ show f ++ "'."
-    address _ _                 = Left "Compile error: Function 'address' not called on heap."
+    -- 'address' takes a function name, looks for the corresponding DEF-cell in the global environment and returns the address of the similar DEF-cell in the heap.
+    address :: Store HeapCell -> Store HeapCell -> String -> Either String Int
+    address (Global gcells) (Heap hcells) f = address' gcells f where
+        address' (d@DEF {fname} : xs) f = if fname == f then address'' hcells 0 d else address' xs f where
+                address'' (x : xs) acc d = if x == d then return acc else address'' xs (acc + 1) d
+                address'' [] _ d         = Left $ "Compile error: Heap does not contain definition of function '" ++ show f ++ "'."
+        address' (x : xs) f             = address' xs f
+        address' [] f       = Left $ "Compile error: Global environment does not contain definition of function '" ++ show f ++ "'."
+    address _ _ _                           = Left "Compile error: Function 'address' not called on global."
 
     -- 'add2arg' takes the address of an APP-cell and delivers the heap address of its argument.
     add2arg :: Store HeapCell -> Int -> Either String Int
@@ -99,7 +100,7 @@ module MF where
     reset s = s {sp = -1, pc = pc s + 1}
 
     pushfun :: State -> String -> State
-    pushfun s name = case address (heap s) name of
+    pushfun s name = case address (global s) (heap s) name of
         Right int  -> s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell int)}
         Left error -> ErrorState error
 

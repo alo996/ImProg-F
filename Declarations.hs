@@ -149,13 +149,15 @@ module Declarations where
     data Store a
         = Code [a]
         | Stack [a]
+        | Global [a]
         | Heap [a]
         deriving Eq
 
     instance (Show a) => Show (Store a) where
-      show (Code ccells)  = "Code: " ++ showCells ccells
-      show (Stack scells) = "Stack: " ++ showCells scells
-      show (Heap hcells)  = "Heap: " ++ showCells hcells
+      show (Code ccells)   = "Code: " ++ showCells ccells
+      show (Stack scells)  = "Stack: " ++ showCells scells
+      show (Global gcells) = "Global: " ++ showCells gcells
+      show (Heap hcells)   = "Heap: " ++ showCells hcells
 
     showCells :: (Show a) => [a] -> String
     showCells xs = showCells' xs 0 "" where
@@ -173,6 +175,7 @@ module Declarations where
             sp :: Int,
             code :: Store Instruction,
             stack :: Store StackCell,
+            global :: Store HeapCell,
             heap :: Store HeapCell
         }
         | ErrorState String
