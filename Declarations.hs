@@ -154,14 +154,14 @@ module Declarations where
         deriving Eq
 
     instance (Show a) => Show (Store a) where
-      show (Code ccells)   = "Code: " ++ showCells ccells
-      show (Stack scells)  = "Stack: " ++ showCells scells
-      show (Global gcells) = "Global: " ++ showCells gcells
-      show (Heap hcells)   = "Heap: " ++ showCells hcells
+      show (Code ccells)   = "Code: " ++ showCells ccells "c"
+      show (Stack scells)  = "Stack: " ++ showCells scells "s"
+      show (Global gcells) = "Global: " ++ showCells gcells "g"
+      show (Heap hcells)   = "Heap: " ++ showCells hcells "h"
 
-    showCells :: (Show a) => [a] -> String
-    showCells xs = showCells' xs 0 "" where
-      showCells' (x : xs) ind acc = showCells' xs (ind + 1) (acc ++ "\n   " ++ show ind ++ ": " ++ show x)
+    showCells :: (Show a) => [a] -> String -> String
+    showCells xs prefix = showCells' xs 0 "" where
+      showCells' (x : xs) ind acc = showCells' xs (ind + 1) (acc ++ "\n   " ++ prefix ++ show ind ++ ": " ++ show x)
       showCells' [] _ acc         = acc
 
     {-
@@ -181,8 +181,9 @@ module Declarations where
         | ErrorState String
 
     instance Show State where
-        show State{pc, sp, code, stack, heap} = show code ++ "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show stack ++ "\n" ++ show heap
+        show State{pc, sp, code = (Code ccells), stack, heap} = "+———----+\n| State |\n+———----+\n" ++ "I:  " ++ show (ccells !! pc) ++ "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show stack ++ "\n" ++ show heap ++ "\n"
         show (ErrorState error)               = error
+
 
     -- The instruction type has several constructors, each one indicating some kind of functionality.
     data Instruction

@@ -12,7 +12,7 @@ module MF where
     -- 'interpret' recursively executes a set of instructions either a HALT instruction or an error occurs.
     -- trace (show (ccells !! pc) ++ ", pc = " ++ show pc ++ ", sp = " ++ show sp ++ ", stack = " ++ show stack ++ ", heap = " ++ show heap) use this to debug
     interpret :: State -> State
-    interpret s@State{pc, sp, code = Code ccells, stack, global, heap} = case trace (show (ccells !! pc) ++ ", pc = " ++ show pc ++ ", sp = " ++ show sp ++ ", stack = " ++ show stack ++ ", global = " ++ show global ++ ", heap = " ++ show heap) (access (Code ccells) pc) of
+    interpret s@State{pc, sp, code = Code ccells, stack, global, heap} = case trace (show s) (access (Code ccells) pc) of
         Right instruction -> case instruction of
             Halt -> s
             _    -> case run instruction s of
@@ -45,6 +45,15 @@ module MF where
     run (SlideLet n) state        = slideLet state n
     run (Error error) state       = ErrorState error
 
+    result :: State -> String
+    result State{pc, sp, code, stack, global, heap} = case access stack sp of
+        Right (StackCell adr) -> case access heap adr of
+            Right (VALNum n) -> "---> Result: " ++ show n
+            Right (VALBool b) -> case b of
+              0 -> "---> Result: False"
+              1 -> "---> Result: True"
+            Left error -> "---> Error: " ++ error
+        Left error -> "---> Error: " ++ error
 
     ---------------------------------------- HELPER FUNCTIONS ----------------------------------------
     -- 'address' takes a function name, looks for the corresponding DEF-cell in the global environment and returns the address of the similar DEF-cell in the heap.
@@ -81,7 +90,7 @@ module MF where
     newAPP, newVAL :: Store HeapCell -> Int -> Int -> (Int, Store HeapCell)
     newAPP heap a b = (depth heap, push heap (APP a b))
 
-    newVAL heap t w 
+    newVAL heap t w
             | t == 2    = (depth heap, push heap (VALBool w))
             | otherwise = (depth heap, push heap (VALNum w))
 
@@ -115,11 +124,11 @@ module MF where
                 Left error  -> ErrorState error
             Left error -> ErrorState error
         Left error -> ErrorState error
-        
+
     makeapp :: State -> State
     makeapp s = case access (stack s) (sp s) of
         Right (StackCell a) -> case access (stack s) (sp s - 1) of
-            Right (StackCell b) -> let tuple = newAPP (heap s) a b in 
+            Right (StackCell b) -> let tuple = newAPP (heap s) a b in
                 case save (stack s) (StackCell (fst tuple)) (sp s - 1) of
                     Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = snd tuple}
                     Left error           -> ErrorState error
@@ -168,7 +177,7 @@ module MF where
 
     halt :: State -> State
     halt s = s
-    
+
     value :: Store HeapCell -> Int -> Either String HeapCell
     value heap adr1 = case access heap adr1 of
         Right (IND adr2) -> value heap adr2
@@ -194,7 +203,7 @@ module MF where
             Right (VALBool _)   -> s {pc = pc s + 1}
             Left error          -> ErrorState error
         Left error             -> ErrorState error
-    
+
     return'' :: State -> State
     return'' s = case access (stack s) (sp s - 1) of
         Right (StackCell adr) -> case access (stack s) (sp s) of
@@ -220,7 +229,7 @@ module MF where
         Left error             -> ErrorState error
 
     opUpdate :: State -> State
-    opUpdate s = case access (stack s) (sp s) of 
+    opUpdate s = case access (stack s) (sp s) of
         Right (StackCell addr1) -> case access (heap s) addr1 of
             Right hcell -> case access (stack s) (sp s - 2) of
                 Right (StackCell addr2) -> case save (heap s) hcell addr2 of
@@ -232,7 +241,7 @@ module MF where
                                     Left error           -> ErrorState error
                                     _                    -> ErrorState "Error in 'opUpdate'"
                                 Left error             -> ErrorState error
-                            Left error            -> ErrorState error 
+                            Left error            -> ErrorState error
                         Left error            -> ErrorState error
                     Left error            -> ErrorState error
                 Left error            -> ErrorState error
@@ -255,13 +264,13 @@ module MF where
                                                 else let tuple = newVAL (heap s) 1 0 in case save stack (StackCell (fst tuple)) (sp s - 1) of
                                                     Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = snd tuple}
                                                     _                    -> ErrorState "'operator: 4 error"
-                                    _   -> ErrorState "Compile error: 'operator' calls value with wrong arguments." 
+                                    _   -> ErrorState "Compile error: 'operator' calls value with wrong arguments."
                                 Right (VALNum w)  -> case op of
                                     Minus -> let tuple = newVAL (heap s) 0 (- w) in case save stack (StackCell (fst tuple)) (sp s - 1) of
                                         Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = snd tuple}
-                                        _     -> ErrorState "Compile error: 'operator' calls value with wrong arguments." 
+                                        _     -> ErrorState "Compile error: 'operator' calls value with wrong arguments."
                                     _         -> ErrorState "Compile error: 'operator' calls value with wrong arguments."
-                                _                 -> ErrorState "'operator: 2 error"      
+                                _                 -> ErrorState "'operator: 2 error"
                             Left error -> ErrorState error
                         Left error -> ErrorState error
                     Left error  -> ErrorState error
@@ -281,7 +290,7 @@ module MF where
                                                     And    -> let tuple = newVAL (heap s) 1 (bool1 .&. bool2) in
                                                         case save stack (StackCell $ fst tuple) (sp s - 3) of
                                                             Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error  -> ErrorState error 
+                                                            Left error  -> ErrorState error
                                                     Or     -> let tuple = newVAL (heap s) 1 (bool1 .|. bool2) in
                                                         case save stack (StackCell $ fst tuple) (sp s - 3) of
                                                             Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
@@ -357,7 +366,7 @@ module MF where
 
             Left error              -> ErrorState error
         _ -> ErrorState "type error"
-    
+
     alloc :: State -> State
     alloc s = let tuple = newUNI (heap s) in s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell (fst tuple)), heap = snd tuple}
 
