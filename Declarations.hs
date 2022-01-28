@@ -180,9 +180,9 @@ module Declarations where
         }
         | ErrorState String
 
-    instance Show State where
-        show State{pc, sp, code = (Code ccells), stack, heap} = "+———----+\n| State |\n+———----+\n" ++ "I:  " ++ show (ccells !! pc) ++ "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show stack ++ "\n" ++ show heap ++ "\n"
-        show (ErrorState error)               = error
+    --instance Show State where
+    --    show State{pc, sp, code, stack, global, heap} = "+———----+\n| State |\n+———----+\n" ++ "I:  " ++ show (ccells !! pc) ++ "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show stack ++ "\n" ++ show heap ++ "\n"
+    --    show (ErrorState error)                       = error
 
 
     -- The instruction type has several constructors, each one indicating some kind of functionality.

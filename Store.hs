@@ -1,18 +1,12 @@
 module Store where
     import Declarations
 
-    -- Create empty store.
-    emptyCode, emptyStack, emptyHeap :: Store a
-    emptyCode  = Code []
-    emptyStack = Stack []
-    emptyHeap  = Heap []
-
     -- Push element on the end of a store. Not very efficient, but more intuitive at the moment.
     push :: Store a -> a -> Store a
-    push (Code ccells) elem      = Code (ccells ++ [elem])
-    push (Stack scells) elem     = Stack (scells ++ [elem])
-    push (Global gcells) elem    = Global (gcells ++ [elem])
-    push (Heap hcells) elem      = Heap (hcells ++ [elem])
+    push (Code ccells) elem   = Code (ccells ++ [elem])
+    push (Stack scells) elem  = Stack (scells ++ [elem])
+    push (Global gcells) elem = Global (gcells ++ [elem])
+    push (Heap hcells) elem   = Heap (hcells ++ [elem])
 
     -- Return depth of store.
     depth :: Store a -> Int

@@ -12,7 +12,7 @@ module MF where
     -- 'interpret' recursively executes a set of instructions either a HALT instruction or an error occurs.
     -- trace (show (ccells !! pc) ++ ", pc = " ++ show pc ++ ", sp = " ++ show sp ++ ", stack = " ++ show stack ++ ", heap = " ++ show heap) use this to debug
     interpret :: State -> State
-    interpret s@State{pc, sp, code = Code ccells, stack, global, heap} = case trace (show s) (access (Code ccells) pc) of
+    interpret s@State{pc, sp, code = Code ccells, stack, global, heap} = case access (Code ccells) pc of
         Right instruction -> case instruction of
             Halt -> s
             _    -> case run instruction s of
@@ -47,13 +47,15 @@ module MF where
 
     result :: State -> String
     result State{pc, sp, code, stack, global, heap} = case access stack sp of
-        Right (StackCell adr) -> case access heap adr of
-            Right (VALNum n) -> "---> Result: " ++ show n
+        Right (StackCell addr) -> case access heap addr of
+            Right (VALNum n)  -> "---> Result: " ++ show n
             Right (VALBool b) -> case b of
               0 -> "---> Result: False"
-              1 -> "---> Result: True"
+              _ -> "---> Result: True"
             Left error -> "---> Error: " ++ error
+            _          -> "---> Internal error."
         Left error -> "---> Error: " ++ error
+    result (ErrorState error)                       = "---> Error: " ++ error
 
     ---------------------------------------- HELPER FUNCTIONS ----------------------------------------
     -- 'address' takes a function name, looks for the corresponding DEF-cell in the global environment and returns the address of the similar DEF-cell in the heap.
@@ -202,6 +204,7 @@ module MF where
             Right (VALNum _)    -> s {pc = pc s + 1}
             Right (VALBool _)   -> s {pc = pc s + 1}
             Left error          -> ErrorState error
+            _                   -> ErrorState "error"
         Left error             -> ErrorState error
 
     return'' :: State -> State
@@ -290,43 +293,43 @@ module MF where
                                                     And    -> let tuple = newVAL (heap s) 1 (bool1 .&. bool2) in
                                                         case save stack (StackCell $ fst tuple) (sp s - 3) of
                                                             Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error  -> ErrorState error
+                                                            Left error           -> ErrorState error
                                                     Or     -> let tuple = newVAL (heap s) 1 (bool1 .|. bool2) in
                                                         case save stack (StackCell $ fst tuple) (sp s - 3) of
                                                             Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error  -> ErrorState error
+                                                            Left error           -> ErrorState error
                                                     Equals -> let tuple = newVAL (heap s) 1 (0 .&. xor bool1 bool2) in
                                                         case save stack (StackCell $ fst tuple) (sp s - 3) of
                                                             Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error  -> ErrorState error
+                                                            Left error           -> ErrorState error
                                                     Less   -> let tuple = newVAL (heap s) 1 (fromEnum $ bool1 < bool2) in
                                                         case save stack (StackCell $ fst tuple) (sp s - 3) of
                                                             Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error  -> ErrorState error
+                                                            Left error           -> ErrorState error
                                                     _      -> ErrorState "Type error."
-                                                _                      -> ErrorState "'operator': 9 error"
+                                                _                     -> ErrorState "'operator': 9 error"
                                             Right (VALNum num1) -> case hcell2 of
                                                 Right (VALNum num2) -> case op of
                                                     Equals -> let tuple = newVAL (heap s) 1 (fromEnum $ num1 == num2) in
                                                         case save stack (StackCell $ fst tuple) (sp s - 3) of
                                                             Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error  -> ErrorState error
+                                                            Left error           -> ErrorState error
                                                     Less   -> let tuple = newVAL (heap s) 1 (fromEnum $ num1 < num2) in
                                                         case save stack (StackCell $ fst tuple) (sp s - 3) of
                                                             Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error  -> ErrorState error
+                                                            Left error           -> ErrorState error
                                                     Plus   -> let tuple = newVAL (heap s) 0 (num1 + num2) in
                                                         case save stack (StackCell $ fst tuple) (sp s - 3) of
                                                             Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error  -> ErrorState error
+                                                            Left error           -> ErrorState error
                                                     Times  -> let tuple = newVAL (heap s) 0 (num1 * num2) in
                                                         case save stack (StackCell $ fst tuple) (sp s - 3) of
                                                             Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error  -> ErrorState error
+                                                            Left error           -> ErrorState error
                                                     Divide -> let tuple = newVAL (heap s) 0 (num1 `div` num2) in
                                                         case save stack (StackCell $ fst tuple) (sp s - 3) of
                                                             Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error  -> ErrorState error
+                                                            Left error           -> ErrorState error
                                                     _      -> ErrorState "Type error."
                                                 _                    -> ErrorState "'operator': 8 error"
                                             _                   -> ErrorState "Type error."
@@ -380,6 +383,7 @@ module MF where
                 Left error              -> ErrorState error
             Left error  -> ErrorState error
         Left error             -> ErrorState error
+    updateLet _ _           = ErrorState "error"
 
     slideLet :: State -> Int -> State
     slideLet s n = case access (stack s) (sp s) of
