@@ -85,12 +85,12 @@ module Declarations where
     type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
 
     data Def
-        = Def Expr [Expr] Expr
+        = Def Var [Var] Expr
         deriving (Eq, Show)
 
     -- A local definition consists of two expressions.
     data LocalDef
-        = LocalDef Expr Expr
+        = LocalDef Var Expr
         deriving (Eq, Show)
 
     -- A lot of stuff can be an expression, for example '2 + 2'. All possible combinations are summed up in the Expr type.
@@ -157,7 +157,7 @@ module Declarations where
     instance Show Stack where
       show (Stack scells)  = "Stack: " ++ showCells scells "s"
 
-    newtype Global = Global [HeapCell] deriving Eq
+    newtype Global = Global [(String, Int)] deriving Eq
     instance Show Global where
       show (Global gcells) = "Global: " ++ showCells gcells "g"
 

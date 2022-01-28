@@ -2,18 +2,18 @@ module Store where
     import Declarations
 
     -- Push element at the end of a stack. Not very efficient, but more intuitive at the moment.
-    push :: Stack -> StackCell -> Stack
-    push (Stack scells) elem  = Stack (scells ++ [elem])
+    pushStack :: Stack -> StackCell -> Stack
+    pushStack (Stack scells) elem  = Stack (scells ++ [elem])
 
     pushHeap :: Heap -> HeapCell -> Heap
     pushHeap (Heap hcells) elem  = Heap (hcells ++ [elem])
 
     -- Access element at index 'ind' in code, stack or heap.
-    accessStack :: Stack -> Int -> Either String StackCell
-    accessStack s@(Stack scells) ind = if (ind < length scells) && (ind >= 0) && not(null scells) then return $ scells !! ind else Left $ "Compile error: " ++ show s ++ " has no index " ++ show ind ++ "."
-
     accessCode :: Code -> Int -> Either String Instruction
     accessCode c@(Code ccells) ind = if (ind < length ccells) && (ind >= 0) && not(null ccells) then return $ ccells !! ind else Left $ "Compile error: " ++ show c ++ " has no index " ++ show ind ++ "."
+
+    accessStack :: Stack -> Int -> Either String StackCell
+    accessStack s@(Stack scells) ind = if (ind < length scells) && (ind >= 0) && not(null scells) then return $ scells !! ind else Left $ "Compile error: " ++ show s ++ " has no index " ++ show ind ++ "."
 
     accessHeap :: Heap -> Int -> Either String HeapCell
     accessHeap h@(Heap hcells) ind = if (ind < length hcells) && (ind >= 0) && not(null hcells) then return $ hcells !! ind else Left $ "Compile error: " ++ show h ++ " has no index " ++ show ind ++ "."

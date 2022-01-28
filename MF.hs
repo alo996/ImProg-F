@@ -58,13 +58,10 @@ module MF where
 
     ---------------------------------------- HELPER FUNCTIONS ----------------------------------------
     -- 'address' takes a function name, looks for the corresponding DEF-cell in the global environment and returns the address of the similar DEF-cell in the heap.
-    address :: Global -> Heap -> String -> Either String Int
-    address (Global gcells) (Heap hcells) f = address' gcells f where
-        address' (d@DEF {fname} : xs) f = if fname == f then address'' hcells 0 d else address' xs f where
-                address'' (x : xs) acc d = if x == d then return acc else address'' xs (acc + 1) d
-                address'' [] _ d         = Left $ "Compile error: Heap does not contain definition of function '" ++ show f ++ "'."
-        address' (x : xs) f             = address' xs f
-        address' [] f       = Left $ "Compile error: Global environment does not contain definition of function '" ++ show f ++ "'."
+    address :: Global -> String -> Either String Int
+    address (Global gcells) f = address' gcells f where
+        address' ((fname, pos) : xs) f = if fname == f then return pos else address' xs f
+        address' [] f                  = Left $ "Runtime error: Global environment does not contain definition of function '" ++ show f ++ "'."
 
     -- 'add2arg' takes the address of an APP-cell and delivers the heap address of its argument.
     add2arg :: Heap -> Int -> Either String Int
@@ -108,12 +105,12 @@ module MF where
     reset s = s {sp = -1, pc = pc s + 1}
 
     pushfun :: State -> String -> State
-    pushfun s name = case address (global s) (heap s) name of
-        Right int  -> s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell int)}
+    pushfun s name = case address (global s) name of
+        Right int  -> s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell int)}
         Left error -> ErrorState error
 
     pushval :: State -> Int -> Int -> State
-    pushval s t w = let tuple = newVAL (heap s) t w in s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell (fst tuple)), heap = snd tuple}
+    pushval s t w = let tuple = newVAL (heap s) t w in s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell (fst tuple)), heap = snd tuple}
 
     pushparam :: State -> Int -> State
     pushparam s n = case accessStack (stack s) (sp s - n - 1) of
@@ -149,8 +146,8 @@ module MF where
     reduce s = case accessStack (stack s) (sp s) of
         Right (StackCell addr) -> case accessHeap (heap s) addr of
             Right elem -> case elem of
-                (APP addr1 addr2) -> s {sp = sp s + 1, stack = push (stack s) (StackCell addr1)}
-                (DEF f n addr3)   ->  s {pc = addr3, sp = sp s + 1, stack = push (stack s) (StackCell (pc s + 1))}
+                (APP addr1 addr2) -> s {sp = sp s + 1, stack = pushStack (stack s) (StackCell addr1)}
+                (DEF f n addr3)   ->  s {pc = addr3, sp = sp s + 1, stack = pushStack (stack s) (StackCell (pc s + 1))}
                 _                 -> case accessStack (stack s) (sp s - 1) of
                     Right (StackCell addr4) -> case accessStack (stack s) (sp s) of
                         Right scell -> case saveStack (stack s) scell (sp s - 1) of
@@ -181,7 +178,7 @@ module MF where
     unwind :: State -> State
     unwind s = case accessStack (stack s) (sp s) of
         Right (StackCell addr) -> case value (heap s) addr of
-            Right (APP adr1 adr2) -> s {sp = sp s + 1, stack = push (stack s) (StackCell adr1)}
+            Right (APP adr1 adr2) -> s {sp = sp s + 1, stack = pushStack (stack s) (StackCell adr1)}
             Right hcell           -> s {pc = pc s + 1}
             Left error            -> ErrorState error
         Left error             -> ErrorState error
@@ -189,10 +186,10 @@ module MF where
     call :: State -> State
     call s = case accessStack (stack s) (sp s) of
         Right (StackCell addr) -> case value (heap s) addr of
-            Right (DEF _ _ adr) -> s {pc = adr, sp = sp s + 1, stack = push (stack s) (StackCell (pc s + 1))}
-            Right (PRE op 2)    -> s {pc = 4, sp = sp s + 1, stack = push (stack s) (StackCell (pc s + 1))}
-            Right (PRE If 3)    -> s {pc = 13, sp = sp s + 1, stack = push (stack s) (StackCell (pc s + 1))}
-            Right (PRE op 1)    -> s {pc = 21, sp = sp s + 1, stack = push (stack s) (StackCell (pc s + 1))}
+            Right (DEF _ _ adr) -> s {pc = adr, sp = sp s + 1, stack = pushStack (stack s) (StackCell (pc s + 1))}
+            Right (PRE op 2)    -> s {pc = 4, sp = sp s + 1, stack = pushStack (stack s) (StackCell (pc s + 1))}
+            Right (PRE If 3)    -> s {pc = 13, sp = sp s + 1, stack = pushStack (stack s) (StackCell (pc s + 1))}
+            Right (PRE op 1)    -> s {pc = 21, sp = sp s + 1, stack = pushStack (stack s) (StackCell (pc s + 1))}
             Right (VALNum _)    -> s {pc = pc s + 1}
             Right (VALBool _)   -> s {pc = pc s + 1}
             Left error          -> ErrorState error
@@ -362,7 +359,7 @@ module MF where
         _ -> ErrorState "type error"
 
     alloc :: State -> State
-    alloc s = let tuple = newUNI (heap s) in s {pc = pc s + 1, sp = sp s + 1, stack = push (stack s) (StackCell (fst tuple)), heap = snd tuple}
+    alloc s = let tuple = newUNI (heap s) in s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell (fst tuple)), heap = snd tuple}
 
     updateLet :: State -> Int -> State
     updateLet s@State{stack = Stack scells} n = case accessStack (stack s) (sp s - n - 1) of
