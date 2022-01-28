@@ -12,7 +12,7 @@ module Compiler where
     -- Compile a definition. 'compileDefinition' takes the definition to compile and the current machine state and returns the updated machine state with the new stack and global environment.
     compileDefinition :: Def -> State -> State
     compileDefinition (Def (AtomicExpr (Var fname)) es e) s@State{code = Code ccells, global = Global gcells, heap = Heap hcells} =
-        let localenv = createPos es; defcell = [DEF fname (length localenv) (depth (code s))] in
+        let localenv = createPos es; defcell = [DEF fname (length localenv) (length ccells)] in
         s {code = Code (ccells ++ compileExpression e localenv ++ [FuncUpdate (length localenv), Slide (length localenv + 1), Unwind, Call, Return]), global = Global (gcells ++ defcell), heap = Heap (hcells ++ defcell)}
     compileDefinition def state = ErrorState "Error in 'compileDefinition'"
 

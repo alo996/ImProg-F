@@ -146,17 +146,24 @@ module Declarations where
     We have four kinds of stores to deal with: code (for instructions), stack (for references),
     heap (for applications) and global (for definitions of non-local functions).
     -}
-    data Store a
-        = Code [a]
-        | Stack [a]
-        | Global [a]
-        | Heap [a]
-        deriving Eq
 
-    instance (Show a) => Show (Store a) where
+    newtype Code = Code [Instruction] deriving Eq
+
+    instance Show Code where
       show (Code ccells)   = "Code: " ++ showCells ccells "c"
+
+    newtype Stack = Stack [StackCell] deriving Eq
+
+    instance Show Stack where
       show (Stack scells)  = "Stack: " ++ showCells scells "s"
+
+    newtype Global = Global [HeapCell] deriving Eq
+    instance Show Global where
       show (Global gcells) = "Global: " ++ showCells gcells "g"
+
+    newtype Heap = Heap [HeapCell] deriving Eq
+    
+    instance Show Heap where
       show (Heap hcells)   = "Heap: " ++ showCells hcells "h"
 
     showCells :: (Show a) => [a] -> String -> String
@@ -173,10 +180,10 @@ module Declarations where
         {
             pc :: Int,
             sp :: Int,
-            code :: Store Instruction,
-            stack :: Store StackCell,
-            global :: Store HeapCell,
-            heap :: Store HeapCell
+            code :: Code,
+            stack :: Stack,
+            global :: Global,
+            heap :: Heap
         }
         | ErrorState String
 
@@ -205,7 +212,7 @@ module Declarations where
         | UpdateLet Int
         | SlideLet Int
         | Error String
-        deriving Show
+        deriving (Eq, Show)
 
     {-A heap is a list of heap cells.
     As the global environment is not changed during runtime, it can be stored at one end of the data store consisting of stack, heap and global environment after compiling.

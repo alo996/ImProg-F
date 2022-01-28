@@ -1,37 +1,26 @@
 module Store where
     import Declarations
 
-    -- Push element on the end of a store. Not very efficient, but more intuitive at the moment.
-    push :: Store a -> a -> Store a
-    push (Code ccells) elem   = Code (ccells ++ [elem])
+    -- Push element at the end of a stack. Not very efficient, but more intuitive at the moment.
+    push :: Stack -> StackCell -> Stack
     push (Stack scells) elem  = Stack (scells ++ [elem])
-    push (Global gcells) elem = Global (gcells ++ [elem])
-    push (Heap hcells) elem   = Heap (hcells ++ [elem])
 
-    -- Return depth of store.
-    depth :: Store a -> Int
-    depth (Code ccells)   = length ccells
-    depth (Stack scells)  = length scells
-    depth (Global gcells) = length gcells
-    depth (Heap hcells)   = length hcells
+    pushHeap :: Heap -> HeapCell -> Heap
+    pushHeap (Heap hcells) elem  = Heap (hcells ++ [elem])
 
-    -- Access element at index 'ind' in a store.
-    access :: Show a => Store a -> Int -> Either String a
-    access c@(Code ccells) ind   = if (ind < depth c) && (ind >= 0) && not(null ccells) then return $ ccells !! ind else Left $ "Compile error: " ++ show c ++ " has no index " ++ show ind ++ "."
-    access s@(Stack scells) ind  = if (ind < depth s) && (ind >= 0) && not(null scells) then return $ scells !! ind else Left $ "Compile error: " ++ show s ++ " has no index " ++ show ind ++ "."
-    access g@(Global gcells) ind = if (ind < depth g) && (ind >= 0) && not(null gcells) then return $ gcells !! ind else Left $ "Compile error: " ++ show g ++ " has no index " ++ show ind ++ "."
-    access h@(Heap hcells) ind   = if (ind < depth h) && (ind >= 0) && not(null hcells) then return $ hcells !! ind else Left $ "Compile error: " ++ show h ++ " has no index " ++ show ind ++ "."
+    -- Access element at index 'ind' in code, stack or heap.
+    accessStack :: Stack -> Int -> Either String StackCell
+    accessStack s@(Stack scells) ind = if (ind < length scells) && (ind >= 0) && not(null scells) then return $ scells !! ind else Left $ "Compile error: " ++ show s ++ " has no index " ++ show ind ++ "."
 
-    -- Reverse a store.
-    reverseStore :: Store a -> Store a
-    reverseStore (Code ccells)   = Code (reverse ccells)
-    reverseStore (Stack scells)  = Stack (reverse scells)
-    reverseStore (Global gcells) = Stack (reverse gcells)
-    reverseStore (Heap hcells)   = Heap (reverse hcells)
+    accessCode :: Code -> Int -> Either String Instruction
+    accessCode c@(Code ccells) ind = if (ind < length ccells) && (ind >= 0) && not(null ccells) then return $ ccells !! ind else Left $ "Compile error: " ++ show c ++ " has no index " ++ show ind ++ "."
 
-    -- Either overwrite element at index 'ind' in a store or push element at end of store.
-    save :: Show a => Store a -> a -> Int -> Either String (Store a)
-    save c@(Code ccells) ccell ind   = if (ind <= depth c) && (ind >= 0) then return $ Code (take ind ccells ++ [ccell] ++ drop (ind + 1) ccells) else Left $ "Compile error in 'save': " ++ show c ++ " has no index " ++ show ind ++ "."
-    save s@(Stack scells) scell ind  = if (ind <= depth s) && (ind >= 0) then return $ Stack (take ind scells ++ [scell] ++ drop (ind + 1) scells) else Left $ "Compile error in 'save': " ++ show s ++ " has no index " ++ show ind ++ "."
-    save g@(Global gcells) scell ind = if (ind <= depth g) && (ind >= 0) then return $ Stack (take ind gcells ++ [scell] ++ drop (ind + 1) gcells) else Left $ "Compile error in 'save': " ++ show g ++ " has no index " ++ show ind ++ "."
-    save h@(Heap hcells) hcell ind   = if (ind <= depth h) && (ind >= 0) then return $ Heap (take ind hcells ++ [hcell] ++ drop (ind + 1) hcells) else Left $ "Compile error in 'save': " ++ show h ++ " has no index " ++ show ind ++ "."
+    accessHeap :: Heap -> Int -> Either String HeapCell
+    accessHeap h@(Heap hcells) ind = if (ind < length hcells) && (ind >= 0) && not(null hcells) then return $ hcells !! ind else Left $ "Compile error: " ++ show h ++ " has no index " ++ show ind ++ "."
+
+    -- Either overwrite element at index 'ind' in a stack/heap or push element at end of store.
+    saveStack :: Stack -> StackCell -> Int -> Either String Stack
+    saveStack s@(Stack scells) scell ind  = if (ind <= length scells) && (ind >= 0) then return $ Stack (take ind scells ++ [scell] ++ drop (ind + 1) scells) else Left $ "Compile error in 'save': " ++ show s ++ " has no index " ++ show ind ++ "."
+
+    saveHeap :: Heap -> HeapCell -> Int -> Either String Heap
+    saveHeap h@(Heap hcells) hcell ind   = if (ind <= length hcells) && (ind >= 0) then return $ Heap (take ind hcells ++ [hcell] ++ drop (ind + 1) hcells) else Left $ "Compile error in 'save': " ++ show h ++ " has no index " ++ show ind ++ "."
