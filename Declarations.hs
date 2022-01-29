@@ -85,12 +85,12 @@ module Declarations where
     type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
 
     data Def
-        = Def Var [Var] Expr
+        = Def Expr [Expr] Expr
         deriving (Eq, Show)
 
     -- A local definition consists of two expressions.
     data LocalDef
-        = LocalDef Var Expr
+        = LocalDef Expr Expr
         deriving (Eq, Show)
 
     -- A lot of stuff can be an expression, for example '2 + 2'. All possible combinations are summed up in the Expr type.
@@ -100,6 +100,7 @@ module Declarations where
         | Mult Expr Expr
         | Div Expr Expr
         | UnaryMin Expr
+        | BinaryMin Expr Expr
         | Equal Expr Expr
         | LessThan Expr Expr
         | LogicalAnd Expr Expr
@@ -116,6 +117,7 @@ module Declarations where
         show (Mult e1 e2)          = show e1 ++ "*" ++ show e2
         show (Div e1 e2)           = show e1 ++ "/" ++ show e2
         show (UnaryMin e)          = "-" ++ show e
+        show (BinaryMin e1 e2)     = show e1 ++ " - " ++ show e2
         show (Equal e1 e2)         = show e1 ++ " == " ++ show e2
         show (LessThan e1 e2)      = show e1 ++ " < " ++ show e2
         show (LogicalAnd e1 e2)    = show e1 ++ " & " ++ show e2
@@ -187,9 +189,9 @@ module Declarations where
         }
         | ErrorState String
 
-    --instance Show State where
-    --    show State{pc, sp, code, stack, global, heap} = "+———----+\n| State |\n+———----+\n" ++ "I:  " ++ show (ccells !! pc) ++ "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show stack ++ "\n" ++ show heap ++ "\n"
-    --    show (ErrorState error)                       = error
+    instance Show State where
+        show State{pc, sp, code = Code ccells, stack, global, heap} = "+———----+\n| State |\n+———----+\n" ++ "I:  " ++ show (ccells !! pc) ++ "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show ccells ++ "\n" ++ show stack ++ "\n" ++ show heap ++ "\n"
+        show (ErrorState error)                                     = error
 
 
     -- The instruction type has several constructors, each one indicating some kind of functionality.
