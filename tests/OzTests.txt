@@ -8,6 +8,9 @@ main = f; f = -3-4-(-2); passt
 
 main = f; f = -3-4*(*(-2)); passt 
 
+f x y z = if x < 3 then let a = 4 in true else y / z;
+main = f 0 (-2) (-2); passt
+
 main = f; f = -(3-4)-(-2);
 
 main = f+x; f = -3-4-(-2); x = true;
@@ -17,8 +20,6 @@ main = f+x; f = -3-4-(-2); x = True;
 main = f+x; f = -3-4-(-2); x == true;
 
 main = f+x; f = false; x = true;
-
-
 
 
 main = f+x; f = False; x = true;
