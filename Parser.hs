@@ -53,7 +53,7 @@ module Parser where
     (e, ts1) <- variable ts
     match (KeywordToken Assign) ts1 >>= \ (_, ts2) -> expr ts2 >>= \ (e1, ts3) -> return (LocalDef e e1, ts3)
 
-  expr, expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, atomicExpr :: Parser Expr
+  expr, expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, atomicExpr, variable :: Parser Expr
   expr ((KeywordToken Let, _) : ts) = do
     (e, ts1) <- localDefs ts
     match (KeywordToken In) ts1 >>= \ (_, ts2) -> expr ts2 >>= \ (e1, ts3) -> return (LetIn e e1, ts3)
@@ -88,7 +88,12 @@ module Parser where
       (KeywordToken Less, _) : ts2   -> expr5 ts2 >>= \ (e1, ts3) -> return (LessThan e e1, ts3)
       _                              -> return (e, ts1)
 
-  expr5 ts = expr6 ts >>= \ (e, ts1) -> restExpr5 ts1 >>= \ (es, ts2) -> return (foldl Add e es, ts2)
+  -- expr5 ts = expr6 ts >>= \ (e, ts1) -> case ts1 of restExpr5 ts1 >>= \ (es, ts2) -> return (foldl Add e es, ts2)
+  expr5 ts = do
+    (e, ts1) <- expr6 ts
+    case ts1 of
+      (KeywordToken Minus, _) : ts2 -> expr6 ts2 >>= \ (e1, ts3) -> return (BinaryMin e e1, ts3)
+      _                             -> restExpr5 ts1 >>= \ (es, ts3) -> return (foldl Add e es, ts3)
 
   expr6 ((KeywordToken Minus, _) : ts) = expr7 ts >>= \ (e, ts1) -> return (UnaryMin e, ts1)
   expr6 ts                             = expr7 ts
@@ -101,9 +106,7 @@ module Parser where
 
   expr8 ts = atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (foldl Func e es, ts2)
     
-  atomicExpr n@((NameToken _, _) : _)          = case variable n of
-    Right (var, ts) -> return (AtomicExpr (Var var), ts)
-    Left error      -> Left error
+  atomicExpr n@((NameToken _, _) : _)          = variable n
   atomicExpr ((BooleanToken bool, _) : ts)     = return (AtomicExpr (LitBool bool), ts)
   atomicExpr ((NumberToken num, _) : ts)       = return (AtomicExpr (LitNum num), ts)
   atomicExpr ((KeywordToken LBracket, _) : ts) = do
@@ -112,20 +115,18 @@ module Parser where
   atomicExpr ((token, line) : _)               = Left $ "Syntax error in line " ++ show line ++ ": Expression expected but found '" ++ show token ++ "'."
   atomicExpr []                                = Left "Syntax error at end of program: Expression expected."
 
-  variable :: Parser Var
-  variable ((NameToken name, _) : ts) = return (name, ts)
+  variable ((NameToken name, _) : ts) = return (AtomicExpr (Var name), ts)
   variable ((token , line) : _)       = Left $ "Syntax error in line " ++ show line ++ ": Identifier expected but found '" ++ show token ++ "'."
   variable []                         = Left "Syntax error at end of program: Identifier expected."
 
-  restDef :: Parser [Var]
+  restDef, restExpr5, restExpr7, restExpr8 :: Parser [Expr]
   restDef ts = case ts of
     (NameToken _, _) : _ -> variable ts >>= \ (e, ts1) -> restDef ts1 >>= \ (es, ts2) -> return (e : es, ts2)
     _                    -> return ([], ts)
 
-  restExpr5, restExpr7, restExpr8 :: Parser [Expr]
-  restExpr5 ((KeywordToken Plus, _) : ts)     = expr6 ts >>= \ (e, ts1) -> restExpr5 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
-  restExpr5 ((KeywordToken LBracket, _) : ts) = match (KeywordToken Minus) ts >>= \ (_, ts1) -> expr6 ts1 >>= \ (e1, ts2) -> match (KeywordToken RBracket) ts2 >>= \ (_, ts3) -> return ([UnaryMin e1], ts3)
-  restExpr5 ts                                = return ([], ts)
+  restExpr5 ((KeywordToken Plus, _) : ts)  = expr6 ts >>= \ (e, ts1) -> restExpr5 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
+  --restExpr5 ((KeywordToken Minus, _) : ts) = expr6 ts >>= \ (e1, ts1) -> return ([UnaryMin e1], ts1)
+  restExpr5 ts                             = return ([], ts)
 
   restExpr7 ((KeywordToken Times, _) : ts) = expr8 ts >>= \ (e, ts1) -> restExpr7 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
   restExpr7 ts                             = return ([], ts)

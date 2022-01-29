@@ -12,7 +12,7 @@ module MF where
     -- 'interpret' recursively executes a set of instructions either a HALT instruction or an error occurs.
     -- trace (show (ccells !! pc) ++ ", pc = " ++ show pc ++ ", sp = " ++ show sp ++ ", stack = " ++ show stack ++ ", heap = " ++ show heap) use this to debug
     interpret :: State -> State
-    interpret s@State{pc, sp, code = Code ccells, stack, global, heap} = case accessCode (Code ccells) pc of
+    interpret s@State{pc, sp, code = Code ccells, stack, global, heap} = case trace (show s) accessCode (Code ccells) pc of
         Right instruction -> case instruction of
             Halt -> s
             _    -> case run instruction s of
@@ -34,7 +34,7 @@ module MF where
     run (Slide n) state           = slide state n
     run Unwind state              = unwind state
     run Call state                = call state
-    run Return state              = return' state
+    run Return state              = return'' state
     run Halt state                = halt state
     run (Operator n) state        = operator state n
     run Alloc state               = alloc state
@@ -65,7 +65,7 @@ module MF where
 
     -- 'add2arg' takes the address of an APP-cell and delivers the heap address of its argument.
     add2arg :: Heap -> Int -> Either String Int
-    add2arg h@(Heap hcells) addr = if (addr >= 0) && (addr < length hcells) then let APP addr1 addr2 = hcells !! addr in return addr2 else Left $ "Compile error: Heap does not contain cell at address " ++ show addr ++ "'."
+    add2arg h@(Heap hcells) addr = if (addr >= 0) && (addr < length hcells) then let APP addr1 addr2 = hcells !! addr in return addr2 else Left $ "Runtime error: Pushparam expected heap address, found code address " ++ show addr ++ " instead."
 
     -- 'arity'' returns the number of formal arguments of an operator.
     arity' :: Keyword -> Int
@@ -142,30 +142,6 @@ module MF where
             Left error -> ErrorState error
         Left error -> ErrorState error
 
-    reduce :: State -> State
-    reduce s = case accessStack (stack s) (sp s) of
-        Right (StackCell addr) -> case accessHeap (heap s) addr of
-            Right elem -> case elem of
-                (APP addr1 addr2) -> s {sp = sp s + 1, stack = pushStack (stack s) (StackCell addr1)}
-                (DEF f n addr3)   ->  s {pc = addr3, sp = sp s + 1, stack = pushStack (stack s) (StackCell (pc s + 1))}
-                _                 -> case accessStack (stack s) (sp s - 1) of
-                    Right (StackCell addr4) -> case accessStack (stack s) (sp s) of
-                        Right scell -> case saveStack (stack s) scell (sp s - 1) of
-                            Right (Stack scells) -> s {pc = addr4, sp = sp s - 1, stack = Stack (take (sp s) scells)}
-                            Left error           -> ErrorState error
-                    Left error           -> ErrorState error
-            Left error -> ErrorState error
-        Left error           -> ErrorState error
-
-    return' :: State -> State
-    return' s = case accessStack (stack s) (sp s - 1) of
-        Right (StackCell addr) -> case accessStack (stack s) (sp s) of
-            Right scell -> case saveStack (stack s) scell (sp s - 1) of
-                Right (Stack scells) -> s {pc = addr, sp = sp s - 1, stack = Stack (take (sp s) scells)}
-                Left error           -> ErrorState error
-            Left error           -> ErrorState error
-        Left error           -> ErrorState error
-
     halt :: State -> State
     halt s = s
 
@@ -198,10 +174,10 @@ module MF where
 
     return'' :: State -> State
     return'' s = case accessStack (stack s) (sp s - 1) of
-        Right (StackCell adr) -> case accessStack (stack s) (sp s) of
-            Right (StackCell adr1) -> case saveStack (stack s) (StackCell adr1) (sp s - 1) of
-                Right nstack -> s {pc = adr, sp = sp s - 1, stack = nstack}
-                Left error   -> ErrorState error
+        Right (StackCell addr) -> case accessStack (stack s) (sp s) of
+            Right (StackCell addr1) -> case saveStack (stack s) (StackCell addr1) (sp s - 1) of
+                Right (Stack scells) -> s {pc = addr, sp = sp s - 1, stack = Stack (take (sp s) scells)}
+                Left error           -> ErrorState error
             Left error             -> ErrorState error
         Left error            -> ErrorState error
 
@@ -228,7 +204,7 @@ module MF where
                     Right heap -> case accessStack (stack s) (sp s - 2) of
                         Right aux -> case accessStack (stack s) (sp s - 1) of
                             Right scell -> case saveStack (stack s) scell (sp s - 2) of
-                                Right nstack -> case saveStack nstack aux (sp s - 1) of
+                                Right stack -> case saveStack stack aux (sp s - 1) of
                                     Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap}
                                     Left error           -> ErrorState error
                                 Left error             -> ErrorState error
@@ -251,21 +227,21 @@ module MF where
                                     Not -> if fromEnum w == 1
                                                 then let tuple = newVAL (heap s) 1 1 in case saveStack stack (StackCell (fst tuple)) (sp s - 1) of
                                                     Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = snd tuple}
-                                                    _                    -> ErrorState "'operator: 4 error"
+                                                    _                    -> ErrorState "Runtime error: Cannot execute Operator 1."
                                                 else let tuple = newVAL (heap s) 1 0 in case saveStack stack (StackCell (fst tuple)) (sp s - 1) of
                                                     Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = snd tuple}
-                                                    _                    -> ErrorState "'operator: 4 error"
-                                    _   -> ErrorState "Compile error: 'operator' calls value with wrong arguments."
+                                                    _                    -> ErrorState "Runtime error: Cannot execute Operator 1."
+                                    _   -> ErrorState "Runtime error: Cannot execute Operator 1."
                                 Right (VALNum w)  -> case op of
                                     Minus -> let tuple = newVAL (heap s) 0 (- w) in case saveStack stack (StackCell (fst tuple)) (sp s - 1) of
                                         Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = snd tuple}
-                                        _     -> ErrorState "Compile error: 'operator' calls value with wrong arguments."
-                                    _         -> ErrorState "Compile error: 'operator' calls value with wrong arguments."
-                                _                 -> ErrorState "'operator: 2 error"
+                                        _     -> ErrorState "Runtime error: Cannot execute Operator 1."
+                                    _         -> ErrorState "Runtime error: Cannot execute Operator 1."
+                                _                 -> ErrorState "Runtime error: Cannot execute Operator 1."
                             Left error -> ErrorState error
                         Left error -> ErrorState error
                     Left error  -> ErrorState error
-                _               -> ErrorState "'operator: 1 error"
+                _               -> ErrorState "Runtime error: Cannot execute Operator 1."
             Left error  -> ErrorState error
         2 -> case accessStack (stack s) (sp s - 3) of
             Right (StackCell addr) -> case value (heap s) addr of
@@ -278,57 +254,61 @@ module MF where
                                         case hcell1 of
                                             Right (VALBool bool1) -> case hcell2 of
                                                 Right (VALBool bool2) -> case op of
-                                                    And    -> let tuple = newVAL (heap s) 1 (bool1 .&. bool2) in
+                                                    And    -> let tuple = newVAL (heap s) 2 (bool1 .&. bool2) in
+                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
+                                                            Left error           -> ErrorState "Runtime error: Cannot execute Operator 2."
+                                                    Or     -> let tuple = newVAL (heap s) 2 (bool1 .|. bool2) in
+                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
+                                                            Left error           -> ErrorState "Runtime error: Cannot execute Operator 2."
+                                                    Equals -> let tuple = newVAL (heap s) 2 (0 .&. xor bool1 bool2) in
+                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
+                                                            Left error           -> ErrorState "Runtime error: Cannot execute Operator 2."
+                                                    Less   -> let tuple = newVAL (heap s) 2 (fromEnum $ bool1 < bool2) in
                                                         case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
                                                             Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
                                                             Left error           -> ErrorState error
-                                                    Or     -> let tuple = newVAL (heap s) 1 (bool1 .|. bool2) in
-                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
-                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error           -> ErrorState error
-                                                    Equals -> let tuple = newVAL (heap s) 1 (0 .&. xor bool1 bool2) in
-                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
-                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error           -> ErrorState error
-                                                    Less   -> let tuple = newVAL (heap s) 1 (fromEnum $ bool1 < bool2) in
-                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
-                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error           -> ErrorState error
-                                                    _      -> ErrorState "Type error."
-                                                _                     -> ErrorState "'operator': 9 error"
+                                                    _      -> ErrorState "Runtime error: Cannot execute Operator 2."
+                                                _                     -> ErrorState "Runtime error: Cannot execute Operator 2."
                                             Right (VALNum num1) -> case hcell2 of
                                                 Right (VALNum num2) -> case op of
-                                                    Equals -> let tuple = newVAL (heap s) 1 (fromEnum $ num1 == num2) in
+                                                    Equals -> let tuple = newVAL (heap s) 2 (fromEnum $ num1 == num2) in
+                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
+                                                            Left error           -> ErrorState "Runtime error: Cannot execute Operator 2."
+                                                    Less   -> let tuple = newVAL (heap s) 2 (fromEnum $ num1 < num2) in
+                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
+                                                            Left error           -> ErrorState "Runtime error: Cannot execute Operator 2."
+                                                    Plus   -> let tuple = newVAL (heap s) 1 (num1 + num2) in
+                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
+                                                            Left error           -> ErrorState "Runtime error: Cannot execute Operator 2."
+                                                    Times  -> let tuple = newVAL (heap s) 1 (num1 * num2) in
+                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
+                                                            Left error           -> ErrorState "Runtime error: Cannot execute Operator 2."
+                                                    Minus  -> let tuple = newVAL (heap s) 1 (num1 - num2) in
+                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
+                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
+                                                            Left error           -> ErrorState "Runtime error: Cannot execute Operator 2."
+                                                    Divide -> let tuple = newVAL (heap s) 1 (num1 `div` num2) in
                                                         case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
                                                             Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
                                                             Left error           -> ErrorState error
-                                                    Less   -> let tuple = newVAL (heap s) 1 (fromEnum $ num1 < num2) in
-                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
-                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error           -> ErrorState error
-                                                    Plus   -> let tuple = newVAL (heap s) 0 (num1 + num2) in
-                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
-                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error           -> ErrorState error
-                                                    Times  -> let tuple = newVAL (heap s) 0 (num1 * num2) in
-                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
-                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error           -> ErrorState error
-                                                    Divide -> let tuple = newVAL (heap s) 0 (num1 `div` num2) in
-                                                        case saveStack stack (StackCell $ fst tuple) (sp s - 3) of
-                                                            Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = snd tuple}
-                                                            Left error           -> ErrorState error
-                                                    _      -> ErrorState "Type error."
-                                                _                    -> ErrorState "'operator': 8 error"
-                                            _                   -> ErrorState "Type error."
-                                    Left error          -> ErrorState error
-                            Left error          -> ErrorState error
-                        Left error          -> ErrorState error
-                    Left error          -> ErrorState error
-                _                -> ErrorState "'operator': 7 error"
+                                                    _      -> ErrorState "Runtime error: Cannot execute Operator 2."
+                                                _                    -> ErrorState "Runtime error: Cannot execute Operator 2."
+                                            _                   -> ErrorState "Runtime error: Cannot execute Operator 2."
+                                    Left error          -> ErrorState "Runtime error: Cannot execute Operator 2."
+                            Left error          -> ErrorState "Runtime error: Cannot execute Operator 2."
+                        Left error          -> ErrorState "Runtime error: Cannot execute Operator 2."
+                    Left error          -> ErrorState "Runtime error: Cannot execute Operator 2."
+                _                -> ErrorState "Runtime error: Cannot execute Operator 2."
             Left error          -> ErrorState error
         3 -> case accessStack (stack s) (sp s) of
-            Right (StackCell addr) -> case value (heap s) addr of
+            Right (StackCell addr) -> case trace ("operator 3 calls " ++ show (value (heap s) addr)) value (heap s) addr of
                 Right (VALBool bool) -> case bool of
                     1  -> case accessStack (stack s) (sp s - 4) of
                         Right (StackCell addr1) -> case add2arg (heap s) addr1 of
@@ -336,27 +316,27 @@ module MF where
                                 Right stack -> case accessStack stack (sp s - 1) of
                                     Right scell -> case saveStack stack scell (sp s - 4) of
                                         Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack $ (take $ sp s - 2) scells}
-                                        _                    -> ErrorState "'operator: 6 error"
-                                    Left error  -> ErrorState error
-                                Left error  -> ErrorState error
-                            Left error  -> ErrorState error
-                        Left error              -> ErrorState error
+                                        _                    -> ErrorState "Runtime error: Cannot execute Operator 3."
+                                    Left error  -> ErrorState "Runtime error: Cannot execute Operator 3."
+                                Left error  -> ErrorState "Runtime error: Cannot execute Operator 3."
+                            Left error  -> ErrorState "Runtime error: Cannot execute Operator 3."
+                        Left error              -> ErrorState "Runtime error: Cannot execute Operator 3."
                     0 -> case accessStack (stack s) (sp s - 5) of
                         Right (StackCell addr1) -> case add2arg (heap s) addr1 of
                             Right addr2 -> case saveStack (stack s) (StackCell addr2) (sp s - 3) of
                                 Right stack -> case accessStack stack (sp s - 1) of
                                     Right scell -> case saveStack stack scell (sp s - 4) of
                                         Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack $(take $ sp s - 3) scells}
-                                        _                    -> ErrorState "'operator: 6 error"
-                                    Left error  -> ErrorState error
-                                Left error  -> ErrorState error
-                            Left error  -> ErrorState error
-                        Left error              -> ErrorState error
-                    _ -> ErrorState "Type error"
-                _                    -> ErrorState "'operator: 5 error"
+                                        _                    -> ErrorState "Runtime error: Cannot execute Operator 3."
+                                    Left error  -> ErrorState "Runtime error: Cannot execute Operator 3."
+                                Left error  -> ErrorState "Runtime error: Cannot execute Operator 3."
+                            Left error  -> ErrorState "Runtime error: Cannot execute Operator 3."
+                        Left error              -> ErrorState "Runtime error: Cannot execute Operator 3."
+                    _ -> ErrorState "Runtime error: Cannot execute Operator 3."
+                _                    -> ErrorState "Runtime error: Cannot execute Operator 3."
 
-            Left error              -> ErrorState error
-        _ -> ErrorState "type error"
+            Left error              -> ErrorState "Runtime error: Cannot execute Operator 3."
+        _ -> ErrorState "Runtime error: Cannot execute Operator 3."
 
     alloc :: State -> State
     alloc s = let tuple = newUNI (heap s) in s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell (fst tuple)), heap = snd tuple}
