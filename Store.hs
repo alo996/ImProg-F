@@ -1,5 +1,7 @@
 module Store where
+    
 import Declarations
+    ( Heap(..), HeapCell, StackCell, Stack(..), Instruction, Code(..) )
 
 
 -- | Push element at the end of a stack or heap.

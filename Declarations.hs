@@ -1,6 +1,10 @@
+{- |
+Module      : Declarations
+Description : This module contains all type declarations and type class instantiations needed to tokenize, parse, compile and interpret F programs.
+-}
 {-# LANGUAGE NamedFieldPuns #-}
--- This module contains all necessary types, aliases and type class instantiations.
 module Declarations where
+
 
 ----------------------------------------------------------------------- LEXICAL ANALYSIS ------------------------------------------------------------------------
 -- | A token is a sequence of characters with some inherent structure (e.g. a reserved F-keyword, a name, a multi-character number).

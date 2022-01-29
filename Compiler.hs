@@ -2,7 +2,21 @@
 module Compiler where
 
 import Declarations
-import Store
+    ( State(..),
+      Heap(..),
+      HeapCell(DEF, fname, arity),
+      Global(Global),
+      Stack(Stack),
+      Instruction(..),
+      Code(..),
+      AtomicExpr(Var, LitBool, LitNum, Expr),
+      Expr(..),
+      LocalDef(..),
+      Def(..),
+      BoolF(BoolF),
+      Keyword(If, Plus, Times, Divide, Equals, Less, And, Or, Minus,
+              Not) )
+import Store ()
 
 
 -- | Compile a program. 'compileProgram' takes a program (a list of definitions) and returns the initial machine if successful.

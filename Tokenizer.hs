@@ -1,83 +1,94 @@
--- This module contains all functionality to pursue lexical analysis in F.
+{- |
+Module      : Tokenizer
+Description : This module contains all functionality to pursue lexical analysis in F.
+-}
 module Tokenizer where
-    import Data.Char ( isAlpha, isAlphaNum, isDigit )
-    import Declarations
 
-    -- tokenize receives user input and transforms it to a list of tuples, each containing a token and its respective line in the source code.
-    tokenize :: String -> Either String [(Token, Int)]
-    tokenize ""      = Left "Compile error: Can not compile empty program."
-    tokenize program = tokenize' program [] 1
+import Data.Char ( isAlpha, isAlphaNum, isDigit )
+import Declarations
+    ( BoolF(BoolF),
+      Token(..),
+      Keyword(Times, Equals, Else, If, In, Let, Not, Then, And, Assign,
+              Divide, Less, LBracket, Minus, Or, Plus, RBracket, Semicolon) )
 
-    -- tokenize' deals with spaces and tokenizes keywords and booleans.
-    tokenize' :: String -> [(Token, Int)] -> Int -> Either String [(Token, Int)]
-    tokenize' [] tokenAcc lineAcc = Right $ reverse tokenAcc
 
-    -- Next character is a space.
-    tokenize' (' ' : xs) tokenAcc lineAcc         = tokenize' xs tokenAcc lineAcc
-    tokenize' ('\t' : xs) tokenAcc lineAcc        = tokenize' xs tokenAcc lineAcc
-    tokenize' ('\r' : '\n' : xs) tokenAcc lineAcc = tokenize' xs tokenAcc (lineAcc + 1)
-    tokenize' ('\n' : xs) tokenAcc lineAcc        = tokenize' xs tokenAcc (lineAcc + 1)
-    tokenize' ('\r' : xs) tokenAcc lineAcc        = tokenize' xs tokenAcc (lineAcc + 1)
+-- |'tokenize' receives user input and, if successful, transforms it to a list of tuples, each containing a token and its line number in the source code.
+tokenize :: String -> Either String [(Token, Int)]
+tokenize ""    = Left "Runtime error: Can not compile empty program."
+tokenize input = tokenize' input [] 1
 
-    -- Next characters form a multiple character keyword or a boolean value, followed by a reserved special character or space.
-    tokenize' token@('=' : '=' : xs) tokenAcc lineAcc                       = tokenize' xs ((KeywordToken Equals , lineAcc) : tokenAcc) lineAcc
-    tokenize' token@('e' : 'l' : 's' : 'e' : x : xs) tokenAcc lineAcc       = evaluate x (KeywordToken Else) (x : xs) token tokenAcc lineAcc
-    tokenize' token@('f' : 'a' : 'l' : 's' : 'e' : x : xs) tokenAcc lineAcc = evaluate x (BooleanToken $ BoolF False) (x : xs) token tokenAcc lineAcc
-    tokenize' token@('i' : 'f' : x : xs) tokenAcc lineAcc                   = evaluate x (KeywordToken If) (x : xs) token tokenAcc lineAcc
-    tokenize' token@('i' : 'n' : x : xs) tokenAcc lineAcc                   = evaluate x (KeywordToken In) (x : xs) token tokenAcc lineAcc
-    tokenize' token@('l' : 'e' : 't' : x : xs) tokenAcc lineAcc             = evaluate x (KeywordToken Let) (x : xs) token tokenAcc lineAcc
-    tokenize' token@('n' : 'o' : 't' : x : xs) tokenAcc lineAcc             = evaluate x (KeywordToken Not) (x : xs) token tokenAcc lineAcc
-    tokenize' token@('t' : 'h' : 'e' : 'n' : x : xs) tokenAcc lineAcc       = evaluate x (KeywordToken Then) (x : xs) token tokenAcc lineAcc
-    tokenize' token@('t' : 'r' : 'u' : 'e' : x : xs) tokenAcc lineAcc       = evaluate x (BooleanToken $ BoolF True) (x : xs) token tokenAcc lineAcc
+{- | 'tokenize'' deals with spaces and tokenizes keywords and booleans. It receives user input, a list of already tokenized (token, line number)-pairs and an integer corresponding to the current line in the source code. It either returns an extended list of (token, line number)-pairs or an error message.
+-}
+tokenize' :: String -> [(Token, Int)] -> Int -> Either String [(Token, Int)]
+tokenize' [] tAcc lAcc                                         = Right $ reverse tAcc
+-- | Checks whether next character is a space.
+tokenize' (' ' : xs) tAcc lAcc                                 = tokenize' xs tAcc lAcc
+tokenize' ('\t' : xs) tAcc lAcc                                = tokenize' xs tAcc lAcc
+tokenize' ('\r' : '\n' : xs) tAcc lAcc                         = tokenize' xs tAcc (lAcc + 1)
+tokenize' ('\n' : xs) tAcc lAcc                                = tokenize' xs tAcc (lAcc + 1)
+tokenize' ('\r' : xs) tAcc lAcc                                = tokenize' xs tAcc (lAcc + 1)
+-- | Checks whether next characters form a keyword or a boolean value, followed by a reserved special character or a space.
+tokenize' ('=' : '=' : xs) tAcc lAcc                           = tokenize' xs ((KeywordToken Equals, lAcc) : tAcc) lAcc
+tokenize' tok@('e' : 'l' : 's' : 'e' : x : xs) tAcc lAcc       = keyCheck x (KeywordToken Else) (x : xs) tok tAcc lAcc
+tokenize' tok@('f' : 'a' : 'l' : 's' : 'e' : x : xs) tAcc lAcc = keyCheck x (BooleanToken $ BoolF False) (x : xs) tok tAcc lAcc
+tokenize' tok@('i' : 'f' : x : xs) tAcc lAcc                   = keyCheck x (KeywordToken If) (x : xs) tok tAcc lAcc
+tokenize' tok@('i' : 'n' : x : xs) tAcc lAcc                   = keyCheck x (KeywordToken In) (x : xs) tok tAcc lAcc
+tokenize' tok@('l' : 'e' : 't' : x : xs) tAcc lAcc             = keyCheck x (KeywordToken Let) (x : xs) tok tAcc lAcc
+tokenize' tok@('n' : 'o' : 't' : x : xs) tAcc lAcc             = keyCheck x (KeywordToken Not) (x : xs) tok tAcc lAcc
+tokenize' tok@('t' : 'h' : 'e' : 'n' : x : xs) tAcc lAcc       = keyCheck x (KeywordToken Then) (x : xs) tok tAcc lAcc
+tokenize' tok@('t' : 'r' : 'u' : 'e' : x : xs) tAcc lAcc       = keyCheck x (BooleanToken $ BoolF True) (x : xs) tok tAcc lAcc
+-- | A multiple character keyword is either at the end of an identifier or the program.
+tokenize' ('e' : 'l' : 's' : 'e' : xs) tAcc lAcc               = tokenize' xs ((KeywordToken Else, lAcc) : tAcc) lAcc
+tokenize' ('f' : 'a' : 'l' : 's' : 'e' : xs) tAcc lAcc         = tokenize' xs ((BooleanToken $ BoolF False , lAcc) : tAcc) lAcc
+tokenize' ('i' : 'f' : xs) tAcc lAcc                           = tokenize' xs ((KeywordToken If, lAcc) : tAcc) lAcc
+tokenize' ('i' : 'n' : xs) tAcc lAcc                           = tokenize' xs ((KeywordToken In, lAcc) : tAcc) lAcc
+tokenize' ('l' : 'e' : 't' : xs) tAcc lAcc                     = tokenize' xs ((KeywordToken Let, lAcc) : tAcc) lAcc
+tokenize' ('n' : 'o' : 't' : xs) tAcc lAcc                     = tokenize' xs ((KeywordToken Not, lAcc) : tAcc) lAcc
+tokenize' ('t' : 'h' : 'e' : 'n' : xs) tAcc lAcc               = tokenize' xs ((KeywordToken Then, lAcc) : tAcc) lAcc
+tokenize' ('t' : 'r' : 'u' : 'e' : xs) tAcc lAcc               = tokenize' xs ((BooleanToken $ BoolF True, lAcc) : tAcc) lAcc
+-- | Checks whether the next character is a keyword.
+tokenize' ('&' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken And , lAcc) : tAcc) lAcc
+tokenize' ('=' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Assign, lAcc) : tAcc) lAcc
+tokenize' ('/' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Divide, lAcc) : tAcc) lAcc
+tokenize' ('<' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Less, lAcc) : tAcc) lAcc
+tokenize' ('(' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken LBracket, lAcc) : tAcc) lAcc
+tokenize' ('-' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Minus, lAcc) : tAcc) lAcc
+tokenize' ('|' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Or, lAcc) : tAcc) lAcc
+tokenize' ('+' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Plus, lAcc) : tAcc) lAcc
+tokenize' (')' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken RBracket, lAcc) : tAcc) lAcc
+tokenize' (';' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Semicolon, lAcc) : tAcc) lAcc
+tokenize' ('*' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Times, lAcc) : tAcc) lAcc
+-- | The next character is no space, no keyword and not part of a keyword. Checks for digits and letters, otherwise returns an error.
+tokenize' (x : xs) tAcc lAcc
+    | isAlphaNum x = if isDigit x
+                        then tokenizeNumber (x : xs) tAcc lAcc ""
+                        else tokenizeName (x : xs) tAcc lAcc ""
+    | otherwise    = Left $ "Syntax error in line " ++ show lAcc ++ ": Illegal character '" ++ show x ++ "'."  
 
-    -- If multiple character keyword is either at the end of an identifier or the program.
-    tokenize' ('e' : 'l' : 's' : 'e' : xs) tokenAcc lineAcc           = tokenize' xs ((KeywordToken Else , lineAcc) : tokenAcc) lineAcc
-    tokenize' ('f' : 'a' : 'l' : 's' : 'e' : xs) tokenAcc lineAcc     = tokenize' xs ((BooleanToken $ BoolF False , lineAcc) : tokenAcc) lineAcc
-    tokenize' ('i' : 'f' : xs) tokenAcc lineAcc                       = tokenize' xs ((KeywordToken If , lineAcc) : tokenAcc) lineAcc
-    tokenize' ('i' : 'n' : xs) tokenAcc lineAcc                       = tokenize' xs ((KeywordToken In , lineAcc) : tokenAcc) lineAcc
-    tokenize' ('l' : 'e' : 't' : xs) tokenAcc lineAcc                 = tokenize' xs ((KeywordToken Let , lineAcc) : tokenAcc) lineAcc
-    tokenize' ('n' : 'o' : 't' : xs) tokenAcc lineAcc                 = tokenize' xs ((KeywordToken Not , lineAcc) : tokenAcc) lineAcc
-    tokenize' ('t' : 'h' : 'e' : 'n' : xs) tokenAcc lineAcc           = tokenize' xs ((KeywordToken Then , lineAcc) : tokenAcc) lineAcc
-    tokenize' ('t' : 'r' : 'u' : 'e' : xs) tokenAcc lineAcc           = tokenize' xs ((BooleanToken $ BoolF True , lineAcc) : tokenAcc) lineAcc
+{- | Tokenizes integers or identifiers. Both 'tokenizeNumber' and 'tokenizeName' additionally take an accumulator to recursively concatenate integers or letters to already processed input until some condition is met.
+-}
+tokenizeNumber, tokenizeName :: String -> [(Token, Int)] -> Int -> String -> Either String [(Token, Int)]
+tokenizeNumber [x] tAcc lAcc num = Right $ reverse $ (NumberToken (read (num ++ [x]) :: Int), lAcc) : tAcc
+tokenizeNumber (x : y : ys) tAcc lAcc num
+    | isDigit y = tokenizeNumber (y : ys) tAcc lAcc (num ++ [x])
+    | isAlpha y = Left $ "Syntax error in line " ++ show lAcc ++ ": Identifiers can not begin with a digit."
+    | otherwise = tokenize' (y : ys) ((NumberToken (read (num ++ [x]) :: Int), lAcc) : tAcc) lAcc
+tokenizeNumber _ _ _ _              = Left "Syntax error."
 
-    -- Next character is a single character keyword.
-    tokenize' (x : xs) tokenAcc lineAcc = case x of
-        '&' -> tokenize' xs ((KeywordToken And , lineAcc) : tokenAcc) lineAcc
-        '=' -> tokenize' xs ((KeywordToken Assign , lineAcc) : tokenAcc) lineAcc
-        '/' -> tokenize' xs ((KeywordToken Divide , lineAcc) : tokenAcc) lineAcc
-        '<' -> tokenize' xs ((KeywordToken Less , lineAcc) : tokenAcc) lineAcc
-        '(' -> tokenize' xs ((KeywordToken LBracket , lineAcc) : tokenAcc) lineAcc
-        '-' -> tokenize' xs ((KeywordToken Minus , lineAcc) : tokenAcc) lineAcc
-        '|' -> tokenize' xs ((KeywordToken Or , lineAcc) : tokenAcc) lineAcc
-        '+' -> tokenize' xs ((KeywordToken Plus, lineAcc) : tokenAcc) lineAcc
-        ')' -> tokenize' xs ((KeywordToken RBracket , lineAcc) : tokenAcc) lineAcc
-        ';' -> tokenize' xs ((KeywordToken Semicolon , lineAcc) : tokenAcc) lineAcc
-        '*' -> tokenize' xs ((KeywordToken Times, lineAcc) : tokenAcc) lineAcc
-        _   -> if isAlphaNum x
-                    then if isDigit x
-                        then tokenizeNumbers (x:xs) tokenAcc lineAcc ""
-                        else tokenizeNames (x:xs) tokenAcc lineAcc ""
-                    else Left $ "Syntax error in line " ++ show lineAcc ++ ": Illegal character '" ++ show x ++ "'."
+tokenizeName [x] tAcc lAcc name = Right $ reverse $ (NameToken $ name ++ [x], lAcc) : tAcc
+tokenizeName (x : y : ys) tAcc lAcc name
+    | isAlphaNum y = tokenizeName (y : ys) tAcc lAcc (name ++ [x])
+    | otherwise    = tokenize' (y : ys) ((NameToken $ name ++ [x], lAcc) : tAcc) lAcc
+tokenizeName _ _ _ _            = Left "Syntax error."
 
-    -- Tokenize integers or identifiers.
-    tokenizeNumbers, tokenizeNames :: String -> [(Token, Int)] -> Int -> String -> Either String [(Token, Int)]
-    tokenizeNumbers [x] tokenAcc lineAcc number = Right $ reverse $ (NumberToken (read (number ++ [x]) :: Int), lineAcc) : tokenAcc
-    tokenizeNumbers (x : y : ys) tokenAcc lineAcc number
-        | isDigit y = tokenizeNumbers (y : ys) tokenAcc lineAcc (number ++ [x])
-        | isAlpha y = Left $ "Syntax error in line " ++ show lineAcc ++ ": Identifiers can not begin with a digit."
-        | otherwise = tokenize' (y : ys) ((NumberToken (read (number ++ [x]) :: Int), lineAcc) : tokenAcc) lineAcc
-    tokenizeNumbers _ _ _ _                     = Left "Syntax error." -- This case can never be reached.
-
-    tokenizeNames [x] tokenAcc lineAcc name = Right $ reverse $ (NameToken $ name ++ [x], lineAcc) : tokenAcc
-    tokenizeNames (x : y : ys) tokenAcc lineAcc name
-        | isAlphaNum y = tokenizeNames (y : ys) tokenAcc lineAcc (name ++ [x])
-        | otherwise    = tokenize' (y : ys) ((NameToken $ name ++ [x], lineAcc) : tokenAcc) lineAcc
-    tokenizeNames _ _ _ _                   = Left "Syntax error." -- This case can never be reached.
-
-    -- Helper function validateChar checks whether a character either belongs to the set of reserved special characters of F or is a space.
-    validateChar :: Char -> Bool
-    validateChar x = x `elem` [';', '=', '(', ')', '&', '|', '+', '-', '*', '/', '<', ' ', '\n', '\t', '\r']
-
-    -- Evaluate is a helper function to validate whether - based on the following char - a keyword is to be parsed or it is just part of a longer name
-    evaluate :: Char -> Token -> String -> String -> [(Token, Int)] -> Int -> Either String [(Token, Int)]
-    evaluate char checktoken list token tokenAcc lineAcc = if validateChar char then tokenize' list ((checktoken, lineAcc) : tokenAcc) lineAcc else tokenizeNames token tokenAcc lineAcc ""
+{- | 'keyCheck' validates whether a string is a keyword or just part of a longer name, based on its following character. 
+It takes the character following the assumed keyword, the assumed keyword, the remaining input with and without the assumed keyword, the already processed list of (token, line number)-pairs and the line number.
+-}
+keyCheck :: Char -> Token -> String -> String -> [(Token, Int)] -> Int -> Either String [(Token, Int)]
+keyCheck c checktok rest input tAcc lAcc
+    | charCheck c = tokenize' rest ((checktok, lAcc) : tAcc) lAcc 
+    | otherwise   = tokenizeName input tAcc lAcc ""
+  where
+    -- | 'charCheck' validates whether a character either belongs to the set of reserved special characters of F or is a space.
+    charCheck :: Char -> Bool
+    charCheck c = c `elem` [';', '=', '(', ')', '&', '|', '+', '-', '*', '/', '<', ' ', '\n', '\t', '\r']
