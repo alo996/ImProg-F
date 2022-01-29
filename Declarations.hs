@@ -81,41 +81,26 @@ data LocalDef
     = LocalDef Expr Expr
     deriving (Eq, Show)
 
--- A lot of stuff can be an expression, for example '2 + 2'. All possible combinations are summed up in the Expr type.
+-- | All possible expressions are summed up in the 'Expr' type.
 data Expr
     = Add Expr Expr
-    | Func Expr Expr
-    | Mult Expr Expr
-    | Div Expr Expr
-    | UnaryMin Expr
-    | BinaryMin Expr Expr
-    | Equal Expr Expr
-    | LessThan Expr Expr
-    | LogicalAnd Expr Expr
-    | LogicalOr Expr Expr
-    | LogicalNot Expr
-    | LetIn [LocalDef] Expr
-    | IfThenElse Expr Expr Expr
     | AtomicExpr AtomicExpr
+    | BinaryMin Expr Expr
+    | Div Expr Expr
+    | Equal Expr Expr
+    | Func Expr Expr
+    | IfThenElse Expr Expr Expr
+    | LessThan Expr Expr
+    | LetIn [LocalDef] Expr
+    | LogicalAnd Expr Expr
+    | LogicalNot Expr
+    | LogicalOr Expr Expr
+    | Mult Expr Expr
+    | UnaryMin Expr
     deriving Eq
 
-instance Show Expr where
-    show (Add e1 e2)           = show e1 ++ "+" ++ show e2
-    show (Func e1 e2)          = show e1 ++ " " ++ show e2
-    show (Mult e1 e2)          = show e1 ++ "*" ++ show e2
-    show (Div e1 e2)           = show e1 ++ "/" ++ show e2
-    show (UnaryMin e)          = "-" ++ show e
-    show (BinaryMin e1 e2)     = show e1 ++ " - " ++ show e2
-    show (Equal e1 e2)         = show e1 ++ " == " ++ show e2
-    show (LessThan e1 e2)      = show e1 ++ " < " ++ show e2
-    show (LogicalAnd e1 e2)    = show e1 ++ " & " ++ show e2
-    show (LogicalOr e1 e2)     = show e1 ++ " | " ++ show e2
-    show (LogicalNot e)        = "!" ++ show e
-    show (LetIn e1 e2)         = "let " ++ show e1 ++ " in " ++ show e2
-    show (IfThenElse e1 e2 e3) = "if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3
-    show (AtomicExpr e)        = show e
-
--- An atomic expression is the most basic kind of expression. It is either a name, a numeral or a boolean.
+{- | An atomic expression is the most basic kind of expression. It is either a name, a boolean value, an integer (with range [ -2^29, 2^29 - 1] at least) or an expression in paranthesis.
+-}
 data AtomicExpr
     = Var String
     | LitBool BoolF
@@ -123,48 +108,61 @@ data AtomicExpr
     | Expr Expr
     deriving Eq
 
+instance Show Expr where
+    show (Add e1 e2)           = show e1 ++ "+" ++ show e2
+    show (AtomicExpr e)        = show e
+    show (BinaryMin e1 e2)     = show e1 ++ " - " ++ show e2
+    show (Div e1 e2)           = show e1 ++ "/" ++ show e2
+    show (Equal e1 e2)         = show e1 ++ " == " ++ show e2
+    show (Func e1 e2)          = show e1 ++ " " ++ show e2
+    show (IfThenElse e1 e2 e3) = "if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3
+    show (LessThan e1 e2)      = show e1 ++ " < " ++ show e2
+    show (LetIn e1 e2)         = "let " ++ show e1 ++ " in " ++ show e2
+    show (LogicalAnd e1 e2)    = show e1 ++ " & " ++ show e2
+    show (LogicalNot e)        = "!" ++ show e
+    show (LogicalOr e1 e2)     = show e1 ++ " | " ++ show e2
+    show (Mult e1 e2)          = show e1 ++ "*" ++ show e2
+    show (UnaryMin e)          = "-" ++ show e
+
 instance Show AtomicExpr where
-    show (Var s)                = show s
-    show (LitBool (BoolF bool)) = show bool
-    show (LitNum n)             = show n
-    show (Expr e)               = show e
+    show (Var s)        = show s
+    show (LitBool bool) = show bool
+    show (LitNum n)     = show n
+    show (Expr e)       = show e
 
-type Var = String
-
----------------------------------------- MF-CODE GENERATION AND INTERPRETATION ----------------------------------------
-{-
-We have four kinds of stores to deal with: code (for instructions), stack (for references),
-heap (for applications) and global (for definitions of non-local functions).
+---------------------------------------------------------------- MF-CODE GENERATION AND INTERPRETATION ------------------------------------------------------------
+{- | The abstract machine contains four types of stores: 'Code' contains a translated program as a sequence of MF instructions, 'Stack' contains references to expressions that need further evaluation, 'Global' contains non-local function definitions and 'Heap' contains expressions represented graphs. 
 -}
+newtype Code = Code [Instruction]
 
-newtype Code = Code [Instruction] deriving Eq
+newtype Stack = Stack [StackCell]
 
-instance Show Code where
-    show (Code ccells)   = "Code: " ++ showCells ccells "c"
+newtype Global = Global [(String, Int)]
 
-newtype Stack = Stack [StackCell] deriving Eq
+newtype Heap = Heap [HeapCell]
 
-instance Show Stack where
-    show (Stack scells)  = "Stack: " ++ showCells scells "s"
+-- | A heap is a list of heap cells. Heap cells either contain 
+data HeapCell
+    = APP Int Int
+    | DEF
+    {
+        fname :: String,
+        arity :: Int,
+        caddr :: Int
+    }
+    | IND Int
+    | PRE Keyword Int
+    | UNINITIALIZED
+    | VALBool Int
+    | VALNum Int
+    deriving Show
 
-newtype Global = Global [(String, Int)] deriving Eq
-instance Show Global where
-    show (Global gcells) = "Global: " ++ showCells gcells "g"
+-- | A stack is a list of stack cells. Stack cells contain references to code cells or heap cells, each simply represented with an integer. 
+newtype StackCell
+    = StackCell Int
+    deriving Show
 
-newtype Heap = Heap [HeapCell] deriving Eq
-
-instance Show Heap where
-    show (Heap hcells)   = "Heap: " ++ showCells hcells "h"
-
-showCells :: (Show a) => [a] -> String -> String
-showCells xs prefix = showCells' xs 0 "" where
-    showCells' (x : xs) ind acc = showCells' xs (ind + 1) (acc ++ "\n   " ++ prefix ++ show ind ++ ": " ++ show x)
-    showCells' [] _ acc         = acc
-
-{-
-A machine state consists of a program counter, a list of generated instructions, a stack, a heap and a global environment (see Zhu's example).
-Do we also need a stack pointer? If so, why didn't Zhu include one?
--}
+-- | 'State' models the abstract machine. It contains a program counter, a stack pointer and the already introduced stores code, stack, global and heap. In case of a faulty execution, it can also take on an error state, that returns an error message to the user.
 data State
     = State
     {
@@ -177,52 +175,49 @@ data State
     }
     | ErrorState String
 
+{- | MF takes as input a list of instructions to which an F program was translated into. 'Instruction' can take on values that each correspond to a certain functionality specified in MF.hs.
+-} 
+data Instruction
+    = Alloc
+    | Call
+    | Error String
+    | FuncUpdate Int
+    | Halt
+    | Makeapp
+    | Operator Int
+    | OpUpdate
+    | Pushfun String
+    | Pushparam Int
+    | Pushpre Keyword
+    | Pushval String Int
+    | Reset
+    | Return
+    | Slide Int
+    | SlideLet Int
+    | Unwind
+    | UpdateLet Int
+    deriving (Eq, Show)
+
+instance Show Code where
+    show (Code ccells) = "Code: " ++ showCells ccells "c"
+
+instance Show Stack where
+    show (Stack scells) = "Stack: " ++ showCells scells "s"
+
+instance Show Global where
+    show (Global gcells) = "Global: " ++ showCells gcells "g"
+
+instance Show Heap where
+    show (Heap hcells) = "Heap: " ++ showCells hcells "h"
+
+-- | 'showCells' is used to produce readable output of the stores used in MF.
+showCells :: (Show a) => [a] -> String -> String
+showCells xs prefix = showCells' xs 0 "" 
+  where
+    showCells' :: (Show a) => [a] -> Int -> String -> String
+    showCells' (x : xs) n acc = showCells' xs (n + 1) (acc ++ "\n   " ++ prefix ++ show n ++ ": " ++ show x)
+    showCells' [] _ acc       = acc
+
 instance Show State where
     show State{pc, sp, code = Code ccells, stack, global, heap} = "+———----+\n| State |\n+———----+\n" ++ "I:  " ++ show (ccells !! pc) ++ "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show ccells ++ "\n" ++ show stack ++ "\n" ++ show heap ++ "\n" ++ show global
     show (ErrorState error)                                     = error
-
-
--- The instruction type has several constructors, each one indicating some kind of functionality.
-data Instruction
-    = Reset
-    | Pushfun String
-    | Pushval String Int
-    | Pushparam Int
-    | Pushpre Keyword
-    | Makeapp
-    | Slide Int
-    | Unwind
-    | Call
-    | Return
-    | Halt
-    | Operator Int
-    | Alloc
-    | FuncUpdate Int
-    | OpUpdate
-    | UpdateLet Int
-    | SlideLet Int
-    | Error String
-    deriving (Eq, Show)
-
-{-A heap is a list of heap cells.
-As the global environment is not changed during runtime, it can be stored at one end of the data store consisting of stack, heap and global environment after compiling.
--}
-data HeapCell
-    = APP Int Int
-    | VALNum Int
-    | VALBool Int
-    | DEF
-    {
-        fname :: String,
-        arity :: Int,
-        caddr :: Int
-    }
-    | IND Int
-    | PRE Keyword Int
-    | UNINITIALIZED
-    deriving (Show, Eq)
-
--- A stack is a list of stack cells.
-newtype StackCell
-    = StackCell Int
-    deriving (Show, Eq)
