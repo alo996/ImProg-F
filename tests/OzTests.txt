@@ -1,12 +1,12 @@
 --New tests for MF
 
-let x = y+2 in x+y; y = 3; main = f x;
+let x = y+2 in x+y; y = 3; main = f x; passt
 
-main = f 3 -4; f y x = y-x;
+main = f 3 -4; f y x = y-x; passt
 
-main = f; f = -3-4-(-2);
+main = f; f = -3-4-(-2); passt
 
-main = f; f = -3-4*(*(-2));
+main = f; f = -3-4*(*(-2)); passt 
 
 main = f; f = -(3-4)-(-2);
 
@@ -17,6 +17,9 @@ main = f+x; f = -3-4-(-2); x = True;
 main = f+x; f = -3-4-(-2); x == true;
 
 main = f+x; f = false; x = true;
+
+
+
 
 main = f+x; f = False; x = true;
 
