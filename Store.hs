@@ -1,26 +1,37 @@
 module Store where
-    import Declarations
+import Declarations
 
-    -- Push element at the end of a stack. Not very efficient, but more intuitive at the moment.
-    pushStack :: Stack -> StackCell -> Stack
-    pushStack (Stack scells) elem  = Stack (scells ++ [elem])
 
-    pushHeap :: Heap -> HeapCell -> Heap
-    pushHeap (Heap hcells) elem  = Heap (hcells ++ [elem])
+-- | Push element at the end of a stack or heap.
+pushStack :: Stack -> StackCell -> Stack
+pushStack (Stack scells) elem = Stack $ scells ++ [elem]
 
-    -- Access element at index 'ind' in code, stack or heap.
-    accessCode :: Code -> Int -> Either String Instruction
-    accessCode c@(Code ccells) ind = if (ind < length ccells) && (ind >= 0) && not(null ccells) then return $ ccells !! ind else Left $ "Compile error: " ++ show c ++ " has no index " ++ show ind ++ "."
+pushHeap :: Heap -> HeapCell -> Heap
+pushHeap (Heap hcells) elem = Heap $ hcells ++ [elem]
 
-    accessStack :: Stack -> Int -> Either String StackCell
-    accessStack s@(Stack scells) ind = if (ind < length scells) && (ind >= 0) && not(null scells) then return $ scells !! ind else Left $ "Compile error: " ++ show s ++ " has no index " ++ show ind ++ "."
+-- | Access element at index 'n' in a code, stack or heap.
+accessCode :: Code -> Int -> Either String Instruction
+accessCode c@(Code ccells) n
+    | (n < length ccells) && (n >= 0) && not(null ccells) = return $ ccells !! n 
+    | otherwise                                           = Left $ "Compile error: " ++ show c ++ " has no index " ++ show n ++ "."
 
-    accessHeap :: Heap -> Int -> Either String HeapCell
-    accessHeap h@(Heap hcells) ind = if (ind < length hcells) && (ind >= 0) && not(null hcells) then return $ hcells !! ind else Left $ "Compile error: " ++ show h ++ " has no index " ++ show ind ++ "."
+accessStack :: Stack -> Int -> Either String StackCell
+accessStack s@(Stack scells) n
+    | (n < length scells) && (n >= 0) && not(null scells) = return $ scells !! n 
+    | otherwise                                           = Left $ "Compile error: " ++ show s ++ " has no index " ++ show n ++ "."
 
-    -- Either overwrite element at index 'ind' in a stack/heap or push element at end of store.
-    saveStack :: Stack -> StackCell -> Int -> Either String Stack
-    saveStack s@(Stack scells) scell ind  = if (ind <= length scells) && (ind >= 0) then return $ Stack (take ind scells ++ [scell] ++ drop (ind + 1) scells) else Left $ "Compile error in 'save': " ++ show s ++ " has no index " ++ show ind ++ "."
+accessHeap :: Heap -> Int -> Either String HeapCell
+accessHeap h@(Heap hcells) n 
+    | (n < length hcells) && (n >= 0) && not(null hcells) = return $ hcells !! n 
+    | otherwise                                           = Left $ "Compile error: " ++ show h ++ " has no index " ++ show n ++ "."
 
-    saveHeap :: Heap -> HeapCell -> Int -> Either String Heap
-    saveHeap h@(Heap hcells) hcell ind   = if (ind <= length hcells) && (ind >= 0) then return $ Heap (take ind hcells ++ [hcell] ++ drop (ind + 1) hcells) else Left $ "Compile error in 'save': " ++ show h ++ " has no index " ++ show ind ++ "."
+-- | Either overwrite element at index 'n' in a stack or heap, or push element at its end.
+saveStack :: Stack -> StackCell -> Int -> Either String Stack
+saveStack s@(Stack scells) scell n
+    | (n <= length scells) && (n >= 0) = return $ Stack (take n scells ++ [scell] ++ drop (n + 1) scells) 
+    | otherwise                        = Left $ "Compile error in 'save': " ++ show s ++ " has no index " ++ show n ++ "."
+
+saveHeap :: Heap -> HeapCell -> Int -> Either String Heap
+saveHeap h@(Heap hcells) hcell n 
+    | (n <= length hcells) && (n >= 0) = return $ Heap (take n hcells ++ [hcell] ++ drop (n + 1) hcells) 
+    | otherwise                        = Left $ "Compile error in 'save': " ++ show h ++ " has no index " ++ show n ++ "."
