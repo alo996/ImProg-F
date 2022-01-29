@@ -6,7 +6,6 @@ Description : This module contains all type declarations and type class instanti
 module Declarations where
 
 
------------------------------------------------------------------------ LEXICAL ANALYSIS ------------------------------------------------------------------------
 -- | A token is a sequence of characters with some inherent structure (e.g. a reserved F-keyword, a name, a multi-character number).
 data Token
     = BooleanToken BoolF
@@ -70,7 +69,6 @@ instance Show BoolF where
     show (BoolF True)  = "true"
     show (BoolF False) = "false"
 
------------------------------------------------------------------------ SYNTACTICAL ANALYSIS ----------------------------------------------------------------------
 {- | We define a parser to be a parametrized function that takes a list of tuples. These tuples are (token, integer)-pairs, assigning each identified token its line number in the source code for error handling purposes. This list of tuples is then mapped to either an error message if parsing was unsuccessful, or a tuple containing parsed output and a list of (token, integer)-pairs left to be parsed by another parser.
 -}
 type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
@@ -134,7 +132,6 @@ instance Show AtomicExpr where
     show (LitNum n)     = show n
     show (Expr e)       = show e
 
----------------------------------------------------------------- MF-CODE GENERATION AND INTERPRETATION ------------------------------------------------------------
 {- | The abstract machine contains four types of stores: 'Code' contains a translated program as a sequence of MF instructions, 'Stack' contains references to expressions that need further evaluation, 'Global' contains non-local function definitions and 'Heap' contains expressions represented graphs. 
 -}
 newtype Code = Code [Instruction]
