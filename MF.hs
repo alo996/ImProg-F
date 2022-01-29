@@ -65,7 +65,12 @@ module MF where
 
     -- 'add2arg' takes the address of an APP-cell and delivers the heap address of its argument.
     add2arg :: Heap -> Int -> Either String Int
-    add2arg h@(Heap hcells) addr = if (addr >= 0) && (addr < length hcells) then let APP addr1 addr2 = hcells !! addr in return addr2 else Left $ "Runtime error: Pushparam expected heap address, found code address " ++ show addr ++ " instead."
+    add2arg h@(Heap hcells) addr  
+        | (addr >= 0) && (addr < length hcells) = case hcells !! addr of
+            APP addr1 addr2 -> return addr2
+            IND addr3       -> add2arg h addr3 
+            _               -> Left $ "Runtime error: Pushparam expected heap address, found code address " ++ show addr ++ " instead."     
+        | otherwise                             = Left $ "Runtime error: Pushparam expected heap address, found code address " ++ show addr ++ " instead."
 
     -- 'arity'' returns the number of formal arguments of an operator.
     arity' :: Keyword -> Int
@@ -115,9 +120,7 @@ module MF where
     pushparam :: State -> Int -> State
     pushparam s n = case accessStack (stack s) (sp s - n - 1) of
         Right (StackCell addr) -> case add2arg (heap s) addr of
-            Right addr -> case saveStack (stack s) (StackCell addr) (sp s + 1) of
-                Right stack -> s {pc = pc s + 1, sp = sp s + 1, stack = stack}
-                Left error  -> ErrorState error
+            Right addr1 -> s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell addr1)}
             Left error -> ErrorState error
         Left error -> ErrorState error
 
