@@ -1,6 +1,6 @@
 {- |
 Module      : Parser
-Description : This module contains all functionality to pursue syntactical analysis in F. It implements a recursive descent LL(1) parser.
+Description : This module contains all functionality to pursue syntactical analysis in F. It implements a recursive descent LL(1) parser, which specifies one function per rule in the F grammar. As defined in the Declarations file, a parser has type 'type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])'.
 -}
 module Parser where
 
@@ -13,47 +13,33 @@ import Declarations
       Token(..),
       Keyword(LBracket, Semicolon, Assign, Let, In, If, Then, Else, Or,
               And, Not, Equals, Less, Minus, Divide, RBracket, Plus, Times) )
-import Tokenizer ()
 
 
-{-
-The idea of the parser is the following: for each rule in the non-left recursive grammar, create a function that implements that rule.
-Each function returns our parametrized parser type (see Declarations file). Implementing a rule means the following: 
-If there is some structure in the rule, check whether that structure occurs in the tokenized input stream. 
-If the structure is violated, we return an error. If the structure is respected, evaluate the token stream as far as possible 
-with the given function. 
-The parser works with the principle of recursive descent: Each function calls some more special function 
-(for example expr calls expr1, expr1 calls expr2 etc.), until we reach the 'base-cases', like atomicExpr.
-The final return value is an abstract syntax tree, which we will work with in the upcoming steps.
-
-The most general function in our parser is program. It works as follows:
-The first token has to be a definition, which has to start with a variable according to our grammar. 
-That means it starts with a NameToken. So if we detect a NameToken, we apply the function def on the tokenstream. 
-After the definition function did its job (we do not need to care about its implementation here and can just assume it returns a definition), 
-we must find a semicolon, otherwise this wouldn't be a valid definition. 
-So we call the helper function match, which is defined and explained at the end of the module to deal with this fact.
+{- | 'program' parses a program (a list of definitions). It takes a list of tuples, each tuple containing a token and its line number in the source code. If successful, it returns a tuple, containing a list of definitions and an empty list as the entire input was parsed. Otherwise it returns an error.
 -}
 program :: Parser [Def]
 program [] = return ([], [])
 program ts = do
+  -- Parse one defintion.
   (d, ts1) <- def ts
+  -- If the next token is a keyword, recursively apply 'program' and concatenate the results.
   match (KeywordToken Semicolon) ts1 >>= \ (_, ts2) -> program ts2 >>= \ (ds, ts3) -> return (d : ds, ts3)
 
-{-
-Let's see how def works. The corresponding rule in the grammar is 'Variable {Variable} "=" Expression'.
-So a valid definition consists of at least one variable, the '=' symbol and one expression. 
-We again assume that we have two functions, variable and expr, that correctly parse variables and expressions, 
-without knowing their concrete implementations at the moment.
--}
-def :: Parser Def -- the return value is Either String (Def, [(Token, Int)])
-def ts = do -- as we have to do some calculations in the Either monad, we directly jump into a do block
-  (e, ts1) <- variable ts -- as our parser only looks ahead one symbol, we apply the function variable on the tokenstream ts. It returns the tuple (e, ts1), with e being the parsed expression (a variable) and ts1 the remaining tokenstream.
-  case ts1 of -- We have to check what the first symbol of ts1 is to continue with the correct calculation
+-- | 'def' parses one function definition.
+def :: Parser Def
+def ts = do
+  (e, ts1) <- variable ts
+  case ts1 of
+    -- At least one formal parameter has been specified.
     d@((NameToken _, _) : ts2)     -> restDef d >>= \ (es, ts3) -> match (KeywordToken Assign) ts3 >>= \ (_, ts4) -> expr ts4 >>= \ (e1, ts5) -> return (Def e es e1, ts5) 
-    (KeywordToken Assign, _) : ts2 -> expr ts2 >>= \ (e1, ts3) -> return (Def e [] e1, ts3) -- We found the Keyword '='. That means we call expr on the remaining tokenstream, as our rule states that we need to find exactly one more expression.  
-    (token , line) : _             -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' or expression expected but found '" ++ show token ++ "'." -- We neither found a NameToken nor the Keyword '='. That means there is something wrong with the input and we tell the user what we would have expexcted instead.
-    []                             -> Left "Syntax error at end of program: Keyword '=' or expression expected." -- The tokenstream has suddenly ended. This is also incorrect.
-  
+    -- The function has no formal parameters and the next token is '='. Therefore continues parsing the defining expression.
+    (KeywordToken Assign, _) : ts2 -> expr ts2 >>= \ (e1, ts3) -> return (Def e [] e1, ts3) 
+    -- The next token is neither a variable nor '='. This is syntactically incorrect, therefore returns an error. 
+    (token, line) : _              -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' or expression expected but found '" ++ show token ++ "'."
+    -- The tokenstream has suddenly ended, which is also syntactically incorrect.
+    []                             -> Left "Syntax error at end of program: Keyword '=' or expression expected."
+
+-- | Parses a list of local definitions.
 localDefs :: Parser [LocalDef]
 localDefs ts = do
   (d, ts1) <- localDef ts
@@ -61,11 +47,13 @@ localDefs ts = do
     (KeywordToken Semicolon, _) : ts2 -> localDefs ts2 >>= \ (ds, ts3) -> return (d : ds, ts3)
     _                                 -> return ([d], ts1)
 
+-- | Parses exactly one local definition.
 localDef :: Parser LocalDef
 localDef ts = do
   (e, ts1) <- variable ts
   match (KeywordToken Assign) ts1 >>= \ (_, ts2) -> expr ts2 >>= \ (e1, ts3) -> return (LocalDef e e1, ts3)
 
+-- | All expressions are of the same type.
 expr, expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, atomicExpr, variable :: Parser Expr
 expr ((KeywordToken Let, _) : ts) = do
   (e, ts1) <- localDefs ts
@@ -101,12 +89,11 @@ expr4 ts = do
     (KeywordToken Less, _) : ts2   -> expr5 ts2 >>= \ (e1, ts3) -> return (LessThan e e1, ts3)
     _                              -> return (e, ts1)
 
--- expr5 ts = expr6 ts >>= \ (e, ts1) -> case ts1 of restExpr5 ts1 >>= \ (es, ts2) -> return (foldl Add e es, ts2)
 expr5 ts = do
   (e, ts1) <- expr6 ts
   case ts1 of
     (KeywordToken Minus, _) : ts2 -> expr6 ts2 >>= \ (e1, ts3) -> return (BinaryMin e e1, ts3)
-    _                             -> restExpr5 ts1 >>= \ (es, ts3) -> return (foldl Add e es, ts3)
+    _                             -> restExpr5 ts1 >>= \ (es, ts3) -> return (foldl Add e es, ts3)  -- Addition is left associative.
 
 expr6 ((KeywordToken Minus, _) : ts) = expr7 ts >>= \ (e, ts1) -> return (UnaryMin e, ts1)
 expr6 ts                             = expr7 ts
@@ -115,9 +102,9 @@ expr7 ts  = do
   (e, ts1) <- expr8 ts
   case ts1 of
     (KeywordToken Divide, _) : ts2 -> expr8 ts2 >>= \ (e1, ts3) -> return (Div e e1, ts3)
-    _                              -> restExpr7 ts1 >>= \ (es, ts3) -> return (foldl Mult e es, ts3)
+    _                              -> restExpr7 ts1 >>= \ (es, ts3) -> return (foldl Mult e es, ts3)  -- Mulitplication is left associative.
 
-expr8 ts = atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (foldl Func e es, ts2)
+expr8 ts = atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (foldl Func e es, ts2)  -- Function application is left associative.
   
 atomicExpr n@((NameToken _, _) : _)          = variable n
 atomicExpr ((BooleanToken bool, _) : ts)     = return (AtomicExpr (LitBool bool), ts)
@@ -129,16 +116,16 @@ atomicExpr ((token, line) : _)               = Left $ "Syntax error in line " ++
 atomicExpr []                                = Left "Syntax error at end of program: Expression expected."
 
 variable ((NameToken name, _) : ts) = return (AtomicExpr (Var name), ts)
-variable ((token , line) : _)       = Left $ "Syntax error in line " ++ show line ++ ": Identifier expected but found '" ++ show token ++ "'."
+variable ((token, line) : _)        = Left $ "Syntax error in line " ++ show line ++ ": Identifier expected but found '" ++ show token ++ "'."
 variable []                         = Left "Syntax error at end of program: Identifier expected."
 
+-- | 'Rest' functions recursively iterate through the remaining tokenstream until their pattern is no longer matched.
 restDef, restExpr5, restExpr7, restExpr8 :: Parser [Expr]
 restDef ts = case ts of
   (NameToken _, _) : _ -> variable ts >>= \ (e, ts1) -> restDef ts1 >>= \ (es, ts2) -> return (e : es, ts2)
   _                    -> return ([], ts)
 
 restExpr5 ((KeywordToken Plus, _) : ts)  = expr6 ts >>= \ (e, ts1) -> restExpr5 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
---restExpr5 ((KeywordToken Minus, _) : ts) = expr6 ts >>= \ (e1, ts1) -> return ([UnaryMin e1], ts1)
 restExpr5 ts                             = return ([], ts)
 
 restExpr7 ((KeywordToken Times, _) : ts) = expr8 ts >>= \ (e, ts1) -> restExpr7 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
@@ -151,10 +138,13 @@ restExpr8 ts = case ts of
   (KeywordToken LBracket, _) : _ -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
   _                              -> return ([], ts)
 
+{- | 'match' checks whether a certain keyword is next in the remaining tokenstream. If so, this token is removed and the caller can operate on the remaining tokens. Otherwise it returns an error, indicating a syntactical error.
+-}
 match :: Token -> Parser ()  
--- match :: Token -> [(Token, Int)] -> Either String ((), [(Token, Int)]) is identical
 match (KeywordToken key1) ((KeywordToken key2, line) : ts)
-  | key1 == key2 = return ((), ts) -- If the tokenstream begins with the expected keyword, we return the Right value to do further calculations.
+    -- If the tokenstream begins with the expected keyword, 'match' returns the remaining tokens for further calculations.
+  | key1 == key2 = return ((), ts)
+    -- If the keywords do not match, an error is returned.
   | otherwise    = Left $ "Syntax error in line " ++ show line ++ ": Keyword '" ++ show (KeywordToken key1) ++ "' expected but found '" ++ show (KeywordToken key2) ++ "'."
 match t1 ((t2 , line) : _) = Left $ "Syntax error in line " ++ show line ++ ": Keyword " ++ show t1 ++ " expected but found '" ++ show t2 ++ "'."
 match t1 []                = Left $ "Syntax error at end of program: Keyword '" ++ show t1 ++ "' expected."

@@ -2,10 +2,9 @@
 module Main where
 
 import Compiler ( compileProgram )
-import Declarations ( State(State, ErrorState, code) )
-import MF ( interpret, result )
+import Declarations (State (State, ErrorState, code))
+import MF ( interpret, resultToString )
 import Parser ( program )
-import Store ()
 import Tokenizer ( tokenize )
 
 
@@ -20,7 +19,6 @@ main' input =
                 ErrorState error   -> putStrLn error
                 state@State{code}  -> do
                     print code
-                    putStrLn "\nInitial Machine State:"
-                    putStrLn $ result $ interpret state
+                    putStrLn $ resultToString $ interpret state
             Left error -> putStrLn error
         Left error -> putStrLn error
