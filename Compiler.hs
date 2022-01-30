@@ -1,47 +1,55 @@
+{- |
+Module      : Compiler
+Description : This module contains all functionality to translate a parsed F program into a set MF instructions, while setting up the global environment and heap for the interpretation process.
+-}
 {-# LANGUAGE NamedFieldPuns #-}
 module Compiler where
 
 import Declarations
-    ( State(..),
-      Heap(..),
+    ( Instruction(FuncUpdate, Slide, Unwind, Call, Return, Pushval,
+                  Pushparam, Error, Pushfun, Pushpre, Makeapp, UpdateLet, SlideLet,
+                  Alloc),
+      State(..),
       HeapCell(DEF, fname, arity),
+      Heap(..),
       Global(Global),
       Stack(Stack),
-      Instruction(..),
-      Code(..),
+      Code(Code),
       AtomicExpr(Var, LitBool, LitNum, Expr),
       Expr(..),
       LocalDef(..),
       Def(..),
       BoolF(BoolF),
-      Keyword(If, Plus, Times, Divide, Equals, Less, And, Or, Minus,
-              Not) )
-import Store ()
+      Operator(IfOp, PlusOp, TimesOp, DivideOp, EqualsOp, LessOp, AndOp,
+               OrOp, BinaryMinOp, UnaryMinOp, NotOp) )
+import Store ( codeInit )
 
 
--- | Compile a program. 'compileProgram' takes a program (a list of definitions) and returns the initial machine if successful.
+-- | Compile a program. 'compileProgram' takes a program (a list of definitions) and returns the initial machine state if successful.
 compileProgram :: [Def] -> State
 compileProgram defs = compileProgram' defs state
   where
-    state = State {pc = 0, sp = -1, code = initializeCode, stack = Stack [], global = Global [], heap = Heap []}
+    state = State {pc = 0, sp = -1, code = codeInit, stack = Stack [], global = Global [], heap = Heap []}
     -- | 'compileProgram'' recursively compiles each definition of the program.
     compileProgram' :: [Def] -> State -> State
     compileProgram' (d : ds) state = compileProgram' ds (compileDefinition d state)
     compileProgram' [] state       = lookupMain $ heap state
       where
-        -- | After compiling all definitions, 'lookupMain' checks whether main has been specified as required.
+        -- | After compiling all definitions, 'lookupMain' checks whether the function main has been specified as required.
         lookupMain :: Heap -> State
         lookupMain (Heap (DEF {fname, arity} : hs)) = if fname == "main" && arity == 0 then state else lookupMain (Heap hs)
         lookupMain _                                = ErrorState "Runtime error: Function main not defined."
 
 -- | Compile a definition. 'compileDefinition' takes the definition to compile and the current machine state and updates its code, global environment and heap.
 compileDefinition :: Def -> State -> State
-compileDefinition (Def (AtomicExpr (Var fname)) es e) state@State{code = Code ccells, global = Global gcells, heap = Heap hcells} =
-    state
+compileDefinition 
+    (Def (AtomicExpr (Var fname)) es e) 
+    state@State{code = Code ccells, global = Global gcells, heap = Heap hcells} 
+  = state
     {
-        code = Code (ccells ++ compileExpression e localenv ++ [FuncUpdate len, Slide (len + 1), Unwind, Call, Return]),
-        global = Global (gcells ++ [(fname, length hcells)]),
-        heap = Heap (hcells ++ hcell)
+      code = Code (ccells ++ compileExpression e localenv ++ [FuncUpdate len, Slide (len + 1), Unwind, Call, Return]),
+      global = Global (gcells ++ [(fname, length hcells)]),
+      heap = Heap (hcells ++ hcell)
     }
       where 
         localenv = createPos es
@@ -64,18 +72,18 @@ compileExpression e pos = case e of
     Func (AtomicExpr (Var fname)) e2   -> compileExpression e2 pos ++ [Pushfun fname, Makeapp]
     Func e1 e2                         -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Makeapp]
     LetIn localdefs e                  -> compileLocalDefinitions localdefs e pos
-    Add e1 e2                          -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre Plus, Makeapp, Makeapp]
-    Mult e1 e2                         -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre Times, Makeapp, Makeapp]
-    Div e1 e2                          -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre Divide, Makeapp, Makeapp]
-    Equal e1 e2                        -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre Equals, Makeapp, Makeapp]
-    LessThan e1 e2                     -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre Less, Makeapp, Makeapp]
-    LogicalAnd e1 e2                   -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre And, Makeapp, Makeapp]
-    LogicalOr e1 e2                    -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre Or, Makeapp, Makeapp]
-    BinaryMin e1 e2                    -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre Minus, Makeapp, Makeapp]
-    UnaryMin e                         -> compileExpression e pos ++ [Pushpre Minus, Makeapp]
-    LogicalNot e                       -> compileExpression e pos ++ [Pushpre Not, Makeapp]
+    Add e1 e2                          -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre PlusOp, Makeapp, Makeapp]
+    Mult e1 e2                         -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre TimesOp, Makeapp, Makeapp]
+    Div e1 e2                          -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre DivideOp, Makeapp, Makeapp]
+    Equal e1 e2                        -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre EqualsOp, Makeapp, Makeapp]
+    LessThan e1 e2                     -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre LessOp, Makeapp, Makeapp]
+    LogicalAnd e1 e2                   -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre AndOp, Makeapp, Makeapp]
+    LogicalOr e1 e2                    -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre OrOp, Makeapp, Makeapp]
+    BinaryMin e1 e2                    -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre BinaryMinOp, Makeapp, Makeapp]
+    UnaryMin e                         -> compileExpression e pos ++ [Pushpre UnaryMinOp, Makeapp]
+    LogicalNot e                       -> compileExpression e pos ++ [Pushpre NotOp, Makeapp]
     IfThenElse e1 e2 e3                ->
-        compileExpression e3 pos ++ compileExpression e2 (posInc pos 1) ++ compileExpression e1 (posInc pos 2) ++ [Pushpre If, Makeapp, Makeapp, Makeapp]
+        compileExpression e3 pos ++ compileExpression e2 (posInc pos 1) ++ compileExpression e1 (posInc pos 2) ++ [Pushpre IfOp, Makeapp, Makeapp, Makeapp]
 
 {- | Compile a local definition. 'compileLocalDefinitions' takes a list of local definitions, the corresponding expression and a local environment. 
 It returns a list of MF instructions.
@@ -117,15 +125,10 @@ posInc pos n = map (\ (a, b) -> (a, b + n)) pos
 posInd :: Expr -> [(Expr, Int)] -> Either String Int
 posInd e pos = case lookup e pos of
     Just n -> return n
-    _      -> Left $ "Compile error: Local environment " ++ show pos ++ " does not contain formal parameter " ++ show e ++ "."
+    _      -> Left $ "Runtime error: Local environment " ++ show pos ++ " does not contain formal parameter " ++ show e ++ "."
 
 -- | Replicate a list n-1 times and concatenate.
 replicate' :: [a] -> Int -> [a]
 replicate' xs n
     | n > 1     = xs ++ replicate' xs (n - 1)
     | otherwise = xs
-
--- | Initialize code with the set of MF instructions needed before the translation of function definitions.
-initializeCode :: Code
-initializeCode =
-    Code [Reset, Pushfun "main", Call, Halt, Pushparam 1, Unwind, Call, Pushparam 3, Unwind, Call, Operator 2, OpUpdate, Return, Pushparam 1, Unwind, Call, Operator 3, OpUpdate, Unwind, Call, Return, Pushparam 1, Unwind, Call, Operator 1, OpUpdate, Return]
