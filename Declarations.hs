@@ -152,7 +152,7 @@ data HeapCell
         caddr :: Int
     }
     | IND Int
-    | PRE Keyword Int
+    | PRE Operator Int
     | UNINITIALIZED
     | VALBool Int
     | VALNum Int
@@ -189,7 +189,7 @@ data Instruction
     | OpUpdate
     | Pushfun String
     | Pushparam Int
-    | Pushpre Keyword
+    | Pushpre Operator
     | Pushval String Int
     | Reset
     | Return
@@ -197,6 +197,20 @@ data Instruction
     | SlideLet Int
     | Unwind
     | UpdateLet Int
+    deriving (Eq, Show)
+
+data Operator
+    = AndOp
+    | BinaryMinOp
+    | DivideOp 
+    | EqualsOp 
+    | IfOp 
+    | LessOp
+    | NotOp
+    | OrOp
+    | PlusOp
+    | TimesOp 
+    | UnaryMinOp
     deriving (Eq, Show)
 
 instance Show Code where
