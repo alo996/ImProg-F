@@ -34,7 +34,7 @@ Project for 'Implementierung von Programmiersprachen' at the Ludwig Maximilian U
 
 ## Running Tests
 
-To run tests, run the following command (by using Stack)
+To run tests (by using Stack), run the following command 
 
 ```bash
   stack run --test
