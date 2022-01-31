@@ -7,11 +7,11 @@ module Store where
 import Declarations
     (Instruction(Return, Reset, Pushfun, Halt, Pushparam, Unwind,
                   Call, Operator, OpUpdate),
-      StackCell,
-      HeapCell,
-      Heap(..),
-      Stack(..),
-      Code(..))
+    StackCell,
+    HeapCell,
+    Heap(..),
+    Stack(..),
+    Code(..))
 
 
 -- | Access element at index 'n' in a code, stack or heap.

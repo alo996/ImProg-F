@@ -13,7 +13,7 @@ data Token
     | KeywordToken Keyword
     | NameToken String
     | NumberToken Int
-    deriving Eq
+    deriving (Eq, Show)
 
 -- | A keyword is a sequence of characters that is reserved by F.
 data Keyword
@@ -39,12 +39,6 @@ data Keyword
 
 -- | 'BoolF' adresses the fact that boolean values in F are lowercase, unlike in Haskell.
 newtype BoolF = BoolF Bool deriving Eq
-
-instance Show Token where
-    show (BooleanToken bool)    = show bool
-    show (KeywordToken keyword) = show keyword
-    show (NameToken name)       = show name
-    show (NumberToken num)      = show num
 
 instance Show Keyword where
     show And       = "&"
@@ -114,10 +108,10 @@ data AtomicExpr
     deriving Eq
 
 instance Show Expr where
-    show (Add e1 e2)           = show e1 ++ "+" ++ show e2
+    show (Add e1 e2)           = show e1 ++ " + " ++ show e2
     show (AtomicExpr e)        = show e
     show (BinaryMin e1 e2)     = show e1 ++ " - " ++ show e2
-    show (Div e1 e2)           = show e1 ++ "/" ++ show e2
+    show (Div e1 e2)           = show e1 ++ " / " ++ show e2
     show (Equal e1 e2)         = show e1 ++ " == " ++ show e2
     show (Func e1 e2)          = show e1 ++ " " ++ show e2
     show (IfThenElse e1 e2 e3) = "if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3

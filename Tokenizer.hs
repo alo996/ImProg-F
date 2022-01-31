@@ -4,12 +4,12 @@ Description : This module contains all functionality to pursue lexical analysis 
 -}
 module Tokenizer where
 
-import Data.Char ( isAlpha, isAlphaNum, isDigit )
+import Data.Char (isAlpha, isAlphaNum, isDigit)
 import Declarations
-    ( BoolF(BoolF),
-      Token(..),
-      Keyword(Times, Equals, Else, If, In, Let, Not, Then, And, Assign,
-              Divide, Less, LBracket, Minus, Or, Plus, RBracket, Semicolon) )
+    (BoolF(BoolF),
+    Token(..),
+    Keyword(Times, Equals, Else, If, In, Let, Not, Then, And, Assign,
+            Divide, Less, LBracket, Minus, Or, Plus, RBracket, Semicolon))
 
 
 -- |'tokenize' receives user input and, if successful, transforms it to a list of tuples, each containing a token and its line number in the source code.
@@ -94,3 +94,6 @@ keyCheck c checktok rest input tAcc lAcc
     -- | 'charCheck' validates whether a character either belongs to the set of reserved special characters of F or is a space.
     charCheck :: Char -> Bool
     charCheck c = c `elem` [';', '=', '(', ')', '&', '|', '+', '-', '*', '/', '<', ' ', '\n', '\t', '\r']
+
+tokensToString :: [(Token, Int)] -> String
+tokensToString toks = foldl (++) "+———-----+\n| Tokens |\n+———-----+\n" (map (\ (tok, _) -> show tok ++ "\n") toks)

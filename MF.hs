@@ -5,17 +5,32 @@ Description : This module contains all functionality to interpret a translated F
 {-# LANGUAGE NamedFieldPuns #-}
 module MF where
 
-import Data.Bits ( Bits((.&.), (.|.), xor) )
-import Declarations
+import Data.Bits (Bits((.&.), (.|.), xor))
 import Debug.Trace
+import Declarations
+    (Global(..),
+    Heap(..),
+    HeapCell(IND, DEF, APP, VALBool, VALNum, PRE, UNINITIALIZED),
+    Instruction(..),
+    Operator(..),
+    Stack(Stack),
+    StackCell(StackCell),
+    State(..))
 import Store
+    (accessCode,
+    accessHeap,
+    accessStack,
+    pushHeap,
+    pushStack,
+    saveHeap,
+    saveStack)
 
 
 ---------------------------------------- MAIN EXECUTION CYCLE ----------------------------------------
 -- | 'interpret' recursively executes a set of MF instructions. Either return a state when instruction 'HALT' is reached, or an error occurs.
 interpret :: State -> State
 interpret (ErrorState error) = ErrorState error
-interpret s                  = case accessCode (code s) (pc s) of
+interpret s                  = case trace (show s) accessCode (code s) (pc s) of
     Right instr -> case instr of
         Halt -> s
         _    -> case run instr s of
@@ -170,7 +185,9 @@ operator s op = case op of
                                                     case saveStack stack (StackCell n) (sp s - 3) of
                                                         Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = heap'}
                                                         Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                                DivideOp -> let (n, heap') = newVAL (heap s) 1 (num1 `div` num2) in
+                                                DivideOp -> if num2 == 0 
+                                                                then ErrorState "Runtime error: Division by zero."
+                                                                else let (n, heap') = newVAL (heap s) 1 (num1 `div` num2) in
                                                     case saveStack stack (StackCell n) (sp s - 3) of
                                                         Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = heap'}
                                                         Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
@@ -204,7 +221,7 @@ operator s op = case op of
                         Right addr2 -> case saveStack (stack s) (StackCell addr2) (sp s - 3) of
                             Right stack -> case accessStack stack (sp s - 1) of
                                 Right scell -> case saveStack stack scell (sp s - 4) of
-                                    Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack $(take $ sp s - 3) scells}
+                                    Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack $ (take $ sp s - 2) scells}
                                     Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
                                 Left error  -> ErrorState $ "Runtime error in 'operator': " ++ error
                             Left error  -> ErrorState $ "Runtime error in 'operator': " ++ error
@@ -260,16 +277,6 @@ pushval s t w = s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (St
 
 reset :: State -> State
 reset s = s {sp = -1, pc = pc s + 1}
-
-resultToString :: State -> String
-resultToString (ErrorState error) = "---> " ++ error
-resultToString s                  = case accessStack (stack s) (sp s) of
-    Right (StackCell addr) -> case accessHeap (heap s) addr of
-        Right (VALNum n)  -> "---> Result: " ++ show n
-        Right (VALBool b) -> if b == 0 then "---> Result: False" else "---> Result: True"
-        Left error        -> "---> " ++ error
-        _                 -> "---> Runtime error."
-    Left error             -> "---> " ++ error
 
 return' :: State -> State
 return' s = case accessStack (stack s) (sp s - 1) of
@@ -368,6 +375,16 @@ newPRE h@(Heap hcells) op n = (length hcells, pushHeap h $ PRE op $ arity' op)
 
 newUNI :: Heap -> (Int, Heap)
 newUNI h@(Heap hcells) = (length hcells, pushHeap h UNINITIALIZED)
+
+resultToString :: State -> String
+resultToString (ErrorState error) = "---> " ++ error
+resultToString s                  = case accessStack (stack s) (sp s) of
+    Right (StackCell addr) -> case accessHeap (heap s) addr of
+        Right (VALNum n)  -> "---> Result: " ++ show n
+        Right (VALBool b) -> if b == 0 then "---> Result: False" else "---> Result: True"
+        Left error        -> "---> " ++ error
+        _                 -> "---> Runtime error."
+    Left error             -> "---> " ++ error
 
 value :: Heap -> Int -> Either String HeapCell
 value heap addr = case accessHeap heap addr of

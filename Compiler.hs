@@ -6,7 +6,25 @@ Description : This module contains all functionality to translate a parsed F pro
 module Compiler where
 
 import Declarations
-import Store
+    (AtomicExpr(Var, LitBool, LitNum, Expr),
+    BoolF(BoolF),
+    Code(Code),
+    Def(..),
+    Expr(..),
+    Global(..),
+    Heap(..),
+    HeapCell(DEF, fname, arity),
+    Instruction(FuncUpdate, Slide, Unwind, Call, Return, Pushval,
+                Pushparam, Error, Pushfun, Pushpre, Makeapp, UpdateLet, SlideLet,
+                Alloc),
+    LocalDef(..),
+    Operator(IfOp, PlusOp, TimesOp, DivideOp, EqualsOp, LessOp, AndOp,
+              OrOp, BinaryMinOp, UnaryMinOp, NotOp),
+    Stack(Stack),
+    State(..))
+import Store (codeInit)
+import Tokenizer
+import Parser
 
 
 ---------------------------------------- F PROGRAM TRANSLATION ----------------------------------------
@@ -91,6 +109,13 @@ compileLocalDefinitions ldefs e pos = compileLocalDefinitions' ldefs e (replicat
 
 
 ---------------------------------------- HELPER FUNCTIONS FOR COMPILER ----------------------------------------
+-- | 'checkDuplicate' returns True if a new function name 'f1' does not already exist in a global environment.
+checkDuplicate :: String -> Global -> Bool 
+checkDuplicate f1 (Global []) = True 
+checkDuplicate f1 (Global ((f2, _) : gcells))
+    | f1 == f2  = False 
+    | otherwise = checkDuplicate f1 (Global gcells)
+
 -- | Create a local environment for a given list of formal parameters.
 createPos :: [Expr] -> [(Expr, Int)]
 createPos es = zip es [1..]
@@ -106,6 +131,9 @@ createPos' ldefs pos n = createPos'' ldefs pos' (length ldefs - 2)
     createPos'' :: [LocalDef] -> [(Expr, Int)] -> Int -> [(Expr, Int)]
     createPos'' ((LocalDef e1 _) : ldefs) pos n = createPos'' ldefs ((e1, n) : pos) (n - 1)
     createPos'' [] pos _                        = pos
+
+instructionsToString :: [Instruction] -> String
+instructionsToString ins = foldl (++) "+———-----------+\n| Instructions |\n+——------------+\n" (map (\ i -> show i ++ "\n") ins)
 
 -- | Increment all indices in a local environment by an offset.
 posInc :: [(Expr, Int)] -> Int -> [(Expr, Int)]
@@ -123,9 +151,11 @@ replicate' xs n
     | n > 1     = xs ++ replicate' xs (n - 1)
     | otherwise = xs
 
--- | 'checkDuplicate' returns True if a new function name 'f1' does not already exist in a global environment.
-checkDuplicate :: String -> Global -> Bool 
-checkDuplicate f1 (Global [])             = True 
-checkDuplicate f1 (Global ((f2, _) : gs))
-    | f1 == f2 = False 
-    | otherwise  = checkDuplicate f1 (Global gs)
+testIns :: String -> IO ()
+testIns input = case tokenize input of
+    Right toks -> case program toks of
+      Right ast  -> case compileProgram (fst ast) of
+        ErrorState error           -> putStrLn error
+        State {code = Code ccells} -> putStrLn $ instructionsToString ccells
+      Left error -> putStrLn error
+    Left error -> putStrLn error

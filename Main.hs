@@ -2,7 +2,8 @@
 module Main where
 
 import Compiler (compileProgram)
-import Declarations ( State(State, ErrorState))
+import Debug.Trace
+import Declarations (State(State, ErrorState))
 import MF (interpret, resultToString)
 import Parser (program)
 import Tokenizer (tokenize)
@@ -15,28 +16,19 @@ main = do
     case tokenize input of
         Right toks -> case program toks of
             Right ast  -> case compileProgram (fst ast) of
-                ErrorState error -> do
-                    putStrLn error
-                    subroutine
-                s@State{}        -> do
-                    putStrLn $ resultToString $ interpret s
-                    subroutine
-            Left error -> do
-                putStrLn error
-                subroutine
-        Left error -> do
-            putStrLn error 
-            subroutine
+                ErrorState error -> putStrLn error >> anotherOne
+                s@State{}        -> putStrLn (resultToString $ interpret s) >> anotherOne
+            Left error -> putStrLn error >> anotherOne
+        Left error -> putStrLn error >> anotherOne
       where
-        subroutine :: IO ()
-        subroutine = do
+        anotherOne :: IO ()
+        anotherOne = do
             putStrLn "\nAnother one? [y/n]"
             response <- getLine
-            putStrLn "\n"
             case response of
-                "y" -> main
+                "y" -> putStrLn "\n" >> main
                 "n" -> putStrLn "Goodbye!"  
-                _   -> subroutine
+                _   -> anotherOne
         getLines :: IO String
         getLines = do
             x <- getLine
@@ -49,7 +41,7 @@ main = do
 main' :: String -> IO ()
 main' input =
     case tokenize input of
-        Right toks -> case program toks of
+        Right toks -> case trace (show toks) program toks of
             Right ast  -> case compileProgram (fst ast) of
                 ErrorState error -> putStrLn error
                 s@State{}        -> putStrLn $ resultToString $ interpret s

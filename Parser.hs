@@ -5,14 +5,15 @@ Description : This module contains all functionality to pursue syntactical analy
 module Parser where
 
 import Declarations
-    ( Parser,
-      AtomicExpr(Var, LitBool, LitNum),
-      Expr(..),
-      LocalDef(..),
-      Def(..),
-      Token(..),
-      Keyword(LBracket, Semicolon, Assign, Let, In, If, Then, Else, Or,
-              And, Not, Equals, Less, Minus, Divide, RBracket, Plus, Times) )
+    (Parser,
+    AtomicExpr(Var, LitBool, LitNum),
+    Expr(..),
+    LocalDef(..),
+    Def(..),
+    Token(..),
+    Keyword(LBracket, Semicolon, Assign, Let, In, If, Then, Else, Or,
+            And, Not, Equals, Less, Minus, Divide, RBracket, Plus, Times))
+import Tokenizer (tokenize)
 
 
 {- | 'program' parses a program (a list of definitions). It takes a list of tuples, each tuple containing a token and its line number in the source code. If successful, it returns a tuple, containing a list of definitions and an empty list as the entire input was parsed. Otherwise it returns an error.
@@ -139,7 +140,7 @@ restExpr8 ts = case ts of
   _                              -> return ([], ts)
 
 
----------------------------------------- HELPER FUNCTION FOR PARSER ----------------------------------------
+---------------------------------------- HELPER FUNCTIONS FOR PARSER ----------------------------------------
 {- | 'match' checks whether a certain keyword is next in the remaining tokenstream. If so, this token is removed and the caller can operate on the remaining tokens. Otherwise it returns an error, indicating a syntactical error.
 -}
 match :: Token -> Parser ()  
@@ -150,3 +151,6 @@ match (KeywordToken key1) ((KeywordToken key2, line) : ts)
   | otherwise    = Left $ "Syntax error in line " ++ show line ++ ": Keyword '" ++ show (KeywordToken key1) ++ "' expected but found '" ++ show (KeywordToken key2) ++ "'."
 match t1 ((t2 , line) : _) = Left $ "Syntax error in line " ++ show line ++ ": Keyword " ++ show t1 ++ " expected but found '" ++ show t2 ++ "'."
 match t1 []                = Left $ "Syntax error at end of program: Keyword '" ++ show t1 ++ "' expected."
+
+defsToString :: [Def] -> String
+defsToString defs = foldl (++) "+———------------+\n| Parser Output |\n+——----------—--+\n" (map (\ d -> show d ++ "\n") defs)
