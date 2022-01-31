@@ -7,69 +7,54 @@ module MF where
 
 import Data.Bits ( Bits((.&.), (.|.), xor) )
 import Declarations
-    ( Instruction(..),
-      State(..),
-      StackCell(StackCell),
-      HeapCell(IND, UNINITIALIZED, APP, DEF, PRE, VALNum, VALBool),
-      Heap(..),
-      Global(..),
-      Stack(Stack),
-      Code(Code),
-      Operator(..) )
+import Debug.Trace
 import Store
-    ( pushStack,
-      pushHeap,
-      accessCode,
-      accessStack,
-      accessHeap,
-      saveStack,
-      saveHeap )
 
 
 -- | 'interpret' recursively executes a set of MF instructions. Either return a state when instruction 'HALT' is reached, or an error occurs.
 -- trace (show (ccells !! pc) ++ ", pc = " ++ show pc ++ ", sp = " ++ show sp ++ ", stack = " ++ show stack ++ ", heap = " ++ show heap) use this to debug
 interpret :: State -> State
-interpret s@State{pc, sp, code = Code ccells, stack, global, heap} = case accessCode (Code ccells) pc of
+interpret (ErrorState error) = ErrorState error
+interpret s                  = case accessCode (code s) (pc s) of
     Right instr -> case instr of
         Halt -> s
         _    -> case run instr s of
             ErrorState error -> ErrorState error
-            state            -> interpret state
+            s'               -> interpret s'
     Left error  -> ErrorState error
-interpret (ErrorState error)                                       = ErrorState error
 
 -- | Given an instruction, 'run' executes the respective MF function.
 run :: Instruction -> State -> State
-run Alloc s               = alloc s
-run Call s                = call s
-run (Error error) s       = ErrorState error
-run (FuncUpdate n) s      = funcUpdate s n
-run Halt s                = halt s
-run Makeapp s             = makeapp s
-run (Operator n) s        = operator s n
-run OpUpdate s            = opUpdate s
-run (Pushfun fname) s     = pushfun s fname
-run (Pushparam addr) s    = pushparam s addr
-run (Pushpre kw) s        = pushpre s kw
+run Alloc s            = alloc s
+run Call s             = call s
+run (Error error) s    = ErrorState error
+run (FuncUpdate n) s   = funcUpdate s n
+run Halt s             = halt s
+run Makeapp s          = makeapp s
+run (Operator n) s     = operator s n
+run OpUpdate s         = opUpdate s
+run (Pushfun fname) s  = pushfun s fname
+run (Pushparam addr) s = pushparam s addr
+run (Pushpre kw) s     = pushpre s kw
 run (Pushval typ val) s 
     | typ == "Int" = pushval s 1 val
     | otherwise    = pushval s 2 val
-run Reset s               = reset s
-run Return s              = return' s
-run (Slide n) s           = slide s n
-run (SlideLet n) s        = slideLet s n
-run Unwind s              = unwind s
-run (UpdateLet n) s       = updateLet s n
+run Reset s            = reset s
+run Return s           = return' s
+run (Slide n) s        = slide s n
+run (SlideLet n) s     = slideLet s n
+run Unwind s           = unwind s
+run (UpdateLet n) s    = updateLet s n
 
 resultToString :: State -> String
 resultToString (ErrorState error) = "---> " ++ error
-resultToString s = case accessStack (stack s) (sp s) of
+resultToString s                  = case accessStack (stack s) (sp s) of
     Right (StackCell addr) -> case accessHeap (heap s) addr of
         Right (VALNum n)  -> "---> Result: " ++ show n
         Right (VALBool b) -> if b == 0 then "---> Result: False" else "---> Result: True"
-        Left error -> "---> " ++ error
-        _          -> "---> Runtime error."
-    Left error -> "---> " ++ error
+        Left error        -> "---> " ++ error
+        _                 -> "---> Runtime error."
+    Left error             -> "---> " ++ error
 
 -- | 'address' returns the heap address of a given function name if successful, otherwise it returns an error.
 address :: Global -> String -> Either String Int
