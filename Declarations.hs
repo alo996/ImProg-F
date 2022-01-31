@@ -177,7 +177,7 @@ data State
     }
     | ErrorState String
 
-{- | MF takes as input a list of instructions and translates them into F. 'Instruction' can take on values that each correspond to a certain functionality specified in MF.hs.
+{- | MF takes as input a list of instructions and interprets them. 'Instruction' can take on values that each correspond to a certain functionality specified in MF.hs.
 -} 
 data Instruction
     = Alloc
