@@ -9,7 +9,6 @@ module Declarations where
 ---------------------------------------- TOKEN GENERATION ----------------------------------------
 {- | A token is a sequence of characters with some inherent structure, in our case it is either a boolean value, a reserved F-keyword, a name, or a number).
 -}
-
 data Token
     = BooleanToken BoolF
     | KeywordToken Keyword
@@ -18,7 +17,6 @@ data Token
     deriving (Eq, Show)
 
 -- | A keyword is a sequence of characters that is reserved by F.
-
 data Keyword
     = And
     | Assign
@@ -41,7 +39,6 @@ data Keyword
     deriving Eq
 
 -- | 'BoolF' adresses the fact that boolean values in F are lowercase, unlike those in Haskell.
-
 newtype BoolF = BoolF Bool deriving Eq
 
 instance Show Keyword where
@@ -72,23 +69,19 @@ instance Show BoolF where
 ---------------------------------------- PARSING ----------------------------------------
 {- | We define a parser to be a parametrized function that takes a list of tuples. These tuples are (token, integer)-pairs, assigning each identified token its line number in the source code for error handling purposes. This list of tuples is then mapped to either an error message if parsing was unsuccessful, or a tuple containing parsed output and a list of (token, integer)-pairs left to be parsed by another parser.
 -}
-
 type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
 
 -- | According to the F grammar, a definition consists of a function name, a list of formal parameters, and its defining expression.
-
 data Def
     = Def Expr [Expr] Expr
     deriving (Eq, Show)
 
 -- | A local definition consists of a name and its defining expression.
-
 data LocalDef
     = LocalDef Expr Expr
     deriving (Eq, Show)
 
 -- | All possible expressions are summed up in the 'Expr' type.
-
 data Expr
     = Add Expr Expr
     | AtomicExpr AtomicExpr
@@ -108,7 +101,6 @@ data Expr
 
 {- | An atomic expression is the most basic kind of expression. It is either a name, a boolean value, an integer (with range [ -2^29, 2^29 - 1] at least), or an expression in parentheses.
 -}
-
 data AtomicExpr
     = Var String
     | LitBool BoolF
@@ -152,7 +144,6 @@ newtype Global = Global [(String, Int)]
 newtype Heap = Heap [HeapCell]
 
 -- | A heap is a list of typed heap cells.
-
 data HeapCell
     = APP Int Int
     | DEF
@@ -169,13 +160,11 @@ data HeapCell
     deriving Show
 
 -- | A stack is a list of stack cells. Stack cells contain references to code cells or heap cells, each represented with an integer. 
-
 newtype StackCell
     = StackCell Int
     deriving Show
 
 -- | 'State' models the abstract machine. It contains a program counter, a stack pointer, and the already introduced stores code, stack, global and heap. In case of a faulty execution, it can also take on an error state that returns an error message to the user.
-
 data State
     = State
     {
@@ -190,7 +179,6 @@ data State
 
 {- | MF takes as input a list of instructions and translates them into F. 'Instruction' can take on values that each correspond to a certain functionality specified in MF.hs.
 -} 
-
 data Instruction
     = Alloc
     | Call
@@ -239,7 +227,6 @@ instance Show Heap where
     show (Heap hcells) = "Heap: " ++ formatCells hcells "h"
 
 -- | 'formatCells' is used to produce readable output of the stores used in MF.
-
 formatCells :: (Show a) => [a] -> String -> String
 formatCells xs prefix = formatCells' xs 0 "" 
   where
