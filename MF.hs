@@ -11,8 +11,8 @@ import Debug.Trace
 import Store
 
 
+---------------------------------------- MAIN EXECUTION CYCLE ----------------------------------------
 -- | 'interpret' recursively executes a set of MF instructions. Either return a state when instruction 'HALT' is reached, or an error occurs.
--- trace (show (ccells !! pc) ++ ", pc = " ++ show pc ++ ", sp = " ++ show sp ++ ", stack = " ++ show stack ++ ", heap = " ++ show heap) use this to debug
 interpret :: State -> State
 interpret (ErrorState error) = ErrorState error
 interpret s                  = case accessCode (code s) (pc s) of
@@ -46,122 +46,12 @@ run (SlideLet n) s     = slideLet s n
 run Unwind s           = unwind s
 run (UpdateLet n) s    = updateLet s n
 
-resultToString :: State -> String
-resultToString (ErrorState error) = "---> " ++ error
-resultToString s                  = case accessStack (stack s) (sp s) of
-    Right (StackCell addr) -> case accessHeap (heap s) addr of
-        Right (VALNum n)  -> "---> Result: " ++ show n
-        Right (VALBool b) -> if b == 0 then "---> Result: False" else "---> Result: True"
-        Left error        -> "---> " ++ error
-        _                 -> "---> Runtime error."
-    Left error             -> "---> " ++ error
 
--- | 'address' returns the heap address of a given function name if successful, otherwise it returns an error.
-address :: Global -> String -> Either String Int
-address (Global gcells) f = address' gcells f 
+---------------------------------------- MF FUNCTIONS ----------------------------------------
+alloc :: State -> State
+alloc s = s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell n), heap = heap'}
   where
-    address' :: [(String, Int)] -> String -> Either String Int
-    address' ((fname, n) : xs) f = if fname == f then return n else address' xs f
-    address' [] f                = Left $ "Runtime error: Global environment does not contain definition of function '" ++ show f ++ "'."
-
--- If 'add2arg' accesses an APP-cell, it returns its second argument. If it accesses an IND cell, it recursively calls itself with its argument.
-add2arg :: Heap -> Int -> Either String Int
-add2arg h@(Heap hcells) addr  
-    | (addr >= 0) && (addr < length hcells) = case hcells !! addr of
-        APP addr1 addr2 -> return addr2
-        IND addr3       -> add2arg h addr3 
-        _               -> Left $ "Expected heap address, found code address " ++ show addr ++ " instead."
-    | otherwise                             = Left $ "Expected heap address, found code address " ++ show addr ++ " instead."
-
--- | 'arity'' returns the number of formal arguments of an operator.
-arity' :: Operator -> Int
-arity' op = case op of
-    AndOp       -> 2
-    BinaryMinOp -> 2
-    DivideOp    -> 2
-    EqualsOp    -> 2
-    IfOp        -> 3
-    LessOp      -> 2
-    NotOp       -> 1
-    OrOp        -> 2
-    PlusOp      -> 2
-    TimesOp     -> 2
-    UnaryMinOp  -> 1
-
--- | 'new...' functions create different types of heap cells.
-newAPP, newVAL :: Heap -> Int -> Int -> (Int, Heap)
-newAPP h@(Heap hcells) a b = (length hcells, pushHeap h (APP a b))
-
-newVAL h@(Heap hcells) t w
-        | t == 2    = (length hcells, pushHeap h (VALBool w))
-        | otherwise = (length hcells, pushHeap h (VALNum w))
-
-newIND :: Heap -> Int -> (Int, Heap)
-newIND h@(Heap hcells) n = (length hcells, pushHeap h (IND n))
-
-newPRE :: Heap -> Operator -> Int -> (Int, Heap)
-newPRE h@(Heap hcells) op n = (length hcells, pushHeap h $ PRE op $ arity' op)
-
-newUNI :: Heap -> (Int, Heap)
-newUNI h@(Heap hcells) = (length hcells, pushHeap h UNINITIALIZED)
-
-reset :: State -> State
-reset s = s {sp = -1, pc = pc s + 1}
-
-pushfun :: State -> String -> State
-pushfun s name = case address (global s) name of
-    Right int  -> s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell int)}
-    Left error -> ErrorState error
-
-pushval :: State -> Int -> Int -> State
-pushval s t w = s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell n), heap = heap'}
-  where
-    (n, heap') = newVAL (heap s) t w
-
-pushparam :: State -> Int -> State
-pushparam s n = case accessStack (stack s) (sp s - n - 1) of
-    Right (StackCell addr) -> case add2arg (heap s) addr of
-        Right addr1 -> s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell addr1)}
-        Left error -> ErrorState $ "Runtime error in 'pushparam': " ++ error
-    Left error -> ErrorState $ "Runtime error in 'pushparam': " ++ error
-
-makeapp :: State -> State
-makeapp s = case accessStack (stack s) (sp s) of
-    Right (StackCell a) -> case accessStack (stack s) (sp s - 1) of
-        Right (StackCell b) -> let (n, heap') = newAPP (heap s) a b in
-            case saveStack (stack s) (StackCell n) (sp s - 1) of
-                Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap'}
-                Left error           -> ErrorState $ "Runtime error in 'makeapp': " ++ error
-        Left error         -> ErrorState $ "Runtime error in 'makeapp': " ++ error
-    Left error         -> ErrorState $ "Runtime error in 'makeapp': " ++ error
-
-slide :: State -> Int -> State
-slide s n = case accessStack (stack s) (sp s - 1) of
-    Right scell -> case saveStack (stack s) scell (sp s - n - 1) of
-        Right stack -> case accessStack stack (sp s) of
-            Right scell1 -> case saveStack stack scell1 (sp s - n) of
-                Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n + 1) scells)}
-                Left error           -> ErrorState $ "Runtime error in 'slide': " ++ error
-            Left error    -> ErrorState $ "Runtime error in 'slide': " ++ error
-        Left error -> ErrorState $ "Runtime error in 'slide': " ++ error
-    Left error -> ErrorState $ "Runtime error in 'slide': " ++ error
-
-halt :: State -> State
-halt s = s
-
-value :: Heap -> Int -> Either String HeapCell
-value heap addr = case accessHeap heap addr of
-    Right (IND addr1) -> value heap addr1
-    Right hcell       -> Right hcell
-    Left error        -> Left error
-
-unwind :: State -> State
-unwind s = case accessStack (stack s) (sp s) of
-    Right (StackCell addr) -> case value (heap s) addr of
-        Right (APP addr1 _) -> s {sp = sp s + 1, stack = pushStack (stack s) (StackCell addr1)}
-        Right hcell         -> s {pc = pc s + 1}
-        Left error          -> ErrorState $ "Runtime error in 'unwind': " ++ error
-    Left error             -> ErrorState $ "Runtime error in 'undwind': " ++ error
+    (n, heap') = newUNI (heap s)
 
 call :: State -> State
 call s = case accessStack (stack s) (sp s) of
@@ -176,21 +66,6 @@ call s = case accessStack (stack s) (sp s) of
         _                     -> ErrorState "Runtime error in 'call'."
     Left error             -> ErrorState $ "Runtime error in 'call': " ++ error
 
-return' :: State -> State
-return' s = case accessStack (stack s) (sp s - 1) of
-    Right (StackCell addr) -> case accessStack (stack s) (sp s) of
-        Right (StackCell addr1) -> case saveStack (stack s) (StackCell addr1) (sp s - 1) of
-            Right (Stack scells) -> s {pc = addr, sp = sp s - 1, stack = Stack (take (sp s) scells)}
-            Left error           -> ErrorState $ "Runtime error in 'return'': " ++ error
-        Left error             -> ErrorState $ "Runtime error in 'return'': " ++ error
-    Left error            -> ErrorState $ "Runtime error in 'return'': " ++ error
-
-pushpre :: State -> Operator -> State
-pushpre s op = let (n, heap') = newPRE (heap s) op (arity' op) in
-    case saveStack (stack s) (StackCell n) (sp s + 1) of
-            Right stack -> s{pc = pc s + 1, sp = sp s + 1, stack = stack, heap = heap'}
-            Left error  -> ErrorState $ "Runtime error in 'pushpre': " ++ error
-
 funcUpdate :: State -> Int -> State
 funcUpdate s arg = case accessStack (stack s) (sp s) of
     Right (StackCell addr) -> let hcell = IND addr in case accessStack (stack s) (sp s - arg - 2) of
@@ -200,24 +75,18 @@ funcUpdate s arg = case accessStack (stack s) (sp s) of
         Left error              -> ErrorState $ "Runtime error in 'funcUpdate': " ++ error
     Left error             -> ErrorState $ "Runtime error in 'funcUpdate': " ++ error
 
-opUpdate :: State -> State
-opUpdate s = case accessStack (stack s) (sp s) of
-    Right (StackCell addr) -> case accessHeap (heap s) addr of
-        Right hcell -> case accessStack (stack s) (sp s - 2) of
-            Right (StackCell addr1) -> case saveHeap (heap s) hcell addr1 of
-                Right heap -> case accessStack (stack s) (sp s - 2) of
-                    Right scell -> case accessStack (stack s) (sp s - 1) of
-                        Right scell1 -> case saveStack (stack s) scell1 (sp s - 2) of
-                            Right stack -> case saveStack stack scell (sp s - 1) of
-                                Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap}
-                                Left error           -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
-                            Left error             -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
-                        Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
-                    Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
-                Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
-            Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
-        Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
-    Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
+halt :: State -> State
+halt s = s
+
+makeapp :: State -> State
+makeapp s = case accessStack (stack s) (sp s) of
+    Right (StackCell a) -> case accessStack (stack s) (sp s - 1) of
+        Right (StackCell b) -> let (n, heap') = newAPP (heap s) a b in
+            case saveStack (stack s) (StackCell n) (sp s - 1) of
+                Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap'}
+                Left error           -> ErrorState $ "Runtime error in 'makeapp': " ++ error
+        Left error         -> ErrorState $ "Runtime error in 'makeapp': " ++ error
+    Left error         -> ErrorState $ "Runtime error in 'makeapp': " ++ error
 
 operator :: State -> Int -> State
 operator s op = case op of
@@ -347,10 +216,95 @@ operator s op = case op of
         Left error              -> ErrorState $ "Runtime error in 'operator': " ++ error
     _ -> ErrorState "Runtime error in 'operator'."
 
-alloc :: State -> State
-alloc s = s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell n), heap = heap'}
+opUpdate :: State -> State
+opUpdate s = case accessStack (stack s) (sp s) of
+    Right (StackCell addr) -> case accessHeap (heap s) addr of
+        Right hcell -> case accessStack (stack s) (sp s - 2) of
+            Right (StackCell addr1) -> case saveHeap (heap s) hcell addr1 of
+                Right heap -> case accessStack (stack s) (sp s - 2) of
+                    Right scell -> case accessStack (stack s) (sp s - 1) of
+                        Right scell1 -> case saveStack (stack s) scell1 (sp s - 2) of
+                            Right stack -> case saveStack stack scell (sp s - 1) of
+                                Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap}
+                                Left error           -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
+                            Left error             -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
+                        Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
+                    Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
+                Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
+            Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
+        Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
+    Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
+
+pushfun :: State -> String -> State
+pushfun s name = case address (global s) name of
+    Right int  -> s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell int)}
+    Left error -> ErrorState error
+
+pushparam :: State -> Int -> State
+pushparam s n = case accessStack (stack s) (sp s - n - 1) of
+    Right (StackCell addr) -> case add2arg (heap s) addr of
+        Right addr1 -> s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell addr1)}
+        Left error -> ErrorState $ "Runtime error in 'pushparam': " ++ error
+    Left error -> ErrorState $ "Runtime error in 'pushparam': " ++ error
+
+pushpre :: State -> Operator -> State
+pushpre s op = let (n, heap') = newPRE (heap s) op (arity' op) in
+    case saveStack (stack s) (StackCell n) (sp s + 1) of
+            Right stack -> s{pc = pc s + 1, sp = sp s + 1, stack = stack, heap = heap'}
+            Left error  -> ErrorState $ "Runtime error in 'pushpre': " ++ error
+
+pushval :: State -> Int -> Int -> State
+pushval s t w = s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell n), heap = heap'}
   where
-    (n, heap') = newUNI (heap s)
+    (n, heap') = newVAL (heap s) t w
+
+reset :: State -> State
+reset s = s {sp = -1, pc = pc s + 1}
+
+resultToString :: State -> String
+resultToString (ErrorState error) = "---> " ++ error
+resultToString s                  = case accessStack (stack s) (sp s) of
+    Right (StackCell addr) -> case accessHeap (heap s) addr of
+        Right (VALNum n)  -> "---> Result: " ++ show n
+        Right (VALBool b) -> if b == 0 then "---> Result: False" else "---> Result: True"
+        Left error        -> "---> " ++ error
+        _                 -> "---> Runtime error."
+    Left error             -> "---> " ++ error
+
+return' :: State -> State
+return' s = case accessStack (stack s) (sp s - 1) of
+    Right (StackCell addr) -> case accessStack (stack s) (sp s) of
+        Right (StackCell addr1) -> case saveStack (stack s) (StackCell addr1) (sp s - 1) of
+            Right (Stack scells) -> s {pc = addr, sp = sp s - 1, stack = Stack (take (sp s) scells)}
+            Left error           -> ErrorState $ "Runtime error in 'return'': " ++ error
+        Left error             -> ErrorState $ "Runtime error in 'return'': " ++ error
+    Left error            -> ErrorState $ "Runtime error in 'return'': " ++ error
+
+slide :: State -> Int -> State
+slide s n = case accessStack (stack s) (sp s - 1) of
+    Right scell -> case saveStack (stack s) scell (sp s - n - 1) of
+        Right stack -> case accessStack stack (sp s) of
+            Right scell1 -> case saveStack stack scell1 (sp s - n) of
+                Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n + 1) scells)}
+                Left error           -> ErrorState $ "Runtime error in 'slide': " ++ error
+            Left error    -> ErrorState $ "Runtime error in 'slide': " ++ error
+        Left error -> ErrorState $ "Runtime error in 'slide': " ++ error
+    Left error -> ErrorState $ "Runtime error in 'slide': " ++ error
+
+slideLet :: State -> Int -> State
+slideLet s n = case accessStack (stack s) (sp s) of
+    Right scell -> case saveStack (stack s) scell (sp s - n) of
+        Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n + 1) scells)}
+        Left error           -> ErrorState $ "Runtime error in 'slideLet': " ++ error
+    Left error  -> ErrorState $ "Runtime error in 'slideLet': " ++ error
+
+unwind :: State -> State
+unwind s = case accessStack (stack s) (sp s) of
+    Right (StackCell addr) -> case value (heap s) addr of
+        Right (APP addr1 _) -> s {sp = sp s + 1, stack = pushStack (stack s) (StackCell addr1)}
+        Right hcell         -> s {pc = pc s + 1}
+        Left error          -> ErrorState $ "Runtime error in 'unwind': " ++ error
+    Left error             -> ErrorState $ "Runtime error in 'undwind': " ++ error
 
 updateLet :: State -> Int -> State
 updateLet s@State{stack = Stack scells} n = case accessStack (stack s) (sp s - n - 1) of
@@ -364,9 +318,59 @@ updateLet s@State{stack = Stack scells} n = case accessStack (stack s) (sp s - n
     Left error             -> ErrorState $ "Runtime error in 'updateLet': " ++ error
 updateLet (ErrorState error) _            = ErrorState $ "Runtime error in 'updateLet': " ++ error
 
-slideLet :: State -> Int -> State
-slideLet s n = case accessStack (stack s) (sp s) of
-    Right scell -> case saveStack (stack s) scell (sp s - n) of
-        Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n + 1) scells)}
-        Left error           -> ErrorState $ "Runtime error in 'slideLet': " ++ error
-    Left error  -> ErrorState $ "Runtime error in 'slideLet': " ++ error
+
+---------------------------------------- HELPER FUNCTIONS FOR MF ----------------------------------------
+-- | 'address' returns the heap address of a given function name if successful, otherwise it returns an error.
+address :: Global -> String -> Either String Int
+address (Global gcells) f = address' gcells f 
+  where
+    address' :: [(String, Int)] -> String -> Either String Int
+    address' ((fname, n) : xs) f = if fname == f then return n else address' xs f
+    address' [] f                = Left $ "Runtime error: Global environment does not contain definition of function '" ++ show f ++ "'."
+
+-- If 'add2arg' accesses an APP-cell, it returns its second argument. If it accesses an IND cell, it recursively calls itself with its argument.
+add2arg :: Heap -> Int -> Either String Int
+add2arg h@(Heap hcells) addr  
+    | (addr >= 0) && (addr < length hcells) = case hcells !! addr of
+        APP addr1 addr2 -> return addr2
+        IND addr3       -> add2arg h addr3 
+        _               -> Left $ "Expected heap address, found code address " ++ show addr ++ " instead."
+    | otherwise                             = Left $ "Expected heap address, found code address " ++ show addr ++ " instead."
+
+-- | 'arity'' returns the number of formal arguments of an operator.
+arity' :: Operator -> Int
+arity' op = case op of
+    AndOp       -> 2
+    BinaryMinOp -> 2
+    DivideOp    -> 2
+    EqualsOp    -> 2
+    IfOp        -> 3
+    LessOp      -> 2
+    NotOp       -> 1
+    OrOp        -> 2
+    PlusOp      -> 2
+    TimesOp     -> 2
+    UnaryMinOp  -> 1
+
+-- | 'new...' functions create different types of heap cells.
+newAPP, newVAL :: Heap -> Int -> Int -> (Int, Heap)
+newAPP h@(Heap hcells) a b = (length hcells, pushHeap h (APP a b))
+
+newVAL h@(Heap hcells) t w
+        | t == 2    = (length hcells, pushHeap h (VALBool w))
+        | otherwise = (length hcells, pushHeap h (VALNum w))
+
+newIND :: Heap -> Int -> (Int, Heap)
+newIND h@(Heap hcells) n = (length hcells, pushHeap h (IND n))
+
+newPRE :: Heap -> Operator -> Int -> (Int, Heap)
+newPRE h@(Heap hcells) op n = (length hcells, pushHeap h $ PRE op $ arity' op)
+
+newUNI :: Heap -> (Int, Heap)
+newUNI h@(Heap hcells) = (length hcells, pushHeap h UNINITIALIZED)
+
+value :: Heap -> Int -> Either String HeapCell
+value heap addr = case accessHeap heap addr of
+    Right (IND addr1) -> value heap addr1
+    Right hcell       -> Right hcell
+    Left error        -> Left error

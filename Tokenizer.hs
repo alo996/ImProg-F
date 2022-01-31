@@ -81,6 +81,8 @@ tokenizeName (x : y : ys) tAcc lAcc name
     | otherwise    = tokenize' (y : ys) ((NameToken $ name ++ [x], lAcc) : tAcc) lAcc
 tokenizeName _ _ _ _            = Left "Syntax error."
 
+
+---------------------------------------- HELPER FUNCTION FOR TOKENIZER ----------------------------------------
 {- | 'keyCheck' validates whether a string is a keyword or just part of a longer name, based on its following character. 
 It takes the character following the assumed keyword, the assumed keyword, the remaining input with and without the assumed keyword, the already processed list of (token, line number)-pairs and the line number.
 -}

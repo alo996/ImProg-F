@@ -9,6 +9,7 @@ import Declarations
 import Store
 
 
+---------------------------------------- F PROGRAM TRANSLATION ----------------------------------------
 -- | Compile a program. 'compileProgram' takes a program (a list of definitions) and returns the initial machine state if successful.
 compileProgram :: [Def] -> State
 compileProgram defs = compileProgram' defs s
@@ -88,6 +89,8 @@ compileLocalDefinitions ldefs e pos = compileLocalDefinitions' ldefs e (replicat
         compileLocalDefinitions' ldefs e (ccells ++ compileExpression e2 pos' ++ [UpdateLet $ acc-1]) pos' n (acc-1)
     compileLocalDefinitions' [] e ccells pos' n _                           = ccells ++ compileExpression e pos' ++ [SlideLet n]
 
+
+---------------------------------------- HELPER FUNCTIONS FOR COMPILER ----------------------------------------
 -- | Create a local environment for a given list of formal parameters.
 createPos :: [Expr] -> [(Expr, Int)]
 createPos es = zip es [1..]

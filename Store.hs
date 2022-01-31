@@ -5,13 +5,13 @@ Description : This module contains all functionality to perform necessary operat
 module Store where
 
 import Declarations
-    ( Instruction(Return, Reset, Pushfun, Halt, Pushparam, Unwind,
+    (Instruction(Return, Reset, Pushfun, Halt, Pushparam, Unwind,
                   Call, Operator, OpUpdate),
       StackCell,
       HeapCell,
       Heap(..),
       Stack(..),
-      Code(..) )
+      Code(..))
 
 
 -- | Access element at index 'n' in a code, stack or heap.

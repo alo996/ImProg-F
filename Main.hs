@@ -1,12 +1,11 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Main where
 
-import Compiler
-import Declarations
-import MF 
-import Parser 
-import Data.Text
-import Tokenizer
+import Compiler (compileProgram)
+import Declarations ( State(State, ErrorState))
+import MF (interpret, resultToString)
+import Parser (program)
+import Tokenizer (tokenize)
 
 
 main :: IO ()
@@ -46,7 +45,6 @@ main = do
                 else do
                     xs <- getLines
                     return $ x ++ "\n" ++ xs
-
 
 main' :: String -> IO ()
 main' input =

@@ -138,6 +138,8 @@ restExpr8 ts = case ts of
   (KeywordToken LBracket, _) : _ -> atomicExpr ts >>= \ (e, ts1) -> restExpr8 ts1 >>= \ (es, ts2) -> return (e : es, ts2)
   _                              -> return ([], ts)
 
+
+---------------------------------------- HELPER FUNCTION FOR PARSER ----------------------------------------
 {- | 'match' checks whether a certain keyword is next in the remaining tokenstream. If so, this token is removed and the caller can operate on the remaining tokens. Otherwise it returns an error, indicating a syntactical error.
 -}
 match :: Token -> Parser ()  

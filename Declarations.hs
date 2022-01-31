@@ -1,11 +1,12 @@
 {- |
 Module      : Declarations
-Description : This module contains all type declarations and type class instantiations needed to tokenize, parse, compile and interpret F programs.
+Description : This module contains all type declarations and type class instantiations and needed to tokenize, parse, compile and interpret F programs.
 -}
 {-# LANGUAGE NamedFieldPuns #-}
 module Declarations where
 
 
+---------------------------------------- TOKEN GENERATION ----------------------------------------
 -- | A token is a sequence of characters with some inherent structure (e.g. a reserved F-keyword, a name, a multi-character number).
 data Token
     = BooleanToken BoolF
@@ -69,6 +70,8 @@ instance Show BoolF where
     show (BoolF True)  = "true"
     show (BoolF False) = "false"
 
+
+---------------------------------------- PARSING ----------------------------------------
 {- | We define a parser to be a parametrized function that takes a list of tuples. These tuples are (token, integer)-pairs, assigning each identified token its line number in the source code for error handling purposes. This list of tuples is then mapped to either an error message if parsing was unsuccessful, or a tuple containing parsed output and a list of (token, integer)-pairs left to be parsed by another parser.
 -}
 type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
@@ -132,6 +135,8 @@ instance Show AtomicExpr where
     show (LitNum n)     = show n
     show (Expr e)       = show e
 
+
+---------------------------------------- TRANSLATION AND INTERPRETATION OF F PROGRAMS ----------------------------------------
 {- | The abstract machine contains four types of stores: 'Code' contains a translated program as a sequence of MF instructions, 'Stack' contains references to expressions that need further evaluation, 'Global' contains non-local function definitions and 'Heap' contains expressions represented graphs. 
 -}
 newtype Code = Code [Instruction]
@@ -214,25 +219,33 @@ data Operator
     deriving (Eq, Show)
 
 instance Show Code where
-    show (Code ccells) = "Code: " ++ showCells ccells "c"
+    show (Code ccells) = "Code: " ++ formatCells ccells "c"
 
 instance Show Stack where
-    show (Stack scells) = "Stack: " ++ showCells scells "s"
+    show (Stack scells) = "Stack: " ++ formatCells scells "s"
 
 instance Show Global where
-    show (Global gcells) = "Global: " ++ showCells gcells "g"
+    show (Global gcells) = "Global: " ++ formatCells gcells "g"
 
 instance Show Heap where
-    show (Heap hcells) = "Heap: " ++ showCells hcells "h"
+    show (Heap hcells) = "Heap: " ++ formatCells hcells "h"
 
--- | 'showCells' is used to produce readable output of the stores used in MF.
-showCells :: (Show a) => [a] -> String -> String
-showCells xs prefix = showCells' xs 0 "" 
+-- | 'formatCells' is used to produce readable output of the stores used in MF.
+formatCells :: (Show a) => [a] -> String -> String
+formatCells xs prefix = formatCells' xs 0 "" 
   where
-    showCells' :: (Show a) => [a] -> Int -> String -> String
-    showCells' (x : xs) n acc = showCells' xs (n + 1) (acc ++ "\n   " ++ prefix ++ show n ++ ": " ++ show x)
-    showCells' [] _ acc       = acc
+    formatCells' :: (Show a) => [a] -> Int -> String -> String
+    formatCells' (x : xs) n acc = formatCells' xs (n + 1) (acc ++ "\n   " ++ prefix ++ show n ++ ": " ++ show x)
+    formatCells' [] _ acc       = acc
 
 instance Show State where
-    show State{pc, sp, code = Code ccells, stack, global, heap} = "+———----+\n| State |\n+———----+\n" ++ "I:  " ++ show (ccells !! pc) ++ "\nSP: " ++ show sp ++ "\nPC: " ++ show pc ++ "\n" ++ show ccells ++ "\n" ++ show stack ++ "\n" ++ show heap ++ "\n" ++ show global
-    show (ErrorState error)                                     = error
+    show (ErrorState error)          = error
+    show s@State{code = Code ccells} =
+        "+———----+\n| State |\n+———----+\n" ++ 
+        "I:  " ++ show (ccells !! pc s) ++ 
+        "\nSP: " ++ show (sp s) ++
+        "\nPC: " ++ show (pc s) ++ 
+        "\n" ++ show (code s) ++
+        "\n" ++ show (stack s) ++
+        "\n" ++ show (global s) ++
+        "\n" ++ show (heap s)
