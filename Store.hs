@@ -1,6 +1,6 @@
 {- |
 Module      : Store
-Description : This module contains all functionality to perform necessary operations on stores code, stack, global and heap.
+Description : This module contains all functionality to perform necessary operations on store's code, stack, global and heap.
 -}
 module Store where
 
@@ -14,7 +14,7 @@ import Declarations
     Code(..))
 
 
--- | Access element at index 'n' in a code, stack or heap.
+-- | Access element at index 'n' in code, stack or heap.
 accessCode :: Code -> Int -> Either String Instruction
 accessCode c@(Code ccells) n
     | n < length ccells && n >= 0 && not (null ccells) = return $ ccells !! n 
@@ -42,7 +42,7 @@ pushStack (Stack scells) elem = Stack $ scells ++ [elem]
 pushHeap :: Heap -> HeapCell -> Heap
 pushHeap (Heap hcells) elem = Heap $ hcells ++ [elem]
 
--- | Either overwrite element at index 'n' in a stack or heap, or push element at its end.
+-- | Either overwrite element at index 'n' in a stack or heap, or push element to its end.
 saveStack :: Stack -> StackCell -> Int -> Either String Stack
 saveStack s@(Stack scells) scell n
     | n <= length scells && n >= 0 = return $ Stack (take n scells ++ [scell] ++ drop (n + 1) scells) 
