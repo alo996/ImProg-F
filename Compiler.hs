@@ -1,6 +1,6 @@
 {- |
 Module      : Compiler
-Description : This module contains all functionality to translate a parsed F program into a set MF instructions, while setting up the global environment and heap for the interpretation process.
+Description : This module contains all functionality to translate a parsed F program into a set of MF instructions, while setting up the global environment and heap for the interpretation process.
 -}
 {-# LANGUAGE NamedFieldPuns #-}
 module Compiler where
@@ -63,7 +63,7 @@ compileDefinition
             hcell = [DEF fname (length localenv) (length ccells)]
 compileDefinition _ _ = ErrorState "Error in 'compileDefinition'"
 
--- | Compile an expression. 'compileExpression' takes the expression to compile and a local environment and returns a list of MF instructions.
+-- | Compile an expression. 'compileExpression' takes the expression to be compiled and a local environment and returns a list of MF instructions.
 compileExpression :: Expr -> [(Expr, Int)] -> [Instruction]
 compileExpression e pos = case e of
     AtomicExpr (LitBool (BoolF False)) -> [Pushval "Bool" 0]
@@ -100,7 +100,7 @@ compileLocalDefinitions ldefs e pos = compileLocalDefinitions' ldefs e (replicat
     len = length ldefs
     pos' = createPos' ldefs pos len
     {- | 'compileLocalDefinitions'' recursively iterates through a list of local definitions and compiles them. 
-    It takes the list of local definitions to compile, the expression these local definitions correspond to, the list of already created MF instructions as an accumulator, the local environment of the function, the number of local definitions to compile as argument for the 'SlideLet' instruction after successful compilation and the number of remaining local definitions after each step as argument for the corresponding 'UpdateLet' instruction.
+    It takes the list of local definitions to be compiled, the expression these local definitions correspond to, the list of already created MF instructions as an accumulator, the local environment of the function, the number of local definitions to be compiled as argument for the 'SlideLet' instruction after successful compilation and the number of remaining local definitions after each step as argument for the corresponding 'UpdateLet' instruction.
     -}
     compileLocalDefinitions' :: [LocalDef] -> Expr -> [Instruction] -> [(Expr, Int)] -> Int -> Int -> [Instruction]
     compileLocalDefinitions' ((LocalDef e1 e2) : ldefs) e ccells pos' n acc =
