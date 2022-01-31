@@ -15,7 +15,7 @@ data Token
     | KeywordToken Keyword
     | NameToken String
     | NumberToken Int
-    deriving Eq
+    deriving (Eq, Show)
 
 -- | A keyword is a sequence of characters that is reserved by F.
 
@@ -43,12 +43,6 @@ data Keyword
 -- | 'BoolF' adresses the fact that boolean values in F are lowercase, unlike those in Haskell.
 
 newtype BoolF = BoolF Bool deriving Eq
-
-instance Show Token where
-    show (BooleanToken bool)    = show bool
-    show (KeywordToken keyword) = show keyword
-    show (NameToken name)       = show name
-    show (NumberToken num)      = show num
 
 instance Show Keyword where
     show And       = "&"
@@ -123,10 +117,10 @@ data AtomicExpr
     deriving Eq
 
 instance Show Expr where
-    show (Add e1 e2)           = show e1 ++ "+" ++ show e2
+    show (Add e1 e2)           = show e1 ++ " + " ++ show e2
     show (AtomicExpr e)        = show e
     show (BinaryMin e1 e2)     = show e1 ++ " - " ++ show e2
-    show (Div e1 e2)           = show e1 ++ "/" ++ show e2
+    show (Div e1 e2)           = show e1 ++ " / " ++ show e2
     show (Equal e1 e2)         = show e1 ++ " == " ++ show e2
     show (Func e1 e2)          = show e1 ++ " " ++ show e2
     show (IfThenElse e1 e2 e3) = "if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3
@@ -194,7 +188,7 @@ data State
     }
     | ErrorState String
 
-{- | MF takes as input a list of instructions to be used by standardised instructions. 'Instruction' can take on values that each correspond to a certain functionality specified in MF.hs.
+{- | MF takes as input a list of instructions and translates them into F. 'Instruction' can take on values that each correspond to a certain functionality specified in MF.hs.
 -} 
 
 data Instruction
