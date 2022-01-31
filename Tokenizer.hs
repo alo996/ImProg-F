@@ -12,7 +12,7 @@ import Declarations
             Divide, Less, LBracket, Minus, Or, Plus, RBracket, Semicolon))
 
 
--- |'tokenize' receives user input and, if successful, transforms it to a list of tuples, each containing a token and its line number in the source code.
+-- |'tokenize' receives user input and, if successful, transforms it into a list of tuples, each containing a token and its line number in the source code.
 tokenize :: String -> Either String [(Token, Int)]
 tokenize ""    = Left "Runtime error: Can not compile empty program."
 tokenize input = tokenize' input [] 1
@@ -58,7 +58,8 @@ tokenize' ('+' : xs) tAcc lAcc                                 = tokenize' xs ((
 tokenize' (')' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken RBracket, lAcc) : tAcc) lAcc
 tokenize' (';' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Semicolon, lAcc) : tAcc) lAcc
 tokenize' ('*' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Times, lAcc) : tAcc) lAcc
--- | The next character is no space, no keyword and not part of a keyword. Checks for digits and letters, otherwise returns an error.
+
+-- | The next character is not a space, a keyword or a part of a keyword. Checks for digits and letters, otherwise returns an error.
 tokenize' (x : xs) tAcc lAcc
     | isAlphaNum x = if isDigit x
                         then tokenizeNumber (x : xs) tAcc lAcc ""
