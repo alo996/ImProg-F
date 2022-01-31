@@ -18,17 +18,17 @@ import Declarations
 accessCode :: Code -> Int -> Either String Instruction
 accessCode c@(Code ccells) n
     | n < length ccells && n >= 0 && not (null ccells) = return $ ccells !! n 
-    | otherwise                                        = Left $ show c ++ " has no index " ++ show n ++ "."
+    | otherwise                                        = Left $ "Code has no index " ++ show n ++ "."
 
 accessStack :: Stack -> Int -> Either String StackCell
 accessStack s@(Stack scells) n
     | n < length scells && n >= 0 && not (null scells) = return $ scells !! n 
-    | otherwise                                        = Left $ show s ++ " has no index " ++ show n ++ "."
+    | otherwise                                        = Left $ "Stack has no index " ++ show n ++ "."
 
 accessHeap :: Heap -> Int -> Either String HeapCell
 accessHeap h@(Heap hcells) n 
     | n < length hcells && n >= 0 && not(null hcells) = return $ hcells !! n 
-    | otherwise                                       = Left $ show h ++ " has no index " ++ show n ++ "."
+    | otherwise                                       = Left $ "Heap has no index " ++ show n ++ "."
 
 -- | Initialize code with the set of MF instructions needed before translating function definitions.
 codeInit :: Code
@@ -46,9 +46,9 @@ pushHeap (Heap hcells) elem = Heap $ hcells ++ [elem]
 saveStack :: Stack -> StackCell -> Int -> Either String Stack
 saveStack s@(Stack scells) scell n
     | n <= length scells && n >= 0 = return $ Stack (take n scells ++ [scell] ++ drop (n + 1) scells) 
-    | otherwise                    = Left $ show s ++ " has no index " ++ show n ++ "."
+    | otherwise                    = Left $ "Stack has no index " ++ show n ++ "."
 
 saveHeap :: Heap -> HeapCell -> Int -> Either String Heap
 saveHeap h@(Heap hcells) hcell n 
     | n <= length hcells && n >= 0 = return $ Heap (take n hcells ++ [hcell] ++ drop (n + 1) hcells) 
-    | otherwise                    = Left $ show h ++ " has no index " ++ show n ++ "."
+    | otherwise                    = Left $ "Heap has no index " ++ show n ++ "."
