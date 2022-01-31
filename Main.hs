@@ -3,10 +3,10 @@ module Main where
 
 import Compiler (compileProgram)
 import Debug.Trace
-import Declarations (State(State, ErrorState))
-import MF (interpret, resultToString)
-import Parser (program)
-import Tokenizer (tokenize)
+import Declarations
+import MF (interpret, resultToString, interpretVerbose)
+import Parser (defsToString, program)
+import Tokenizer (tokenize, tokensToString)
 
 
 main :: IO ()
@@ -14,11 +14,17 @@ main = do
     putStrLn "Please enter an F program and hit enter (end with an empty line):"
     input <- getLines
     case tokenize input of
-        Right toks -> case program toks of
-            Right ast  -> case compileProgram (fst ast) of
-                ErrorState error -> putStrLn error >> anotherOne
-                s@State{}        -> putStrLn (resultToString $ interpret s) >> anotherOne
-            Left error -> putStrLn error >> anotherOne
+        Right toks -> do 
+            putStrLn $ tokensToString toks
+            case program toks of
+                Right ast -> do
+                    putStrLn $ defsToString $ fst ast
+                    case compileProgram (fst ast) of
+                        ErrorState error -> putStrLn error >> anotherOne
+                        state            -> do
+                            print (code state)
+                            putStrLn (resultToString $ interpret state) >> anotherOne
+                Left error -> putStrLn error >> anotherOne
         Left error -> putStrLn error >> anotherOne
       where
         anotherOne :: IO ()
@@ -41,9 +47,15 @@ main = do
 main' :: String -> IO ()
 main' input =
     case tokenize input of
-        Right toks -> case trace (show toks) program toks of
-            Right ast  -> case compileProgram (fst ast) of
-                ErrorState error -> putStrLn error
-                s@State{}        -> putStrLn $ resultToString $ interpret s
-            Left error -> putStrLn error
+        Right toks -> do 
+            putStrLn $ tokensToString toks
+            case program toks of
+                Right ast -> do
+                    putStrLn $ defsToString $ fst ast
+                    case compileProgram (fst ast) of
+                        ErrorState error -> putStrLn error
+                        state            -> do
+                            print $ code state
+                            putStrLn $ interpretVerbose state
+                Left error -> putStrLn error
         Left error -> putStrLn error

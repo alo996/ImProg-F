@@ -213,13 +213,13 @@ data Operator
     deriving (Eq, Show)
 
 instance Show Code where
-    show (Code ccells) = "Code: " ++ formatCells ccells "c"
+    show (Code ccells) = "+———-----------+\n| Instructions |\n+——------------+\n" ++ formatCells ccells "c"
 
 instance Show Stack where
     show (Stack scells) = "Stack: " ++ formatCells scells "s"
 
 instance Show Global where
-    show (Global gcells) = "Global: " ++ formatCells gcells "g"
+    show (Global gcells) = "+———----------------+\n| Global environment |\n+———----------------+\n" ++ formatCells gcells "g"
 
 instance Show Heap where
     show (Heap hcells) = "Heap: " ++ formatCells hcells "h"
@@ -229,7 +229,7 @@ formatCells :: (Show a) => [a] -> String -> String
 formatCells xs prefix = formatCells' xs 0 "" 
   where
     formatCells' :: (Show a) => [a] -> Int -> String -> String
-    formatCells' (x : xs) n acc = formatCells' xs (n + 1) (acc ++ "\n   " ++ prefix ++ show n ++ ": " ++ show x)
+    formatCells' (x : xs) n acc = formatCells' xs (n + 1) (acc ++ prefix ++ show n ++ ": " ++ show x ++ "\n")
     formatCells' [] _ acc       = acc
 
 instance Show State where
@@ -239,7 +239,5 @@ instance Show State where
         "I:  " ++ show (ccells !! pc s) ++ 
         "\nSP: " ++ show (sp s) ++
         "\nPC: " ++ show (pc s) ++ 
-        "\n" ++ show (code s) ++
         "\n" ++ show (stack s) ++
-        "\n" ++ show (global s) ++
         "\n" ++ show (heap s)

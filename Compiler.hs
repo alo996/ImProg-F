@@ -132,9 +132,6 @@ createPos' ldefs pos n = createPos'' ldefs pos' (length ldefs - 2)
     createPos'' ((LocalDef e1 _) : ldefs) pos n = createPos'' ldefs ((e1, n) : pos) (n - 1)
     createPos'' [] pos _                        = pos
 
-instructionsToString :: [Instruction] -> String
-instructionsToString ins = foldl (++) "+———-----------+\n| Instructions |\n+——------------+\n" (map (\ i -> show i ++ "\n") ins)
-
 -- | Increment all indices in a local environment by an offset.
 posInc :: [(Expr, Int)] -> Int -> [(Expr, Int)]
 posInc pos n = map (\ (a, b) -> (a, b + n)) pos
@@ -150,12 +147,3 @@ replicate' :: [a] -> Int -> [a]
 replicate' xs n
     | n > 1     = xs ++ replicate' xs (n - 1)
     | otherwise = xs
-
-testIns :: String -> IO ()
-testIns input = case tokenize input of
-    Right toks -> case program toks of
-      Right ast  -> case compileProgram (fst ast) of
-        ErrorState error           -> putStrLn error
-        State {code = Code ccells} -> putStrLn $ instructionsToString ccells
-      Left error -> putStrLn error
-    Left error -> putStrLn error

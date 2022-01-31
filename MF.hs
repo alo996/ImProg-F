@@ -30,13 +30,23 @@ import Store
 -- | 'interpret' recursively executes a set of MF instructions. Either return a state when instruction 'HALT' is reached, or an error occurs.
 interpret :: State -> State
 interpret (ErrorState error) = ErrorState error
-interpret s                  = case trace (show s) accessCode (code s) (pc s) of
+interpret s                  = case accessCode (code s) (pc s) of
     Right instr -> case instr of
         Halt -> s
         _    -> case run instr s of
             ErrorState error -> ErrorState error
             s'               -> interpret s'
     Left error  -> ErrorState error
+
+interpretVerbose :: State -> String 
+interpretVerbose (ErrorState error) = error
+interpretVerbose s                  = case accessCode (code s) (pc s) of
+        Right instr -> case instr of
+            Halt -> resultToString s
+            _    -> case run instr s of
+                ErrorState error -> error
+                s'               -> show (interpret s) ++ "\n" ++ interpretVerbose s'
+        Left error  -> error
 
 -- | Given an instruction, 'run' executes the respective MF function.
 run :: Instruction -> State -> State
