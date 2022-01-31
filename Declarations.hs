@@ -1,21 +1,24 @@
 {- |
 Module      : Declarations
-Description : This module contains all type declarations and type class instantiations and needed to tokenize, parse, compile and interpret F programs.
+Description : This module contains all type declarations and type class instantiations needed to tokenize, parse, compile and interpret F programs.
 -}
 {-# LANGUAGE NamedFieldPuns #-}
 module Declarations where
 
 
 ---------------------------------------- TOKEN GENERATION ----------------------------------------
--- | A token is a sequence of characters with some inherent structure (e.g. a reserved F-keyword, a name, a multi-character number).
+{- | A token is a sequence of characters with some inherent structure, in our case it is either a boolean value, a reserved F-keyword, a name, or a number).
+-}
+
 data Token
     = BooleanToken BoolF
     | KeywordToken Keyword
     | NameToken String
     | NumberToken Int
-    deriving (Eq, Show)
+    deriving Eq
 
 -- | A keyword is a sequence of characters that is reserved by F.
+
 data Keyword
     = And
     | Assign
@@ -37,8 +40,15 @@ data Keyword
     | Then
     deriving Eq
 
--- | 'BoolF' adresses the fact that boolean values in F are lowercase, unlike in Haskell.
+-- | 'BoolF' adresses the fact that boolean values in F are lowercase, unlike those in Haskell.
+
 newtype BoolF = BoolF Bool deriving Eq
+
+instance Show Token where
+    show (BooleanToken bool)    = show bool
+    show (KeywordToken keyword) = show keyword
+    show (NameToken name)       = show name
+    show (NumberToken num)      = show num
 
 instance Show Keyword where
     show And       = "&"
@@ -68,19 +78,23 @@ instance Show BoolF where
 ---------------------------------------- PARSING ----------------------------------------
 {- | We define a parser to be a parametrized function that takes a list of tuples. These tuples are (token, integer)-pairs, assigning each identified token its line number in the source code for error handling purposes. This list of tuples is then mapped to either an error message if parsing was unsuccessful, or a tuple containing parsed output and a list of (token, integer)-pairs left to be parsed by another parser.
 -}
+
 type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])
 
--- | According to the F grammar, a definition constitutes of a function name, a list of formal parameters and its defining expression.
+-- | According to the F grammar, a definition consists of a function name, a list of formal parameters, and its defining expression.
+
 data Def
     = Def Expr [Expr] Expr
     deriving (Eq, Show)
 
 -- | A local definition consists of a name and its defining expression.
+
 data LocalDef
     = LocalDef Expr Expr
     deriving (Eq, Show)
 
 -- | All possible expressions are summed up in the 'Expr' type.
+
 data Expr
     = Add Expr Expr
     | AtomicExpr AtomicExpr
@@ -98,8 +112,9 @@ data Expr
     | UnaryMin Expr
     deriving Eq
 
-{- | An atomic expression is the most basic kind of expression. It is either a name, a boolean value, an integer (with range [ -2^29, 2^29 - 1] at least) or an expression in paranthesis.
+{- | An atomic expression is the most basic kind of expression. It is either a name, a boolean value, an integer (with range [ -2^29, 2^29 - 1] at least), or an expression in parentheses.
 -}
+
 data AtomicExpr
     = Var String
     | LitBool BoolF
@@ -108,10 +123,10 @@ data AtomicExpr
     deriving Eq
 
 instance Show Expr where
-    show (Add e1 e2)           = show e1 ++ " + " ++ show e2
+    show (Add e1 e2)           = show e1 ++ "+" ++ show e2
     show (AtomicExpr e)        = show e
     show (BinaryMin e1 e2)     = show e1 ++ " - " ++ show e2
-    show (Div e1 e2)           = show e1 ++ " / " ++ show e2
+    show (Div e1 e2)           = show e1 ++ "/" ++ show e2
     show (Equal e1 e2)         = show e1 ++ " == " ++ show e2
     show (Func e1 e2)          = show e1 ++ " " ++ show e2
     show (IfThenElse e1 e2 e3) = "if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3
@@ -131,8 +146,9 @@ instance Show AtomicExpr where
 
 
 ---------------------------------------- TRANSLATION AND INTERPRETATION OF F PROGRAMS ----------------------------------------
-{- | The abstract machine contains four types of stores: 'Code' contains a translated program as a sequence of MF instructions, 'Stack' contains references to expressions that need further evaluation, 'Global' contains non-local function definitions and 'Heap' contains expressions represented graphs. 
+{- | The abstract machine contains four types of stores: 'Code' contains a translated program as a sequence of MF instructions, 'Stack' contains references to expressions that need further evaluation, 'Global' contains non-local function definitions, and 'Heap' contains expressions represented as graphs. 
 -}
+
 newtype Code = Code [Instruction]
 
 newtype Stack = Stack [StackCell]
@@ -141,7 +157,8 @@ newtype Global = Global [(String, Int)]
 
 newtype Heap = Heap [HeapCell]
 
--- | A heap is a list of heap cells. Heap cells either contain 
+-- | A heap is a list of typed heap cells.
+
 data HeapCell
     = APP Int Int
     | DEF
@@ -157,12 +174,14 @@ data HeapCell
     | VALNum Int
     deriving Show
 
--- | A stack is a list of stack cells. Stack cells contain references to code cells or heap cells, each simply represented with an integer. 
+-- | A stack is a list of stack cells. Stack cells contain references to code cells or heap cells, each represented with an integer. 
+
 newtype StackCell
     = StackCell Int
     deriving Show
 
--- | 'State' models the abstract machine. It contains a program counter, a stack pointer and the already introduced stores code, stack, global and heap. In case of a faulty execution, it can also take on an error state, that returns an error message to the user.
+-- | 'State' models the abstract machine. It contains a program counter, a stack pointer, and the already introduced stores code, stack, global and heap. In case of a faulty execution, it can also take on an error state that returns an error message to the user.
+
 data State
     = State
     {
@@ -175,8 +194,9 @@ data State
     }
     | ErrorState String
 
-{- | MF takes as input a list of instructions to which an F program was translated into. 'Instruction' can take on values that each correspond to a certain functionality specified in MF.hs.
+{- | MF takes as input a list of instructions to be used by standardised instructions. 'Instruction' can take on values that each correspond to a certain functionality specified in MF.hs.
 -} 
+
 data Instruction
     = Alloc
     | Call
@@ -225,6 +245,7 @@ instance Show Heap where
     show (Heap hcells) = "Heap: " ++ formatCells hcells "h"
 
 -- | 'formatCells' is used to produce readable output of the stores used in MF.
+
 formatCells :: (Show a) => [a] -> String -> String
 formatCells xs prefix = formatCells' xs 0 "" 
   where
