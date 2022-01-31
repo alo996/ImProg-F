@@ -58,7 +58,6 @@ tokenize' ('+' : xs) tAcc lAcc                                 = tokenize' xs ((
 tokenize' (')' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken RBracket, lAcc) : tAcc) lAcc
 tokenize' (';' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Semicolon, lAcc) : tAcc) lAcc
 tokenize' ('*' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Times, lAcc) : tAcc) lAcc
-
 -- | The next character is not a space, a keyword or a part of a keyword. Checks for digits and letters, otherwise returns an error.
 tokenize' (x : xs) tAcc lAcc
     | isAlphaNum x = if isDigit x
