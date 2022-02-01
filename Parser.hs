@@ -21,7 +21,7 @@ import Tokenizer (tokenize)
 program :: Parser [Def]
 program [] = return ([], [])
 program ts = do
-  -- Parse one defintion.
+  -- Parse one definition.
   (d, ts1) <- def ts
   -- If the next token is a keyword, recursively apply 'program' and concatenate the results.
   match (KeywordToken Semicolon) ts1 >>= \ (_, ts2) -> program ts2 >>= \ (ds, ts3) -> return (d : ds, ts3)
