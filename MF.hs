@@ -38,16 +38,6 @@ interpret s                  = case accessCode (code s) (pc s) of
             s'               -> interpret s'
     Left error  -> ErrorState error
 
-interpretVerbose :: State -> String 
-interpretVerbose (ErrorState error) = error
-interpretVerbose s                  = case accessCode (code s) (pc s) of
-        Right instr -> case instr of
-            Halt -> resultToString s
-            _    -> case run instr s of
-                ErrorState error -> error
-                s'               -> show (interpret s) ++ "\n" ++ interpretVerbose s'
-        Left error  -> error
-
 -- | Given an instruction, 'run' executes the respective MF function.
 run :: Instruction -> State -> State
 run Alloc s            = alloc s
@@ -368,6 +358,17 @@ arity' op = case op of
     PlusOp      -> 2
     TimesOp     -> 2
     UnaryMinOp  -> 1
+
+-- | 'interpretVerbose' returns the emulation trace as a string.
+interpretVerbose :: State -> String 
+interpretVerbose (ErrorState error) = error
+interpretVerbose s                  = case accessCode (code s) (pc s) of
+        Right instr -> case instr of
+            Halt -> resultToString s
+            _    -> case run instr s of
+                ErrorState error -> error
+                s'               -> show (interpret s) ++ "\n" ++ interpretVerbose s'
+        Left error  -> error
 
 -- | 'new...' functions create different types of heap cells.
 newAPP, newVAL :: Heap -> Int -> Int -> (Int, Heap)
