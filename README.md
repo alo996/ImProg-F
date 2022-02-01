@@ -16,9 +16,9 @@ This group project was part of the practical 'Implementierung von Programmierspr
 - straightforward execution using the Stack build tool
 - simple user interaction
 - detailed error handling and error messages
-- flag support for differnt levels of output verbosity 
+- flag support for different levels of output verbosity
 - coherent coding style (based on https://kowainik.github.io/posts/2019-02-06-style-guide)
-- extensive commenting 
+- extensive commenting
 - flags inside stack for every module, including tests ??? 
 - no known bugs
 
