@@ -1,4 +1,4 @@
-## ImProg-F
+# ImProg-F
 
 Implementation of the functional programming language 'F' using Haskell. 
 
