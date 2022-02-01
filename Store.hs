@@ -1,6 +1,6 @@
 {- |
 Module      : Store
-Description : This module contains all functionality to perform necessary operations on store's code, stack, global and heap.
+Description : This module contains all functionality to perform necessary operations on stores code, stack, global and heap.
 -}
 module Store where
 
