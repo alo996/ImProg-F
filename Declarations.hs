@@ -217,13 +217,13 @@ instance Show Code where
     show (Code ccells) = "+———-----------+\n| Instructions |\n+——------------+\n" ++ formatCells ccells "c"
 
 instance Show Stack where
-    show (Stack scells) = "Stack: " ++ formatCells scells "s"
+    show (Stack scells) = "Stack:\n" ++ formatCells scells "s"
 
 instance Show Global where
     show (Global gcells) = "+———-----------------+\n| Global environment |\n+———-----------------+\n" ++ formatCells gcells "g"
 
 instance Show Heap where
-    show (Heap hcells) = "Heap: " ++ formatCells hcells "h"
+    show (Heap hcells) = "Heap:\n" ++ formatCells hcells "h"
 
 -- | 'formatCells' is used to produce readable output of the stores used in MF.
 formatCells :: (Show a) => [a] -> String -> String
@@ -240,7 +240,5 @@ instance Show State where
         "I:  " ++ show (ccells !! pc s) ++ 
         "\nSP: " ++ show (sp s) ++
         "\nPC: " ++ show (pc s) ++
-        "\n" ++ show (code s) ++ 
         "\n" ++ show (stack s) ++
-        "\n" ++ show (global s) ++
-        "\n" ++ show (heap s)
+        show (heap s)

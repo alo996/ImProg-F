@@ -6,7 +6,6 @@ Description : This module contains all functionality to interpret a translated F
 module MF where
 
 import Data.Bits (Bits((.&.), (.|.), xor))
-import Debug.Trace
 import Declarations
     (Global(..),
     Heap(..),
@@ -113,10 +112,10 @@ operator s op = case op of
                         Right (StackCell addr1) -> case value (heap s) addr1 of
                             Right (VALBool w) -> case op of
                                 NotOp -> if fromEnum w == 1
-                                            then let (n, heap') = newVAL (heap s) 1 1 in case saveStack stack (StackCell n) (sp s - 1) of
+                                            then let (n, heap') = newVAL (heap s) 2 0 in case saveStack stack (StackCell n) (sp s - 1) of
                                                 Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap'}
                                                 Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                            else let (n, heap') = newVAL (heap s) 1 0 in case saveStack stack (StackCell n) (sp s - 1) of
+                                            else let (n, heap') = newVAL (heap s) 2 1 in case saveStack stack (StackCell n) (sp s - 1) of
                                                 Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap'}
                                                 Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
                                 _   -> ErrorState "Runtime error in 'operator'."
@@ -367,7 +366,7 @@ interpretVerbose s                  = case accessCode (code s) (pc s) of
             Halt -> resultToString s
             _    -> case run instr s of
                 ErrorState error -> error
-                s'               -> show (interpret s) ++ "\n" ++ interpretVerbose s'
+                s'               -> show s ++ "\n" ++ interpretVerbose s'
         Left error  -> error
 
 -- | 'new...' functions create different types of heap cells.
@@ -392,7 +391,7 @@ resultToString (ErrorState error) = "---> " ++ error
 resultToString s                  = case accessStack (stack s) (sp s) of
     Right (StackCell addr) -> case accessHeap (heap s) addr of
         Right (VALNum n)  -> "---> Result: " ++ show n
-        Right (VALBool b) -> if b == 0 then "---> Result: False" else "---> Result: True"
+        Right (VALBool b) -> if b == 0 then "---> Result: false" else "---> Result: true"
         Left error        -> "---> " ++ error
         _                 -> "---> Runtime error."
     Left error             -> "---> " ++ error

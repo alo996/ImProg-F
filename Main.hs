@@ -2,7 +2,6 @@
 module Main where
 
 import Compiler (compileProgram)
-import Debug.Trace
 import Declarations
 import MF (interpret, resultToString, interpretVerbose)
 import Parser (defsToString, program)
