@@ -10,22 +10,21 @@ This group project was part of the practical 'Implementierung von Programmierspr
 
 ##  Installation
 
+tbd
 
 ## Highlights
 
 - straightforward execution using the Stack build tool
-- simple user interaction
 - detailed error handling and error messages
 - flag support for different levels of output verbosity
 - coherent coding style (based on https://kowainik.github.io/posts/2019-02-06-style-guide)
 - extensive commenting
-- flags inside stack for every module, including tests ??? 
 - no known bugs
 
 
 ## Lowlight
 
-We are aware that this implementation might not be the most efficient, e.g. we often use O(n) list operations where one could have used O(1) operations instead (like (:) instead of (++)). Due to the nature of this project, which in our view serves to introduce students to the aforementioned theoretical concepts and not to perform resource intensive calculations, we depriorized this aspect and simlply had not enough time to take care of it before submission.
+We are aware that this implementation might not be the most efficient, e.g. we often use O(n) list operations where one could have used O(1) operations instead (like (:) instead of (++)). Due to the nature of this project, which in our view serves to introduce students to the aforementioned theoretical concepts and not to perform resource intensive calculations, we deprioritized this aspect and simlply had not enough time to take care of it before submission.
 
 
 ## Authors
@@ -36,16 +35,6 @@ We are aware that this implementation might not be the most efficient, e.g. we o
 - [@richard](https://gitlab2.cip.ifi.lmu.de/richard)
 - [@suslov](https://gitlab2.cip.ifi.lmu.de/suslov)
 
-## Table of Contents
-
-- Declarations.hs
-- Store.hs
-- Tokenizer.hs
-- Parser.hs
-- Compiler.hs
-- MF.hs
-- Main.hs
-- Stack file version
 
 ## Running Tests
 
