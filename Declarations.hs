@@ -132,9 +132,8 @@ instance Show AtomicExpr where
 
 
 ---------------------------------------- TRANSLATION AND INTERPRETATION OF F PROGRAMS ----------------------------------------
-{- | The abstract machine contains four types of stores: 'Code' contains a translated program as a sequence of MF instructions, 'Stack' contains references to expressions that need further evaluation, 'Global' contains non-local function definitions, and 'Heap' contains expressions represented as graphs. 
+{- | The abstract machine contains four types of stores: 'Code' contains a translated program as a sequence of MF instructions, 'Stack' contains references to expressions that need further evaluation, 'Global' contains non-local function definitions, and 'Heap' contains expressions represented as graphs.
 -}
-
 newtype Code = Code [Instruction]
 
 newtype Stack = Stack [StackCell]
@@ -159,7 +158,7 @@ data HeapCell
     | VALNum Int
     deriving Show
 
--- | A stack is a list of stack cells. Stack cells contain references to code cells or heap cells, each represented with an integer. 
+-- | A stack is a list of stack cells. Stack cells contain references to code cells or heap cells, each represented with an integer.
 newtype StackCell
     = StackCell Int
     deriving Show
@@ -177,7 +176,7 @@ data State
     }
     | ErrorState String
 
-{- | MF takes as input a list of instructions and interprets them. 'Instruction' can take on values that each correspond to a certain functionality specified in MF.hs.
+{- | MF takes as input a list of instructions to which an F program was translated into. 'Instruction' can take on values that each correspond to a certain functionality specified in MF.hs.
 -} 
 data Instruction
     = Alloc
@@ -215,13 +214,13 @@ data Operator
     deriving (Eq, Show)
 
 instance Show Code where
-    show (Code ccells) = "Code: " ++ formatCells ccells "c"
+    show (Code ccells) = "+———-----------+\n| Instructions |\n+——------------+\n" ++ formatCells ccells "c"
 
 instance Show Stack where
     show (Stack scells) = "Stack: " ++ formatCells scells "s"
 
 instance Show Global where
-    show (Global gcells) = "Global: " ++ formatCells gcells "g"
+    show (Global gcells) = "+———----------------+\n| Global environment |\n+———----------------+\n" ++ formatCells gcells "g"
 
 instance Show Heap where
     show (Heap hcells) = "Heap: " ++ formatCells hcells "h"
@@ -231,7 +230,7 @@ formatCells :: (Show a) => [a] -> String -> String
 formatCells xs prefix = formatCells' xs 0 "" 
   where
     formatCells' :: (Show a) => [a] -> Int -> String -> String
-    formatCells' (x : xs) n acc = formatCells' xs (n + 1) (acc ++ "\n   " ++ prefix ++ show n ++ ": " ++ show x)
+    formatCells' (x : xs) n acc = formatCells' xs (n + 1) (acc ++ prefix ++ show n ++ ": " ++ show x ++ "\n")
     formatCells' [] _ acc       = acc
 
 instance Show State where
@@ -241,7 +240,5 @@ instance Show State where
         "I:  " ++ show (ccells !! pc s) ++ 
         "\nSP: " ++ show (sp s) ++
         "\nPC: " ++ show (pc s) ++ 
-        "\n" ++ show (code s) ++
         "\n" ++ show (stack s) ++
-        "\n" ++ show (global s) ++
         "\n" ++ show (heap s)
