@@ -1,16 +1,31 @@
-# ImProg-F
+## ImProg-F
 
-Implementation of the language F using Haskell, as defined by 'Übersetzerbau - Abstrakte Maschinen' by François Bry and Norbert Eisinger (2004).
-
-Project for 'Implementierung von Programmiersprachen' at the Ludwig Maximilian University of Munich.
+Implementation of the functional programming language 'F' with Haskell. 
 
 
+## Motivation
 
-## Features
+The group project was part of the practical 'Implementierung von Programmiersprachen' at the Ludwig-Maximilians-Universität in Munich, winter semester 2021/22. It introduced the participants to basic principles of formal languages, functional programming, parsing, compiler construction and abstract machines.
 
-- detailed exception handling
-- executable by using Stack
-    - flags inside stack for every module, including tests
+
+##  Installation
+
+
+## Highlights
+
+- straightforward execution using the Stack build tool
+- simple user interaction
+- detailed error handling and error messages
+- flag support for differnt levels of output verbosity 
+- coherent coding style (based on https://kowainik.github.io/posts/2019-02-06-style-guide)
+- extensive commenting 
+- flags inside stack for every module, including tests ?? 
+- no known bugs
+
+
+## Low light
+
+We are aware that this implementation might not be the most efficient, e.g. we often use O(n) list operations where one could have used O(1) operations instead (like (:) instead of (++)). Due to the nature of this project, which in our view serves to introduce students to the aforementioned theoretical concepts and not to perform resource intensive calculations, we depriorized this aspect and simlply had not enough time to take care of it before submission.
 
 
 ## Authors
@@ -40,8 +55,8 @@ To run tests (by using Stack), run the following command
   stack run --test
 ```
 
+## References
 
-## Documentation
-
-[Übersetzerbau - Abstrakte Maschinen](https://uni2work.ifi.lmu.de/course/W21/IfI/ImProg/file/Skript/download/bry-eisinger-uebersaetzerbau--2004.pdf)
+See the homepage of the practical for more information, including the script 
+[Übersetzerbau - Abstrakte Maschinen](https://uni2work.ifi.lmu.de/course/W21/IfI/ImProg/file/Skript/download/bry-eisinger-uebersaetzerbau--2004.pdf) on which this project heavily relies.
 
