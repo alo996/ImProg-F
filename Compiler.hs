@@ -32,11 +32,11 @@ import Parser
 compileProgram :: [Def] -> State
 compileProgram defs = compileProgram' defs s
   where
-    s = State {pc = 0, sp = -1, code = codeInit, stack = Stack [], global = Global [], heap = Heap []}
+    s = createGlobal defs State {pc = 0, sp = -1, code = codeInit, stack = Stack [], global = Global [], heap = Heap []}
     -- | 'compileProgram'' recursively compiles each definition of the program.
     compileProgram' :: [Def] -> State -> State
     compileProgram' _ (ErrorState error) = ErrorState error
-    compileProgram' (def : defs) s       = compileProgram' defs (compileDefinition def s)
+    compileProgram' (d : ds) s           = compileProgram' ds (compileDefinition d s)
     compileProgram' [] s                 = lookupMain $ heap s
       where
         -- | After compiling all definitions, 'lookupMain' checks whether the function 'main' has been specified as required.
@@ -46,76 +46,87 @@ compileProgram defs = compileProgram' defs s
 
 -- | Compile a definition. 'compileDefinition' takes the definition to compile and the current machine state and updates its code, global environment and heap.
 compileDefinition :: Def -> State -> State
-compileDefinition 
-    (Def (AtomicExpr (Var fname)) es e) 
-    s@State{code = Code ccells, global = Global gcells, heap = Heap hcells} 
-      = if checkDuplicate fname (global s) 
-        then s
-              {
-                code = Code (ccells ++ compileExpression e localenv ++ [FuncUpdate len, Slide (len + 1), Unwind, Call, Return]),
-                global = Global (gcells ++ [(fname, length hcells)]),
-                heap = Heap (hcells ++ hcell)
-              }     
-        else ErrorState $ "Runtime error: Multiple declarations of " ++ show fname ++ "."
-          where 
-            localenv = createPos es
-            len = length localenv
-            hcell = [DEF fname (length localenv) (length ccells)]
-compileDefinition _ _ = ErrorState "Error in 'compileDefinition'"
+compileDefinition (Def (AtomicExpr (Var fname)) es e) s@State{} = case checkDuplicate fname s of
+  ErrorState error                                 -> ErrorState error 
+  s'@State{code = Code ccells, heap = Heap hcells} ->
+    s'
+    {
+        code = Code (ccells ++ compileExpression e localenv (global s') ++ [FuncUpdate len, Slide (len + 1), Unwind, Call, Return]),
+        heap = Heap (hcells ++ hcell)
+    }     
+      where 
+        localenv = createPos es
+        len = length localenv
+        hcell = [DEF fname (length localenv) (length ccells)]
+compileDefinition _ _                                            = ErrorState "Error in 'compileDefinition'"
 
 -- | Compile an expression. 'compileExpression' takes the expression to be compiled and a local environment and returns a list of MF instructions.
-compileExpression :: Expr -> [(Expr, Int)] -> [Instruction]
-compileExpression e pos = case e of
+compileExpression :: Expr -> [(Expr, Int)] -> Global -> [Instruction]
+compileExpression e pos g = case e of
     AtomicExpr (LitBool (BoolF False)) -> [Pushval "Bool" 0]
     AtomicExpr (LitBool (BoolF True))  -> [Pushval "Bool" 1]
     AtomicExpr (LitNum n)              -> [Pushval "Int" n]
     AtomicExpr (Var name)              -> case pos of
         [] -> [Pushfun name]
-        _  -> case posInd e pos of
-            Right n    -> [Pushparam n]
-            Left error -> [Error error]
-    AtomicExpr (Expr e)                -> compileExpression e pos
-    Func (AtomicExpr (Var fname)) e2   -> compileExpression e2 pos ++ [Pushfun fname, Makeapp]
-    Func e1 e2                         -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Makeapp]
-    LetIn ldefs e                      -> compileLocalDefinitions ldefs e pos
-    Add e1 e2                          -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre PlusOp, Makeapp, Makeapp]
-    Mult e1 e2                         -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre TimesOp, Makeapp, Makeapp]
-    Div e1 e2                          -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre DivideOp, Makeapp, Makeapp]
-    Equal e1 e2                        -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre EqualsOp, Makeapp, Makeapp]
-    LessThan e1 e2                     -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre LessOp, Makeapp, Makeapp]
-    LogicalAnd e1 e2                   -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre AndOp, Makeapp, Makeapp]
-    LogicalOr e1 e2                    -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre OrOp, Makeapp, Makeapp]
-    BinaryMin e1 e2                    -> compileExpression e2 pos ++ compileExpression e1 (posInc pos 1) ++ [Pushpre BinaryMinOp, Makeapp, Makeapp]
-    UnaryMin e                         -> compileExpression e pos ++ [Pushpre UnaryMinOp, Makeapp]
-    LogicalNot e                       -> compileExpression e pos ++ [Pushpre NotOp, Makeapp]
+        _  -> posInd e pos g
+    AtomicExpr (Expr e)                -> compileExpression e pos g
+    Func (AtomicExpr (Var fname)) e2   -> compileExpression e2 pos g ++ [Pushfun fname, Makeapp]
+    Func e1 e2                         -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Makeapp]
+    LetIn ldefs e                      -> compileLocalDefinitions ldefs e pos g
+    Add e1 e2                          -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre PlusOp, Makeapp, Makeapp]
+    Mult e1 e2                         -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre TimesOp, Makeapp, Makeapp]
+    Div e1 e2                          -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre DivideOp, Makeapp, Makeapp]
+    Equal e1 e2                        -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre EqualsOp, Makeapp, Makeapp]
+    LessThan e1 e2                     -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre LessOp, Makeapp, Makeapp]
+    LogicalAnd e1 e2                   -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre AndOp, Makeapp, Makeapp]
+    LogicalOr e1 e2                    -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre OrOp, Makeapp, Makeapp]
+    BinaryMin e1 e2                    -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre BinaryMinOp, Makeapp, Makeapp]
+    UnaryMin e                         -> compileExpression e pos g ++ [Pushpre UnaryMinOp, Makeapp]
+    LogicalNot e                       -> compileExpression e pos g ++ [Pushpre NotOp, Makeapp]
     IfThenElse e1 e2 e3                ->
-        compileExpression e3 pos ++ compileExpression e2 (posInc pos 1) ++ compileExpression e1 (posInc pos 2) ++ [Pushpre IfOp, Makeapp, Makeapp, Makeapp]
+        compileExpression e3 pos g ++ compileExpression e2 (posInc pos 1) g ++ compileExpression e1 (posInc pos 2) g ++ [Pushpre IfOp, Makeapp, Makeapp, Makeapp]
 
 {- | Compile a local definition. 'compileLocalDefinitions' takes a list of local definitions, the corresponding expression and a local environment. 
 It returns a list of MF instructions.
 -}
-compileLocalDefinitions :: [LocalDef] -> Expr -> [(Expr, Int)] -> [Instruction]
-compileLocalDefinitions ldefs e pos = compileLocalDefinitions' ldefs e (replicate' [Alloc, Alloc, Makeapp] len) pos' len len
+compileLocalDefinitions :: [LocalDef] -> Expr -> [(Expr, Int)] -> Global ->[Instruction]
+compileLocalDefinitions ldefs e pos s = compileLocalDefinitions' ldefs e (replicate' [Alloc, Alloc, Makeapp] len) pos' s len len
   where
     len = length ldefs
     pos' = createPos' ldefs pos len
     {- | 'compileLocalDefinitions'' recursively iterates through a list of local definitions and compiles them. 
     It takes the list of local definitions to be compiled, the expression these local definitions correspond to, the list of already created MF instructions as an accumulator, the local environment of the function, the number of local definitions to be compiled as argument for the 'SlideLet' instruction after successful compilation and the number of remaining local definitions after each step as argument for the corresponding 'UpdateLet' instruction.
     -}
-    compileLocalDefinitions' :: [LocalDef] -> Expr -> [Instruction] -> [(Expr, Int)] -> Int -> Int -> [Instruction]
-    compileLocalDefinitions' ((LocalDef e1 e2) : ldefs) e ccells pos' n acc =
-        compileLocalDefinitions' ldefs e (ccells ++ compileExpression e2 pos' ++ [UpdateLet $ acc-1]) pos' n (acc-1)
-    compileLocalDefinitions' [] e ccells pos' n _                           = ccells ++ compileExpression e pos' ++ [SlideLet n]
+    compileLocalDefinitions' :: [LocalDef] -> Expr -> [Instruction] -> [(Expr, Int)] -> Global -> Int -> Int -> [Instruction]
+    compileLocalDefinitions' ((LocalDef e1 e2) : ldefs) e ccells pos' g n acc =
+        compileLocalDefinitions' ldefs e (ccells ++ compileExpression e2 pos' g ++ [UpdateLet $ acc-1]) pos' g n (acc-1)
+    compileLocalDefinitions' [] e ccells pos' g n _                           = ccells ++ compileExpression e pos' g ++ [SlideLet n]
 
 
 ---------------------------------------- HELPER FUNCTIONS FOR COMPILER ----------------------------------------
--- | 'checkDuplicate' returns True if a new function name 'f1' does not already exist in a global environment.
-checkDuplicate :: String -> Global -> Bool 
-checkDuplicate f1 (Global []) = True 
-checkDuplicate f1 (Global ((f2, _) : gcells))
-    | f1 == f2  = False 
-    | otherwise = checkDuplicate f1 (Global gcells)
+-- | 'checkDuplicate' returns True if the definition of a function 'f' does not already exist in a heap.
+checkDuplicate :: String -> State -> State
+checkDuplicate f s = checkDuplicate' f s (heap s)
+  where
+    checkDuplicate' :: String -> State -> Heap -> State
+    checkDuplicate' f s (Heap (DEF{fname} : hcells)) 
+        | f == fname = ErrorState $ "Runtime error: Multiple declarations of function " ++ show f ++ "."
+        | otherwise  = checkDuplicate' f s (Heap hcells)
+    checkDuplicate' _ s (Heap []) = s
+    checkDuplicate' _ _ _         = ErrorState "Runtime error: Heap set up incorrectly."
 
+-- | Create the global environment.
+createGlobal :: [Def] -> State -> State
+createGlobal defs s = createGlobal' defs s 0 
+  where
+    createGlobal' :: [Def] -> State -> Int -> State
+    createGlobal' 
+        ((Def (AtomicExpr (Var fname)) _ _) : defs) 
+        s@State{global = Global gcells} acc 
+          = createGlobal' defs s {global = Global (gcells ++ [(fname, acc)])} (acc + 1)
+    createGlobal' [] s _ = s
+    createGlobal' _ _ _  = ErrorState "Runtime error: Global environment could not be set up."
+      
 -- | Create a local environment for a given list of formal parameters.
 createPos :: [Expr] -> [(Expr, Int)]
 createPos es = zip es [1..]
@@ -136,11 +147,14 @@ createPos' ldefs pos n = createPos'' ldefs pos' (length ldefs - 2)
 posInc :: [(Expr, Int)] -> Int -> [(Expr, Int)]
 posInc pos n = map (\ (a, b) -> (a, b + n)) pos
 
--- | Get the index of the first occurence of a formal parameter in a given local environment.
-posInd :: Expr -> [(Expr, Int)] -> Either String Int
-posInd e pos = case lookup e pos of
-    Just n -> return n
-    _      -> Left $ "Runtime error: Local environment " ++ show pos ++ " does not contain formal parameter " ++ show e ++ "."
+-- | Get the index of the first occurence of a formal parameter in a given local environment, or look for 
+posInd :: Expr -> [(Expr, Int)] -> Global -> [Instruction]
+posInd e@(AtomicExpr (Var name)) pos g@(Global gcells) = case lookup e pos of
+    Just n -> [Pushparam n]
+    _      -> case lookup name gcells of
+      Just n' -> [Pushfun name]
+      _       -> [Error $ "Runtime error: Function " ++ show name ++ " not found."]
+posInd _ _ _                                           = [Error "Runtime error: Local environment indexed falsely."]
 
 -- | Replicate a list n-1 times and concatenate.
 replicate' :: [a] -> Int -> [a]

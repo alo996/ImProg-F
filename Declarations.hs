@@ -109,25 +109,25 @@ data AtomicExpr
     deriving Eq
 
 instance Show Expr where
-    show (Add e1 e2)           = show e1 ++ " + " ++ show e2
+    show (Add e1 e2)           = "(" ++ show e1 ++ " + " ++ show e2 ++ ")"
     show (AtomicExpr e)        = show e
-    show (BinaryMin e1 e2)     = show e1 ++ " - " ++ show e2
-    show (Div e1 e2)           = show e1 ++ " / " ++ show e2
-    show (Equal e1 e2)         = show e1 ++ " == " ++ show e2
-    show (Func e1 e2)          = show e1 ++ " " ++ show e2
+    show (BinaryMin e1 e2)     = "(" ++ show e1 ++ " - " ++ show e2 ++ ")"
+    show (Div e1 e2)           = "(" ++ show e1 ++ " / " ++ show e2 ++ ")"
+    show (Equal e1 e2)         = "(" ++ show e1 ++ " == " ++ show e2 ++ ")"
+    show (Func e1 e2)          = show "(FuncApp (" ++ show e1 ++ ") (" ++ show e2 ++ "))"
     show (IfThenElse e1 e2 e3) = "if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3
-    show (LessThan e1 e2)      = show e1 ++ " < " ++ show e2
+    show (LessThan e1 e2)      = "(" ++ show e1 ++ " < " ++ show e2 ++ ")"
     show (LetIn e1 e2)         = "let " ++ show e1 ++ " in " ++ show e2
-    show (LogicalAnd e1 e2)    = show e1 ++ " & " ++ show e2
-    show (LogicalNot e)        = "!" ++ show e
-    show (LogicalOr e1 e2)     = show e1 ++ " | " ++ show e2
-    show (Mult e1 e2)          = show e1 ++ "*" ++ show e2
-    show (UnaryMin e)          = "-" ++ show e
+    show (LogicalAnd e1 e2)    = "(" ++ show e1 ++ " & " ++ show e2 ++ ")"
+    show (LogicalNot e)        = "(Not " ++ show e ++ ")"
+    show (LogicalOr e1 e2)     = "(" ++ show e1 ++ " | " ++ show e2 ++ ")"
+    show (Mult e1 e2)          = "(" ++ show e1 ++ " * " ++ show e2 ++ ")"
+    show (UnaryMin e)          = "(Minus " ++ show e ++ ")"
 
 instance Show AtomicExpr where
-    show (Var s)        = show s
-    show (LitBool bool) = show bool
-    show (LitNum n)     = show n
+    show (Var s)        = "Var " ++ show s
+    show (LitBool bool) = "Bool " ++ show bool
+    show (LitNum n)     = "Num " ++ show n
     show (Expr e)       = show e
 
 
@@ -220,7 +220,7 @@ instance Show Stack where
     show (Stack scells) = "Stack: " ++ formatCells scells "s"
 
 instance Show Global where
-    show (Global gcells) = "+———----------------+\n| Global environment |\n+———----------------+\n" ++ formatCells gcells "g"
+    show (Global gcells) = "+———-----------------+\n| Global environment |\n+———-----------------+\n" ++ formatCells gcells "g"
 
 instance Show Heap where
     show (Heap hcells) = "Heap: " ++ formatCells hcells "h"
@@ -239,6 +239,8 @@ instance Show State where
         "+———----+\n| State |\n+———----+\n" ++ 
         "I:  " ++ show (ccells !! pc s) ++ 
         "\nSP: " ++ show (sp s) ++
-        "\nPC: " ++ show (pc s) ++ 
+        "\nPC: " ++ show (pc s) ++
+        "\n" ++ show (code s) ++ 
         "\n" ++ show (stack s) ++
+        "\n" ++ show (global s) ++
         "\n" ++ show (heap s)
