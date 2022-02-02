@@ -177,7 +177,7 @@ data State
     | ErrorState String
 
 {- | MF takes as input a list of instructions and interprets them. 'Instruction' can take on values that each correspond to a certain functionality specified in MF.hs.
--} 
+-}
 data Instruction
     = Alloc
     | Call
@@ -202,17 +202,18 @@ data Instruction
 data Operator
     = AndOp
     | BinaryMinOp
-    | DivideOp 
-    | EqualsOp 
-    | IfOp 
+    | DivideOp
+    | EqualsOp
+    | IfOp
     | LessOp
     | NotOp
     | OrOp
     | PlusOp
-    | TimesOp 
+    | TimesOp
     | UnaryMinOp
     deriving (Eq, Show)
 
+-- | The Stack data construction is being instanciated with Show to customly print interim State results
 instance Show Code where
     show (Code ccells) = "+———-----------+\n| Instructions |\n+——------------+\n" ++ formatCells ccells "c"
 
@@ -227,17 +228,18 @@ instance Show Heap where
 
 -- | 'formatCells' is used to produce readable output of the stores used in MF.
 formatCells :: (Show a) => [a] -> String -> String
-formatCells xs prefix = formatCells' xs 0 "" 
+formatCells xs prefix = formatCells' xs 0 ""
   where
     formatCells' :: (Show a) => [a] -> Int -> String -> String
     formatCells' (x : xs) n acc = formatCells' xs (n + 1) (acc ++ prefix ++ show n ++ ": " ++ show x ++ "\n")
     formatCells' [] _ acc       = acc
 
+-- | Custom show function to print States visually appealing
 instance Show State where
     show (ErrorState error)          = error
     show s@State{code = Code ccells} =
-        "+———----+\n| State |\n+———----+\n" ++ 
-        "I:  " ++ show (ccells !! pc s) ++ 
+        "+———----+\n| State |\n+———----+\n" ++
+        "I:  " ++ show (ccells !! pc s) ++
         "\nSP: " ++ show (sp s) ++
         "\nPC: " ++ show (pc s) ++
         "\n" ++ show (stack s) ++
