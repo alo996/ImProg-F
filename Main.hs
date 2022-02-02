@@ -1,3 +1,7 @@
+{- |
+Module      : Main
+Description : This module is the main program of this project containing functions to enter F code and returning reseluts at different levels from tokenizer to MF.
+-}
 {-# LANGUAGE NamedFieldPuns #-}
 module Main where
 
@@ -7,13 +11,14 @@ import MF (interpret, resultToString, interpretVerbose)
 import Parser (defsToString, program)
 import Tokenizer (tokenize, tokensToString)
 
-
+---------------------------------------- MAIN FUNCTIONS ----------------------------------------------------------------
+-- | 'main' is the program loop which asks for F code and prints the results and interim results of the compiler process
 main :: IO ()
 main = do
     putStrLn "Please enter an F program and hit enter (end with an empty line):"
     input <- getLines
     case tokenize input of
-        Right toks -> do 
+        Right toks -> do
             putStrLn $ tokensToString toks
             case program toks of
                 Right ast -> do
@@ -32,7 +37,7 @@ main = do
             response <- getLine
             case response of
                 "y" -> putStrLn "\n" >> main
-                "n" -> putStrLn "Goodbye!"  
+                "n" -> putStrLn "Goodbye!"
                 _   -> anotherOne
         getLines :: IO String
         getLines = do
@@ -43,10 +48,11 @@ main = do
                     xs <- getLines
                     return $ x ++ "\n" ++ xs
 
+-- | 'main' ' takes a F code string as an input and prints the results to the console. This function also prints out all interim states of MF.
 main' :: String -> IO ()
 main' input =
     case tokenize input of
-        Right toks -> do 
+        Right toks -> do
             putStrLn $ tokensToString toks
             case program toks of
                 Right ast -> do
