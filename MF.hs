@@ -1,6 +1,6 @@
 {- |
 Module      : MF
-Description : This module contains all functionality to interpret a translated F program. 
+Description : This module contains all functionality to interpret a translated F program.
 -}
 {-# LANGUAGE NamedFieldPuns #-}
 module MF where
@@ -50,7 +50,7 @@ run OpUpdate s         = opUpdate s
 run (Pushfun fname) s  = pushfun s fname
 run (Pushparam addr) s = pushparam s addr
 run (Pushpre kw) s     = pushpre s kw
-run (Pushval typ val) s 
+run (Pushval typ val) s
     | typ == "Int" = pushval s 1 val
     | otherwise    = pushval s 2 val
 run Reset s            = reset s
@@ -118,19 +118,19 @@ operator s op = case op of
                                             else let (n, heap') = newVAL (heap s) 2 1 in case saveStack stack (StackCell n) (sp s - 1) of
                                                 Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap'}
                                                 Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                _   -> ErrorState "Runtime error in 'operator'."
+                                _   -> ErrorState "Runtime error in 'operator'. 1"
                             Right (VALNum w)  -> case op of
                                 UnaryMinOp -> let (n, heap') = newVAL (heap s) 0 (- w) in case saveStack stack (StackCell n) (sp s - 1) of
                                     Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap'}
                                     Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                _         -> ErrorState "Runtime error in 'operator'."
+                                _         -> ErrorState "Runtime error in 'operator': Keyword 'not' must not be applied to Integer"
                             Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                            _                    -> ErrorState "Runtime error in 'operator'."
+                            _                    -> ErrorState "Runtime error in 'operator'. 3"
                         Left error -> ErrorState $ "Runtime error in 'operator': " ++ error
                     Left error -> ErrorState $ "Runtime error in 'operator': " ++ error
                 Left error  -> ErrorState $ "Runtime error in 'operator': " ++ error
             Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-            _                    -> ErrorState "Runtime error in 'operator'."
+            _                    -> ErrorState "Runtime error in 'operator'. 4"
         Left error  -> ErrorState $ "Runtime error in 'operator': " ++ error
     2 -> case accessStack (stack s) (sp s - 3) of
         Right (StackCell addr) -> case value (heap s) addr of
@@ -159,10 +159,10 @@ operator s op = case op of
                                                     case saveStack stack (StackCell n) (sp s - 3) of
                                                         Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = heap'}
                                                         Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                                _      -> ErrorState $ "Runtime error: Booleans " ++ show bool1 ++ " and " ++ show bool2 ++ " can not be evaluated with operator " ++ show op ++ "."
-                                            Right (VALNum num)    -> ErrorState $ "Runtime error: Boolean " ++ show bool1 ++ " and integer " ++ show num ++ " can not be evaluated with operator " ++ show op ++ "."
+                                                _      -> ErrorState $ "Runtime error: Booleans " ++ boolify (show bool1) ++ " and " ++ boolify (show bool2) ++ " can not be evaluated with operator " ++ show op ++ "."
+                                            Right (VALNum num)    -> ErrorState $ "Runtime error: Boolean " ++ boolify (show bool1) ++ " and integer " ++ show num ++ " can not be evaluated with operator " ++ show op ++ "."
                                             Left error            -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                            _                     -> ErrorState "Runtime error in 'operator'."
+                                            _                     -> ErrorState "Runtime error in 'operator'. 5"
                                         Right (VALNum num1) -> case hcell2 of
                                             Right (VALNum num2) -> case op of
                                                 EqualsOp -> let (n, heap') = newVAL (heap s) 2 (fromEnum $ num1 == num2) in
@@ -185,16 +185,16 @@ operator s op = case op of
                                                     case saveStack stack (StackCell n) (sp s - 3) of
                                                         Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = heap'}
                                                         Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                                DivideOp -> if num2 == 0 
+                                                DivideOp -> if num2 == 0
                                                                 then ErrorState "Runtime error: Division by zero."
                                                                 else let (n, heap') = newVAL (heap s) 1 (num1 `div` num2) in
                                                     case saveStack stack (StackCell n) (sp s - 3) of
                                                         Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = heap'}
                                                         Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
                                                 _      -> ErrorState $ "Runtime error: Integers " ++ show num1 ++ " and " ++ show num2 ++ " can not be evaluated with operator " ++ show op ++ "."
-                                            Right (VALBool bool) -> ErrorState $ "Runtime error: Integer " ++ show num1 ++ " and boolean " ++ show bool ++ " can not be evaluated with operator " ++ show op ++ "."
+                                            Right (VALBool bool) -> ErrorState $ "Runtime error: Integer " ++ show num1 ++ " and boolean " ++ boolify (show bool) ++ " can not be evaluated with operator " ++ show op ++ "."
                                             Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                            _                    -> ErrorState "Runtime error in 'operator'."
+                                            _                    -> ErrorState "Runtime error in 'operator'. 6"
                                         _                   -> ErrorState $ "Runtime error in 'operator': Neither integer nor boolean accessed at heapcell " ++ show hcell1 ++ "."
                                 Left error          -> ErrorState $ "Runtime error in 'operator': " ++ error
                         Left error          -> ErrorState $ "Runtime error in 'operator': " ++ error
@@ -228,11 +228,11 @@ operator s op = case op of
                             Left error  -> ErrorState $ "Runtime error in 'operator': " ++ error
                         Left error  -> ErrorState $ "Runtime error in 'operator': " ++ error
                     Left error              -> ErrorState $ "Runtime error in 'operator': " ++ error
-                _ -> ErrorState "Runtime error in 'operator'."
+                _ -> ErrorState "Runtime error in 'operator'. 7"
             Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
             _                    -> ErrorState "Runtime error: If expression expects boolean value."
         Left error              -> ErrorState $ "Runtime error in 'operator': " ++ error
-    _ -> ErrorState "Runtime error in 'operator'."
+    _ -> ErrorState "Runtime error in 'operator'. 8"
 
 opUpdate :: State -> State
 opUpdate s = case accessStack (stack s) (sp s) of
@@ -281,10 +281,10 @@ reset s = s {sp = -1, pc = pc s + 1}
 
 
 return' :: State -> State
-return' s = case accessStack (stack s) (sp s - 1) of 
+return' s = case accessStack (stack s) (sp s - 1) of
     Right (StackCell addr) -> case accessStack (stack s) (sp s) of
         Right scell -> case saveStack (stack s) scell (sp s - 1) of
-            Right (Stack scells) -> s {pc = addr, sp = sp s - 1, stack = Stack (take (sp s) scells)} 
+            Right (Stack scells) -> s {pc = addr, sp = sp s - 1, stack = Stack (take (sp s) scells)}
             Left error           -> ErrorState $ "Runtime error in 'return'': " ++ error
         Left error             -> ErrorState $ "Runtime error in 'return'': " ++ error
     Left error            -> ErrorState $ "Runtime error in 'return'': " ++ error
@@ -331,7 +331,7 @@ updateLet (ErrorState error) _            = ErrorState $ "Runtime error in 'upda
 ---------------------------------------- HELPER FUNCTIONS FOR MF ----------------------------------------
 -- | 'address' returns the heap address of a given function name if successful, otherwise it returns an error.
 address :: Global -> String -> Either String Int
-address (Global gcells) f = address' gcells f 
+address (Global gcells) f = address' gcells f
   where
     address' :: [(String, Int)] -> String -> Either String Int
     address' ((fname, n) : xs) f = if fname == f then return n else address' xs f
@@ -339,10 +339,10 @@ address (Global gcells) f = address' gcells f
 
 -- If 'add2arg' accesses an APP-cell, it returns its second argument. If it accesses an IND cell, it recursively calls itself with its argument.
 add2arg :: Heap -> Int -> Either String Int
-add2arg h@(Heap hcells) addr  
+add2arg h@(Heap hcells) addr
     | (addr >= 0) && (addr < length hcells) = case hcells !! addr of
         APP addr1 addr2 -> return addr2
-        IND addr3       -> add2arg h addr3 
+        IND addr3       -> add2arg h addr3
         _               -> Left $ "Expected heap address, found code address " ++ show addr ++ " instead."
     | otherwise                             = Left $ "Expected heap address, found code address " ++ show addr ++ " instead."
 
@@ -362,7 +362,7 @@ arity' op = case op of
     UnaryMinOp  -> 1
 
 -- | 'interpretVerbose' returns the emulation trace as a string.
-interpretVerbose :: State -> String 
+interpretVerbose :: State -> String
 interpretVerbose (ErrorState error) = error
 interpretVerbose s                  = case accessCode (code s) (pc s) of
         Right instr -> case instr of
@@ -409,3 +409,6 @@ value heap addr = case accessHeap heap addr of
     Right (IND addr1) -> value heap addr1
     Right hcell       -> Right hcell
     Left error        -> Left error
+
+boolify :: String -> String
+boolify x = if x == "0" then "'false'" else "'true'"
