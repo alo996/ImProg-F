@@ -373,15 +373,16 @@ interpretVerbose s                  = case accessCode (code s) (pc s) of
 newAPP, newVAL :: Heap -> Int -> Int -> (Int, Heap)
 newAPP h@(Heap hcells) a b = (length hcells, pushHeap h (APP a b))
 
+-- | 'newVAL' creates a heapcell of type 't' (1 for integers, 2 for booleans) with value 'w'.
 newVAL h@(Heap hcells) t w
-        | t == 2    = (length hcells, pushHeap h (VALBool w))
-        | otherwise = (length hcells, pushHeap h (VALNum w))
+        | t == 1    = (length hcells, pushHeap h (VALNum w))
+        | otherwise = (length hcells, pushHeap h (VALBool w))
 
 newIND :: Heap -> Int -> (Int, Heap)
 newIND h@(Heap hcells) n = (length hcells, pushHeap h (IND n))
 
 newPRE :: Heap -> Operator -> Int -> (Int, Heap)
-newPRE h@(Heap hcells) op n = (length hcells, pushHeap h $ PRE op $ arity' op)
+newPRE h@(Heap hcells) op n = (length hcells, pushHeap h (PRE op $ arity' op))
 
 newUNI :: Heap -> (Int, Heap)
 newUNI h@(Heap hcells) = (length hcells, pushHeap h UNINITIALIZED)
