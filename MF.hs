@@ -23,7 +23,6 @@ import Store
     pushStack,
     saveHeap,
     saveStack)
-import System.FilePath (joinPath)
 
 
 ---------------------------------------- MAIN EXECUTION CYCLE ----------------------------------------
@@ -160,9 +159,10 @@ operator s op = case op of
                                                     case saveStack stack (StackCell n) (sp s - 3) of
                                                         Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = heap'}
                                                         Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                                _      -> ErrorState "Runtime error in 'operator'"
+                                                _      -> ErrorState $ "Runtime error: Booleans " ++ show bool1 ++ " and " ++ show bool2 ++ " can not be evaluated with operator " ++ show op ++ "."
+                                            Right (VALNum num)    -> ErrorState $ "Runtime error: Boolean " ++ show bool1 ++ " and integer " ++ show num ++ " can not be evaluated with operator " ++ show op ++ "."
                                             Left error            -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                            _                     -> ErrorState "Runtime error in 'operator'"
+                                            _                     -> ErrorState "Runtime error in 'operator'."
                                         Right (VALNum num1) -> case hcell2 of
                                             Right (VALNum num2) -> case op of
                                                 EqualsOp -> let (n, heap') = newVAL (heap s) 2 (fromEnum $ num1 == num2) in
@@ -191,16 +191,17 @@ operator s op = case op of
                                                     case saveStack stack (StackCell n) (sp s - 3) of
                                                         Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 3, stack = Stack (take (sp s - 2) scells), heap = heap'}
                                                         Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                                _      -> ErrorState "Runtime error in 'operator'"
+                                                _      -> ErrorState $ "Runtime error: Integers " ++ show num1 ++ " and " ++ show num2 ++ " can not be evaluated with operator " ++ show op ++ "."
+                                            Right (VALBool bool) -> ErrorState $ "Runtime error: Integer " ++ show num1 ++ " and boolean " ++ show bool ++ " can not be evaluated with operator " ++ show op ++ "."
                                             Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                            _                    -> ErrorState "Runtime error in 'operator'"
-                                        _                   -> ErrorState "Runtime error in 'operator'"
+                                            _                    -> ErrorState "Runtime error in 'operator'."
+                                        _                   -> ErrorState $ "Runtime error in 'operator': Neither integer nor boolean accessed at heapcell " ++ show hcell1 ++ "."
                                 Left error          -> ErrorState $ "Runtime error in 'operator': " ++ error
                         Left error          -> ErrorState $ "Runtime error in 'operator': " ++ error
                     Left error          -> ErrorState $ "Runtime error in 'operator': " ++ error
                 Left error          -> ErrorState $ "Runtime error in 'operator': " ++ error
             Left error          -> ErrorState $ "Runtime error in 'operator': " ++ error
-            _                   -> ErrorState "Runtime error in 'operator'"
+            _                   -> ErrorState $ "Runtime error in 'operator': No binary operator accessed at heapcell " ++ show (value (heap s) addr)
         Left error          -> ErrorState $ "Runtime error in 'operator': " ++ error
     3 -> case accessStack (stack s) (sp s) of
         Right (StackCell addr) -> case value (heap s) addr of
@@ -227,9 +228,9 @@ operator s op = case op of
                             Left error  -> ErrorState $ "Runtime error in 'operator': " ++ error
                         Left error  -> ErrorState $ "Runtime error in 'operator': " ++ error
                     Left error              -> ErrorState $ "Runtime error in 'operator': " ++ error
-                _ -> ErrorState "Runtime error: Cannot execute Operator 3."
+                _ -> ErrorState "Runtime error in 'operator'."
             Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-            _                    -> ErrorState "Runtime error in 'operator'."
+            _                    -> ErrorState "Runtime error: If expression expects boolean value."
         Left error              -> ErrorState $ "Runtime error in 'operator': " ++ error
     _ -> ErrorState "Runtime error in 'operator'."
 

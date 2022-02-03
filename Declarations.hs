@@ -115,7 +115,7 @@ instance Show Expr where
     show (Div e1 e2)           = "(" ++ show e1 ++ " / " ++ show e2 ++ ")"
     show (Equal e1 e2)         = "(" ++ show e1 ++ " == " ++ show e2 ++ ")"
     show (Func e1 e2)          = show "(FuncApp (" ++ show e1 ++ ") (" ++ show e2 ++ "))"
-    show (IfThenElse e1 e2 e3) = "if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3
+    show (IfThenElse e1 e2 e3) = "(if " ++ show e1 ++ " then (" ++ show e2 ++ ") else (" ++ show e3 ++ "))"
     show (LessThan e1 e2)      = "(" ++ show e1 ++ " < " ++ show e2 ++ ")"
     show (LetIn e1 e2)         = "let " ++ show e1 ++ " in " ++ show e2
     show (LogicalAnd e1 e2)    = "(" ++ show e1 ++ " & " ++ show e2 ++ ")"
@@ -211,7 +211,7 @@ data Operator
     | PlusOp
     | TimesOp
     | UnaryMinOp
-    deriving (Eq, Show)
+    deriving Eq
 
 -- | The Stack data construction is being instanciated with Show to customly print interim State results
 instance Show Code where
@@ -244,3 +244,17 @@ instance Show State where
         "\nPC: " ++ show (pc s) ++
         "\n" ++ show (stack s) ++
         show (heap s)
+
+instance Show Operator where
+    show AndOp       = "&"
+    show BinaryMinOp = "-"
+    show DivideOp    = "/"
+    show EqualsOp    = "=="
+    show IfOp        = "if-then-else"
+    show LessOp      = "<"
+    show NotOp       = "not"
+    show OrOp        = "|"
+    show PlusOp      = "+"
+    show TimesOp     = "*"
+    show UnaryMinOp  = "-"
+
