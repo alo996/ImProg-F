@@ -23,6 +23,7 @@ import Store
     pushStack,
     saveHeap,
     saveStack)
+import System.FilePath (joinPath)
 
 
 ---------------------------------------- MAIN EXECUTION CYCLE ----------------------------------------
@@ -277,11 +278,12 @@ pushval s t w = s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (St
 reset :: State -> State
 reset s = s {sp = -1, pc = pc s + 1}
 
+
 return' :: State -> State
-return' s = case accessStack (stack s) (sp s - 1) of
+return' s = case accessStack (stack s) (sp s - 1) of 
     Right (StackCell addr) -> case accessStack (stack s) (sp s) of
-        Right (StackCell addr1) -> case saveStack (stack s) (StackCell addr1) (sp s - 1) of
-            Right (Stack scells) -> s {pc = addr, sp = sp s - 1, stack = Stack (take (sp s) scells)}
+        Right scell -> case saveStack (stack s) scell (sp s - 1) of
+            Right (Stack scells) -> s {pc = addr, sp = sp s - 1, stack = Stack (take (sp s) scells)} 
             Left error           -> ErrorState $ "Runtime error in 'return'': " ++ error
         Left error             -> ErrorState $ "Runtime error in 'return'': " ++ error
     Left error            -> ErrorState $ "Runtime error in 'return'': " ++ error
@@ -393,7 +395,11 @@ resultToString s                  = case accessStack (stack s) (sp s) of
     Right (StackCell addr) -> case accessHeap (heap s) addr of
         Right (VALNum n)  -> "---> Result: " ++ show n
         Right (VALBool b) -> if b == 0 then "---> Result: false" else "---> Result: true"
-        Left error        -> "---> " ++ error
+        Right (IND m)     -> case value (heap s) m of
+            Right (VALNum n)  -> "---> Result: " ++ show n
+            Right (VALBool b) -> "---> Result: " ++ show b
+            Left error        -> "---> " ++ error
+            _                 -> "---> Runtime error."
         _                 -> "---> Runtime error."
     Left error             -> "---> " ++ error
 

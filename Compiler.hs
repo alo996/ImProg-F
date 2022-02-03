@@ -25,6 +25,7 @@ import Declarations
 import Store (codeInit)
 import Tokenizer
 import Parser
+import Language.Haskell.Extension (KnownExtension(HereDocuments))
 
 
 ---------------------------------------- F PROGRAM TRANSLATION ----------------------------------------
