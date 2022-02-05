@@ -1,18 +1,18 @@
 {- |
 Module      : Main
-Description : This module is the main program of this project containing functions to enter F code and returning reseluts at different levels from tokenizer to MF.
+Description : This module is the main program of this project containing functions to enter F code and returning results at different levels from tokenizer to MF.
 -}
 {-# LANGUAGE NamedFieldPuns #-}
 module Main where
 
 import Compiler (compileProgram)
-import Declarations
+import Declarations (State(ErrorState, code))
 import MF (interpret, resultToString, interpretVerbose)
 import Parser (defsToString, program)
 import Tokenizer (tokenize, tokensToString)
 
----------------------------------------- MAIN FUNCTIONS ----------------------------------------------------------------
--- | 'main' is the program loop which asks for F code and prints the results and interim results of the compiler process
+
+-- | 'main' is the program loop which asks for F code and prints the results and interim results of the compiler process.
 main :: IO ()
 main = do
     putStrLn "Please enter an F program and hit enter (end with an empty line):"
