@@ -81,7 +81,7 @@ data LocalDef
     = LocalDef Expr Expr
     deriving (Eq, Show)
 
--- | All possible expressions are summed up in the 'Expr' type.
+-- | All possible expressions are defined in the 'Expr' type.
 data Expr
     = Add Expr Expr
     | AtomicExpr AtomicExpr
@@ -115,7 +115,7 @@ instance Show Expr where
     show (Div e1 e2)           = "(" ++ show e1 ++ " / " ++ show e2 ++ ")"
     show (Equal e1 e2)         = "(" ++ show e1 ++ " == " ++ show e2 ++ ")"
     show (Func e1 e2)          = show "(FuncApp (" ++ show e1 ++ ") (" ++ show e2 ++ "))"
-    show (IfThenElse e1 e2 e3) = "(if " ++ show e1 ++ " then (" ++ show e2 ++ ") else (" ++ show e3 ++ "))"
+    show (IfThenElse e1 e2 e3) = "if (" ++ show e1 ++ ") then (" ++ show e2 ++ ") else (" ++ show e3 ++ ")"
     show (LessThan e1 e2)      = "(" ++ show e1 ++ " < " ++ show e2 ++ ")"
     show (LetIn e1 e2)         = "let " ++ show e1 ++ " in " ++ show e2
     show (LogicalAnd e1 e2)    = "(" ++ show e1 ++ " & " ++ show e2 ++ ")"
@@ -213,7 +213,7 @@ data Operator
     | UnaryMinOp
     deriving Eq
 
--- | The Stack data construction is being instanciated with Show to customly print interim State results.
+-- | Customized show functions are necessary to properly print interim states during execution.
 instance Show Code where
     show (Code ccells) = "+———-----------+\n| Instructions |\n+——------------+\n" ++ formatCells ccells "c"
 
@@ -226,7 +226,7 @@ instance Show Global where
 instance Show Heap where
     show (Heap hcells) = "Heap:\n" ++ formatCells hcells "h"
 
--- | 'formatCells' is used to produce readable output of the stores used in MF.
+-- | 'formatCells' is used to produce readable output of the used stores.
 formatCells :: (Show a) => [a] -> String -> String
 formatCells xs prefix = formatCells' xs 0 ""
   where
@@ -234,7 +234,7 @@ formatCells xs prefix = formatCells' xs 0 ""
     formatCells' (x : xs) n acc = formatCells' xs (n + 1) (acc ++ prefix ++ show n ++ ": " ++ show x ++ "\n")
     formatCells' [] _ acc       = acc
 
--- | Custom show function to print States visually appealing
+-- | Custom show function to print States visually appealing.
 instance Show State where
     show (ErrorState error)          = error
     show s@State{code = Code ccells} =
