@@ -43,7 +43,7 @@ compileProgram defs = compileProgram' defs s
         -- | After compiling all definitions, 'lookupMain' checks whether the function 'main' has been specified as required.
         lookupMain :: Heap -> State
         lookupMain (Heap (DEF {fname, arity} : hs)) = if fname == "main" && arity == 0 then s else lookupMain (Heap hs)
-        lookupMain _                                = ErrorState "Runtime error: Function main not defined."
+        lookupMain _                                = ErrorState "Runtime error: Function 'main' not defined."
 
 -- | Compile a definition. 'compileDefinition' takes the definition to compile and the current machine state and updates its code, global environment and heap.
 compileDefinition :: Def -> State -> State
@@ -59,7 +59,7 @@ compileDefinition (Def (AtomicExpr (Var fname)) es e) s@State{} = case checkDupl
         localenv = createPos es
         len = length localenv
         hcell = [DEF fname (length localenv) (length ccells)]
-compileDefinition _ _                                            = ErrorState "Error in 'compileDefinition'"
+compileDefinition _ _                                            = ErrorState "Error in 'compileDefinition'."
 
 -- | Compile an expression. 'compileExpression' takes the expression to be compiled and a local environment and returns a list of MF instructions.
 compileExpression :: Expr -> [(Expr, Int)] -> Global -> [Instruction]

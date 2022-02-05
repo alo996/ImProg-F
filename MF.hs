@@ -6,6 +6,7 @@ Description : This module contains all functionality to interpret a translated F
 module MF where
 
 import Data.Bits (Bits((.&.), (.|.), xor))
+import Debug.Trace
 import Declarations
     (Global(..),
     Heap(..),
@@ -120,10 +121,10 @@ operator s op = case op of
                                                 Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
                                 _   -> ErrorState "Runtime error in 'operator'. 1"
                             Right (VALNum w)  -> case op of
-                                UnaryMinOp -> let (n, heap') = newVAL (heap s) 0 (- w) in case saveStack stack (StackCell n) (sp s - 1) of
+                                UnaryMinOp -> let (n, heap') = newVAL (heap s) 1 (- w) in case saveStack stack (StackCell n) (sp s - 1) of
                                     Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap'}
                                     Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                _         -> ErrorState "Runtime error in 'operator': Keyword 'not' must not be applied to Integer"
+                                _         -> ErrorState $ "Runtime error in 'operator': Operator 'not' must not be applied to integer " ++  show w ++ "."
                             Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
                             _                    -> ErrorState "Runtime error in 'operator'. 3"
                         Left error -> ErrorState $ "Runtime error in 'operator': " ++ error
@@ -335,7 +336,7 @@ address (Global gcells) f = address' gcells f
   where
     address' :: [(String, Int)] -> String -> Either String Int
     address' ((fname, n) : xs) f = if fname == f then return n else address' xs f
-    address' [] f                = Left $ "Runtime error: Global environment does not contain definition of function '" ++ show f ++ "'."
+    address' [] f                = Left $ "Runtime error: Global environment does not contain definition of function '" ++ f ++ "'."
 
 -- If 'add2arg' accesses an APP-cell, it returns its second argument. If it accesses an IND cell, it recursively calls itself with its argument.
 add2arg :: Heap -> Int -> Either String Int
@@ -343,8 +344,8 @@ add2arg h@(Heap hcells) addr
     | (addr >= 0) && (addr < length hcells) = case hcells !! addr of
         APP addr1 addr2 -> return addr2
         IND addr3       -> add2arg h addr3
-        _               -> Left $ "Expected heap address, found code address " ++ show addr ++ " instead."
-    | otherwise                             = Left $ "Expected heap address, found code address " ++ show addr ++ " instead."
+        _               -> Left $ "Expected an APP-cell, found " ++ show (hcells !! addr) ++ " instead."
+    | otherwise                             = Left $ "No heapcell at " ++ show addr ++ "."
 
 -- | 'arity'' returns the number of formal arguments of an operator.
 arity' :: Operator -> Int
@@ -360,6 +361,9 @@ arity' op = case op of
     PlusOp      -> 2
     TimesOp     -> 2
     UnaryMinOp  -> 1
+
+boolify :: String -> String
+boolify x = if x == "0" then "'false'" else "'true'"
 
 -- | 'interpretVerbose' returns the emulation trace as a string.
 interpretVerbose :: State -> String
@@ -409,6 +413,3 @@ value heap addr = case accessHeap heap addr of
     Right (IND addr1) -> value heap addr1
     Right hcell       -> Right hcell
     Left error        -> Left error
-
-boolify :: String -> String
-boolify x = if x == "0" then "'false'" else "'true'"

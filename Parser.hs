@@ -5,14 +5,15 @@ Description : This module contains all functionality to pursue syntactical analy
 module Parser where
 
 import Declarations
-    (Parser,
-    AtomicExpr(Var, LitBool, LitNum),
+    (AtomicExpr(Var, LitBool, LitNum),
     Expr(..),
     LocalDef(..),
     Def(..),
-    Token(..),
+    Parser,
+    BoolF(BoolF),
     Keyword(LBracket, Semicolon, Assign, Let, In, If, Then, Else, Or,
-            And, Not, Equals, Less, Minus, Divide, RBracket, Plus, Times))
+            And, Not, Equals, Less, Minus, Divide, RBracket, Plus, Times),
+      Token(..))
 import Tokenizer (tokenize)
 
 
@@ -113,11 +114,11 @@ atomicExpr ((NumberToken num, _) : ts)       = return (AtomicExpr (LitNum num), 
 atomicExpr ((KeywordToken LBracket, _) : ts) = do
   (e, ts1) <- expr ts
   match (KeywordToken RBracket) ts1 >>= \ (_, ts2) -> return (e, ts2)
-atomicExpr ((token, line) : _)               = Left $ "Syntax error in line " ++ show line ++ ": Expression expected but found '" ++ show token ++ "'."
+atomicExpr ((token, line) : _)               = Left $ "Syntax error in line " ++ show line ++ ": Expression expected but found '" ++ toksToString token ++ "'."
 atomicExpr []                                = Left "Syntax error at end of program: Expression expected."
 
 variable ((NameToken name, _) : ts) = return (AtomicExpr (Var name), ts)
-variable ((token, line) : _)        = Left $ "Syntax error in line " ++ show line ++ ": Identifier expected but found '" ++ show token ++ "'."
+variable ((token, line) : _)        = Left $ "Syntax error in line " ++ show line ++ ": Identifier expected but found '" ++ toksToString token ++ "'."
 variable []                         = Left "Syntax error at end of program: Identifier expected."
 
 -- | 'Rest' functions recursively iterate through the remaining tokenstream until their pattern is no longer matched.
@@ -141,6 +142,9 @@ restExpr8 ts = case ts of
 
 
 ---------------------------------------- HELPER FUNCTIONS FOR PARSER ----------------------------------------
+defsToString :: [Def] -> String
+defsToString defs = foldl (++) "+———------------+\n| Parser Output |\n+——----------—--+\n" (map (\ d -> show d ++ "\n") defs)
+
 {- | 'match' checks whether a certain keyword is next in the remaining tokenstream. If so, this token is removed and the caller can operate on the remaining tokens. Otherwise it returns an error, indicating a syntactical error.
 -}
 match :: Token -> Parser ()  
@@ -148,9 +152,14 @@ match (KeywordToken key1) ((KeywordToken key2, line) : ts)
     -- If the tokenstream begins with the expected keyword, 'match' returns the remaining tokens for further calculations.
   | key1 == key2 = return ((), ts)
     -- If the keywords do not match, an error is returned.
-  | otherwise    = Left $ "Syntax error in line " ++ show line ++ ": Keyword '" ++ show (KeywordToken key1) ++ "' expected but found '" ++ show (KeywordToken key2) ++ "'."
-match t1 ((t2 , line) : _) = Left $ "Syntax error in line " ++ show line ++ ": Keyword " ++ show t1 ++ " expected but found '" ++ show t2 ++ "'."
-match t1 []                = Left $ "Syntax error at end of program: Keyword '" ++ show t1 ++ "' expected."
+  | otherwise    = Left $ "Syntax error in line " ++ show line ++ ": Keyword '" ++ toksToString (KeywordToken key1) ++ "' expected but found '" ++ toksToString (KeywordToken key2) ++ "'."
+match t1 ((t2 , line) : _) = Left $ "Syntax error in line " ++ show line ++ ": Keyword " ++ toksToString t1 ++ " expected but found '" ++ show t2 ++ "'."
+match t1 []                = Left $ "Syntax error at end of program: Keyword '" ++ toksToString t1 ++ "' expected."
 
-defsToString :: [Def] -> String
-defsToString defs = foldl (++) "+———------------+\n| Parser Output |\n+——----------—--+\n" (map (\ d -> show d ++ "\n") defs)
+{- | 'toksToString' gives a compact string representation of tokens for error handling. The automatically derived 'show' function for tokens aims at correctly representing tokens in verbose output mode.
+-}
+toksToString :: Token -> String
+toksToString (BooleanToken (BoolF bool)) = show bool
+toksToString (KeywordToken kw)           = show kw
+toksToString (NameToken name)            = show name
+toksToString (NumberToken num)           = show num
