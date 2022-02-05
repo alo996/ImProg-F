@@ -37,7 +37,7 @@ def ts = do
     -- The function has no formal parameters and the next token is '='. Therefore continues parsing the defining expression.
     (KeywordToken Assign, _) : ts2 -> expr ts2 >>= \ (e1, ts3) -> return (Def e [] e1, ts3) 
     -- The next token is neither a variable nor '='. This is syntactically incorrect, therefore returns an error. 
-    (token, line) : _              -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' or expression expected but found '" ++ show token ++ "'."
+    (token, line) : _              -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' or expression expected but found '" ++ toksToString token ++ "'."
     -- The tokenstream has suddenly ended, which is also syntactically incorrect.
     []                             -> Left "Syntax error at end of program: Keyword '=' or expression expected."
 
@@ -152,8 +152,8 @@ match (KeywordToken key1) ((KeywordToken key2, line) : ts)
     -- If the tokenstream begins with the expected keyword, 'match' returns the remaining tokens for further calculations.
   | key1 == key2 = return ((), ts)
     -- If the keywords do not match, an error is returned.
-  | otherwise    = Left $ "Syntax error in line " ++ show line ++ ": Keyword '" ++ toksToString (KeywordToken key1) ++ "' expected but found '" ++ toksToString (KeywordToken key2) ++ "'."
-match t1 ((t2 , line) : _) = Left $ "Syntax error in line " ++ show line ++ ": Keyword " ++ toksToString t1 ++ " expected but found '" ++ show t2 ++ "'."
+  | otherwise    = Left $ "Syntax error in line " ++ show line ++ ": Keyword '" ++ show key1 ++ "' expected but found '" ++ show key2 ++ "'."
+match t1 ((t2 , line) : _) = Left $ "Syntax error in line " ++ show line ++ ": Keyword '" ++ toksToString t1 ++ "' expected but found '" ++ toksToString t2 ++ "'."
 match t1 []                = Left $ "Syntax error at end of program: Keyword '" ++ toksToString t1 ++ "' expected."
 
 {- | 'toksToString' gives a compact string representation of tokens for error handling. The automatically derived 'show' function for tokens aims at correctly representing tokens in verbose output mode.

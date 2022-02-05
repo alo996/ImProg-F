@@ -213,7 +213,7 @@ data Operator
     | UnaryMinOp
     deriving Eq
 
--- | The Stack data construction is being instanciated with Show to customly print interim State results
+-- | The Stack data construction is being instanciated with Show to customly print interim State results.
 instance Show Code where
     show (Code ccells) = "+———-----------+\n| Instructions |\n+——------------+\n" ++ formatCells ccells "c"
 
@@ -257,4 +257,3 @@ instance Show Operator where
     show PlusOp      = "+"
     show TimesOp     = "*"
     show UnaryMinOp  = "-"
-

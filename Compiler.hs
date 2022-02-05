@@ -111,10 +111,10 @@ checkDuplicate f s = checkDuplicate' f s (heap s)
   where
     checkDuplicate' :: String -> State -> Heap -> State
     checkDuplicate' f s (Heap (DEF{fname} : hcells)) 
-        | f == fname = ErrorState $ "Runtime error: Multiple declarations of function " ++ show f ++ "."
+        | f == fname = ErrorState $ "Runtime error in 'checkDuplicate'': Multiple declarations of function '" ++ f ++ "'."
         | otherwise  = checkDuplicate' f s (Heap hcells)
     checkDuplicate' _ s (Heap []) = s
-    checkDuplicate' _ _ _         = ErrorState "Runtime error: Heap set up incorrectly."
+    checkDuplicate' _ _ _         = ErrorState "Runtime error 'checkDuplicate'': Heap set up incorrectly."
 
 -- | Create the global environment.
 createGlobal :: [Def] -> State -> State
@@ -126,7 +126,7 @@ createGlobal defs s = createGlobal' defs s 0
         s@State{global = Global gcells} acc 
           = createGlobal' defs s {global = Global (gcells ++ [(fname, acc)])} (acc + 1)
     createGlobal' [] s _ = s
-    createGlobal' _ _ _  = ErrorState "Runtime error: Global environment could not be set up."
+    createGlobal' _ _ _  = ErrorState "Runtime error in 'createGlobal'': Global environment set up incorrectly."
       
 -- | Create a local environment for a given list of formal parameters.
 createPos :: [Expr] -> [(Expr, Int)]
@@ -154,8 +154,8 @@ posInd e@(AtomicExpr (Var name)) pos g@(Global gcells) = case lookup e pos of
     Just n -> [Pushparam n]
     _      -> case lookup name gcells of
       Just n' -> [Pushfun name]
-      _       -> [Error $ "Runtime error: Function " ++ show name ++ " not found."]
-posInd _ _ _                                           = [Error "Runtime error: Local environment indexed falsely."]
+      _       -> [Error $ "Runtime error: Function '" ++ name ++ "' not found."]
+posInd _ _ _                                           = [Error "Runtime error in 'posInd': Local environment indexed incorrectly."]
 
 -- | Replicate a list n-1 times and concatenate.
 replicate' :: [a] -> Int -> [a]

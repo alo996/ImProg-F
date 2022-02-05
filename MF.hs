@@ -111,27 +111,27 @@ operator s op = case op of
                 Right scell -> case saveStack (stack s) scell (sp s - 2) of
                     Right stack   -> case accessStack stack (sp s) of
                         Right (StackCell addr1) -> case value (heap s) addr1 of
-                            Right (VALBool w) -> case op of
-                                NotOp -> if fromEnum w == 1
+                            Right (VALBool bool) -> case op of
+                                NotOp -> if fromEnum bool == 1
                                             then let (n, heap') = newVAL (heap s) 2 0 in case saveStack stack (StackCell n) (sp s - 1) of
                                                 Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap'}
                                                 Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
                                             else let (n, heap') = newVAL (heap s) 2 1 in case saveStack stack (StackCell n) (sp s - 1) of
                                                 Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap'}
                                                 Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                _   -> ErrorState "Runtime error in 'operator'. 1"
+                                _   -> ErrorState $ "Runtime error: Boolean " ++ boolify (show bool) ++ " can not be evaluated with operator " ++ show op ++ "."
                             Right (VALNum w)  -> case op of
                                 UnaryMinOp -> let (n, heap') = newVAL (heap s) 1 (- w) in case saveStack stack (StackCell n) (sp s - 1) of
                                     Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - 1, stack = Stack (take (sp s) scells), heap = heap'}
                                     Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                _         -> ErrorState $ "Runtime error in 'operator': Operator 'not' must not be applied to integer " ++  show w ++ "."
+                                _         -> ErrorState $ "Runtime error in 'operator': Operator '" ++ show op ++ "' must not be applied to integer " ++  show w ++ "."
                             Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-                            _                    -> ErrorState "Runtime error in 'operator'. 3"
+                            _                    -> ErrorState "Runtime error in 'operator'."
                         Left error -> ErrorState $ "Runtime error in 'operator': " ++ error
                     Left error -> ErrorState $ "Runtime error in 'operator': " ++ error
                 Left error  -> ErrorState $ "Runtime error in 'operator': " ++ error
             Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-            _                    -> ErrorState "Runtime error in 'operator'. 4"
+            _                    -> ErrorState "Runtime error in 'operator'."
         Left error  -> ErrorState $ "Runtime error in 'operator': " ++ error
     2 -> case accessStack (stack s) (sp s - 3) of
         Right (StackCell addr) -> case value (heap s) addr of
@@ -163,7 +163,7 @@ operator s op = case op of
                                                 _      -> ErrorState $ "Runtime error: Booleans " ++ boolify (show bool1) ++ " and " ++ boolify (show bool2) ++ " can not be evaluated with operator " ++ show op ++ "."
                                             Right (VALNum num)    -> ErrorState $ "Runtime error: Boolean " ++ boolify (show bool1) ++ " and integer " ++ show num ++ " can not be evaluated with operator " ++ show op ++ "."
                                             Left error            -> ErrorState $ "Runtime error in 'operator': " ++ error
-                                            _                     -> ErrorState "Runtime error in 'operator'. 5"
+                                            _                     -> ErrorState "Runtime error in 'operator'."
                                         Right (VALNum num1) -> case hcell2 of
                                             Right (VALNum num2) -> case op of
                                                 EqualsOp -> let (n, heap') = newVAL (heap s) 2 (fromEnum $ num1 == num2) in
@@ -229,11 +229,11 @@ operator s op = case op of
                             Left error  -> ErrorState $ "Runtime error in 'operator': " ++ error
                         Left error  -> ErrorState $ "Runtime error in 'operator': " ++ error
                     Left error              -> ErrorState $ "Runtime error in 'operator': " ++ error
-                _ -> ErrorState "Runtime error in 'operator'. 7"
+                _ -> ErrorState "Runtime error in 'operator'."
             Left error           -> ErrorState $ "Runtime error in 'operator': " ++ error
-            _                    -> ErrorState "Runtime error: If expression expects boolean value."
+            _                    -> ErrorState "Runtime error: 'If' expression expects boolean value."
         Left error              -> ErrorState $ "Runtime error in 'operator': " ++ error
-    _ -> ErrorState "Runtime error in 'operator'. 8"
+    _ -> ErrorState "Runtime error in 'operator'."
 
 opUpdate :: State -> State
 opUpdate s = case accessStack (stack s) (sp s) of
@@ -336,16 +336,16 @@ address (Global gcells) f = address' gcells f
   where
     address' :: [(String, Int)] -> String -> Either String Int
     address' ((fname, n) : xs) f = if fname == f then return n else address' xs f
-    address' [] f                = Left $ "Runtime error: Global environment does not contain definition of function '" ++ f ++ "'."
+    address' [] f                = Left $ "Runtime error: Function '" ++ f ++ "' not found."
 
 -- If 'add2arg' accesses an APP-cell, it returns its second argument. If it accesses an IND cell, it recursively calls itself with its argument.
 add2arg :: Heap -> Int -> Either String Int
 add2arg h@(Heap hcells) addr
-    | (addr >= 0) && (addr < length hcells) = case hcells !! addr of
+    | (addr >= 0) && (addr < length hcells) = let hcell = hcells !! addr in case hcell of
         APP addr1 addr2 -> return addr2
         IND addr3       -> add2arg h addr3
-        _               -> Left $ "Expected an APP-cell, found " ++ show (hcells !! addr) ++ " instead."
-    | otherwise                             = Left $ "No heapcell at " ++ show addr ++ "."
+        _               -> Left $ "Expected an APP-cell, found " ++ show hcell ++ " instead."
+    | otherwise                             = Left $ "No heapcell at index " ++ show addr ++ "."
 
 -- | 'arity'' returns the number of formal arguments of an operator.
 arity' :: Operator -> Int
