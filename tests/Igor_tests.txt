@@ -79,8 +79,7 @@ main = if let x = 4 in x * x == 9 then true else false;
 --for Errorstatements:
 
 IMPROVEMENTWORTHY:
-main = f 3 (f 4 (f 5 (f 6 (f 7))));
-f x y = x / y;
+main = f 3 (f 4 (f 5 (f 6 (f 7)))); f x y = x / y; -- done
 
 
 REIMPLEMENTED:
