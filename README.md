@@ -7,10 +7,40 @@ Implementation of the functional programming language 'F' using Haskell.
 
 This group project was part of the practical 'Implementierung von Programmiersprachen' at the Ludwig-Maximilians-Universität in Munich, winter semester 2021/22. It introduced the participants to basic principles of formal languages, functional programming, parsing, compiler construction and abstract machines.
 
+## Notes
 
-##  Installation
+- Int in Haskell is limited to the range of -2^29 to 2^29 - 1, and therefore, so are the values in our project
+- the result of a division is always an Integer
+- multiple operators without a bracket are not allowed (--, ++++,...)
+- no higher-order functions allowed
 
-tbd
+
+##  Installations Needed for Execution 
+
+### Basic Functionality:
+
+- [GHC and Haskell](https://www.haskell.org/downloads/)
+
+### Additional Functionality:
+
+- [The Haskell Tool Stack](https://www.haskell.org/downloads/)
+
+## Usage (with Stack)
+
+- enter the directory where your Stack executable is located
+```bash
+stack run
+```
+(Output: "Please enter an F program and hit enter (end with an empty line):")
+```bash
+main = 9 + 10;
+
+```
+(Output:  "---> Result: 19"  
+          "Another one? [y/n]")      
+
+"y" input starts the program again, "n" ends the execution.
+
 
 ## Highlights
 
@@ -24,7 +54,7 @@ tbd
 
 ## Lowlight
 
-We are aware that this implementation might not be the most efficient, e.g. we often use O(n) list operations where one could have used O(1) operations instead (like (:) instead of (++)). Due to the nature of this project, which in our view serves to introduce students to the aforementioned theoretical concepts and not to perform resource intensive calculations, we deprioritized this aspect and simlply had not enough time to take care of it before submission.
+This implementation might not be the most efficient, e.g. O(n) list operations were often used in place of O(1) operations (e.g. (:) instead of (++)). Due to the nature of this project, which serves to introduce students to the aforementioned theoretical concepts and not to perform resource intensive calculations, this aspect was deprioritized.
 
 
 ## Authors
@@ -36,12 +66,18 @@ We are aware that this implementation might not be the most efficient, e.g. we o
 - [@suslov](https://gitlab2.cip.ifi.lmu.de/suslov)
 
 
-## Running Tests
+## Using flags
 
-To run tests (by using Stack), run the following command 
+Available flags:
+- tokens
+- parse 
+- instructions
+- states
+
+The flags output the list of tokens, parsing output, instructions in MF, and states in MF respectively.
 
 ```bash
-  stack run --test
+  stack run -- -flagName
 ```
 
 ## References

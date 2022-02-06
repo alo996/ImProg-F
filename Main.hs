@@ -17,7 +17,7 @@ import GHC.IO.Encoding
 
 
 -- | 'main' is the program loop which asks for F code and prints the results and interim results of the compiler process.
--- | flags: -tokens -parse -compile -interpret
+-- | flags: -tokens -parse -instructions -states
 main :: IO ()
 main = do
     setLocaleEncoding utf8
@@ -33,8 +33,8 @@ main = do
                     case compileProgram (fst ast) of
                         ErrorState error -> putStrLn error >> anotherOne
                         state            -> do
-                            when ("-compile" `elem` args) $ do print (code state)
-                            if ("-interpret" `elem` args) then putStrLn (resultToString $ interpret state True) >> anotherOne else putStrLn (resultToString $ interpret state False) >> anotherOne
+                            when ("-instructions" `elem` args) $ do print (code state)
+                            if ("-states" `elem` args) then putStrLn (resultToString $ interpret state True) >> anotherOne else putStrLn (resultToString $ interpret state False) >> anotherOne
                 Left error -> putStrLn error >> anotherOne
         Left error -> putStrLn error >> anotherOne
       where
