@@ -9,7 +9,7 @@ This group project was part of the practical 'Implementierung von Programmierspr
 
 ## Notes
 
-- Int in Haskell is limited to the range of -2^29 to 2^29 - 1, and therefore, so is our project
+- Int in Haskell is limited to the range of -2^29 to 2^29 - 1, and therefore, so are the values in our project
 - the result of a division is always an Integer
 - multiple operators without a bracket are not allowed (--, ++++,...)
 - no higher-order functions allowed
@@ -19,11 +19,11 @@ This group project was part of the practical 'Implementierung von Programmierspr
 
 ### Basic Functionality:
 
-- [GHC] and [Haskell] (https://www.haskell.org/downloads/)
+- [GHC and Haskell](https://www.haskell.org/downloads/)
 
 ### Additional Functionality:
 
-- [The Haskell Tool Stack] (https://www.haskell.org/downloads/)
+- [The Haskell Tool Stack](https://www.haskell.org/downloads/)
 
 ## Usage (with Stack)
 
