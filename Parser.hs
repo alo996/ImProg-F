@@ -143,7 +143,7 @@ restExpr8 ts = case ts of
 
 ---------------------------------------- HELPER FUNCTIONS FOR PARSER ----------------------------------------
 defsToString :: [Def] -> String
-defsToString defs = foldl (++) "+———------------+\n| Parser Output |\n+——----------—--+\n" (map (\ d -> show d ++ "\n") defs)
+defsToString defs = foldl (++) "+---------------+\n| Parser Output |\n+---------------+\n" (map (\ d -> show d ++ "\n") defs)
 
 {- | 'match' checks whether a certain keyword is next in the remaining tokenstream. If so, this token is removed and the caller can operate on the remaining tokens. Otherwise it returns an error, indicating a syntactical error.
 -}
