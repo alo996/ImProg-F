@@ -13,26 +13,28 @@ import Declarations (State(ErrorState, code))
 import MF (interpret, resultToString, interpretVerbose)
 import Parser (defsToString, program)
 import Tokenizer (tokenize, tokensToString)
+import GHC.IO.Encoding
 
 
 -- | 'main' is the program loop which asks for F code and prints the results and interim results of the compiler process.
 -- | flags: -tokens -parse -compile -interpret
 main :: IO ()
 main = do
+    setLocaleEncoding utf8
     args <- getArgs
     putStrLn "Please enter an F program and hit enter (end with an empty line):"
     input <- getLines
     case tokenize input of
         Right toks -> do
-            when (elem "-tokens" args) $ do putStrLn $ tokensToString toks
+            when ("-tokens" `elem` args) $ do putStrLn $ tokensToString toks
             case program toks of
                 Right ast -> do
-                    when (elem "-parse" args) $ do putStrLn $ defsToString $ fst ast
+                    when ("-parse" `elem` args) $ do putStrLn $ defsToString $ fst ast
                     case compileProgram (fst ast) of
                         ErrorState error -> putStrLn error >> anotherOne
                         state            -> do
-                            when (elem "-compile" args) $ do print (code state)
-                            if (elem "-interpret" args) then putStrLn (resultToString $ interpret state True) >> anotherOne else putStrLn (resultToString $ interpret state False) >> anotherOne
+                            when ("-compile" `elem` args) $ do print (code state)
+                            if ("-interpret" `elem` args) then putStrLn (resultToString $ interpret state True) >> anotherOne else putStrLn (resultToString $ interpret state False) >> anotherOne
                 Left error -> putStrLn error >> anotherOne
         Left error -> putStrLn error >> anotherOne
       where
