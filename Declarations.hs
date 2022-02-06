@@ -234,7 +234,7 @@ formatCells xs prefix = formatCells' xs 0 ""
     formatCells' (x : xs) n acc = formatCells' xs (n + 1) (acc ++ prefix ++ show n ++ ": " ++ show x ++ "\n")
     formatCells' [] _ acc       = acc
 
--- | Custom show function to print States visually appealing.
+-- | Custom show function to print states visually appealing.
 instance Show State where
     show (ErrorState error)          = error
     show s@State{code = Code ccells} =
