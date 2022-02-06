@@ -28,14 +28,14 @@ import Store
 
 ---------------------------------------- MAIN EXECUTION CYCLE ----------------------------------------
 -- | 'interpret' recursively executes a set of MF instructions. Either return a state when instruction 'HALT' is reached, or an error occurs.
-interpret :: State -> State
-interpret (ErrorState error) = ErrorState error
-interpret s                  = case accessCode (code s) (pc s) of
+interpret :: State -> Bool -> State
+interpret (ErrorState error) _ = ErrorState error
+interpret s debug              = case accessCode (code s) (pc s) of
     Right instr -> case instr of
         Halt -> s
         _    -> case run instr s of
             ErrorState error -> ErrorState error
-            s'               -> interpret s'
+            s'               -> if debug then trace (show s') (interpret s' True) else interpret s' False
     Left error  -> ErrorState error
 
 -- | Given an instruction, 'run' executes the respective MF function.

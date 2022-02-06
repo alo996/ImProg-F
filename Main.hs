@@ -3,8 +3,11 @@ Module      : Main
 Description : This module is the main program of this project containing functions to enter F code and returning results at different levels from tokenizer to MF.
 -}
 {-# LANGUAGE NamedFieldPuns #-}
+
 module Main where
 
+import System.Environment
+import Control.Monad
 import Compiler (compileProgram)
 import Declarations (State(ErrorState, code))
 import MF (interpret, resultToString, interpretVerbose)
@@ -13,21 +16,23 @@ import Tokenizer (tokenize, tokensToString)
 
 
 -- | 'main' is the program loop which asks for F code and prints the results and interim results of the compiler process.
+-- | flags: -tokens -parse -compile -interpret
 main :: IO ()
 main = do
+    args <- getArgs
     putStrLn "Please enter an F program and hit enter (end with an empty line):"
     input <- getLines
     case tokenize input of
         Right toks -> do
-            putStrLn $ tokensToString toks
+            when (elem "-tokens" args) $ do putStrLn $ tokensToString toks
             case program toks of
                 Right ast -> do
-                    putStrLn $ defsToString $ fst ast
+                    when (elem "-parse" args) $ do putStrLn $ defsToString $ fst ast
                     case compileProgram (fst ast) of
                         ErrorState error -> putStrLn error >> anotherOne
                         state            -> do
-                            print (code state)
-                            putStrLn (resultToString $ interpret state) >> anotherOne
+                            when (elem "-compile" args) $ do print (code state)
+                            if (elem "-interpret" args) then putStrLn (resultToString $ interpret state True) >> anotherOne else putStrLn (resultToString $ interpret state False) >> anotherOne
                 Left error -> putStrLn error >> anotherOne
         Left error -> putStrLn error >> anotherOne
       where
