@@ -74,6 +74,8 @@ Available flags:
 - instructions
 - states
 
+The flags output the list of tokens, parsing output, instructions in MF, and states in MF respectively.
+
 ```bash
   stack run -- -flagName
 ```
