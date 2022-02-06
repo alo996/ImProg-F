@@ -27,7 +27,7 @@ This group project was part of the practical 'Implementierung von Programmierspr
 
 ## Usage (with Stack)
 
-- enter the directory where your Stack file is located
+- enter the directory where your Stack executable is located
 ```bash
 stack run
 ```
