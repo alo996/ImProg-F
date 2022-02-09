@@ -1,3 +1,12 @@
+--tests from 9.2 that brings problems: 
+
+main = main*3;  - needs to complete a timeput functionality
+
+main x = x*x; x = 3; - needs fehlerbehandlung for diffrent problebs arising in main functionality in compiler.
+
+
+
+
 --New tests for MF
 
 let x = y+2 in x+y; y = 3; main = f x; passt
