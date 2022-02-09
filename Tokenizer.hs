@@ -96,4 +96,4 @@ keyCheck c checktok rest input tAcc lAcc
     charCheck c = c `elem` [';', '=', '(', ')', '&', '|', '+', '-', '*', '/', '<', ' ', '\n', '\t', '\r']
 
 tokensToString :: [(Token, Int)] -> String
-tokensToString toks = foldl (++) "+-----------+\n| Tokens |\n+-----------+\n" (map (\ (tok, _) -> show tok ++ "\n") toks)
+tokensToString toks = foldl (++) "+--------+\n| Tokens |\n+--------+\n" (map (\ (tok, _) -> show tok ++ "\n") toks)
