@@ -14,6 +14,7 @@ import MF (interpret, resultToString, interpretVerbose)
 import Parser (defsToString, program)
 import Tokenizer (tokenize, tokensToString)
 import GHC.IO.Encoding
+import System.Timeout
 
 
 -- | 'main' is the program loop which asks for F code and prints the results and interim results of the compiler process.
