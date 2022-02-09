@@ -1,3 +1,21 @@
+--tests from 9.2 that brings problems: 
+
+
+main = let x = fun in x 1 2; fun x y = x+y;
+should be Number 3 but we get: ---> Runtime error: Function 'x' not found.
+
+
+main = main*3;  - needs to complete a timeput functionality
+
+main x = x*x; x = 3; - needs fehlerbehandlung for diffrent problebs arising in main functionality in compiler.
+
+
+--took approx 2 mins to compute, problem if timeout less then 120 secs will be implewmented.
+main = prim 1033; prim x = hprim x 2; hprim x h = if h < x then (if (mod x h) == 0 then False else hprim x (h+1)) else True ; mod a b = a - ((a/b) * b); 
+
+
+
+
 --New tests for MF
 
 let x = y+2 in x+y; y = 3; main = f x; passt
