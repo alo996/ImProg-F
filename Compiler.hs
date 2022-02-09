@@ -42,7 +42,7 @@ compileProgram defs = compileProgram' defs s
       where
         -- | After compiling all definitions, 'lookupMain' checks whether the function 'main' has been specified as required.
         lookupMain :: Heap -> State
-        lookupMain (Heap (DEF {fname, arity} : hs)) = if fname == "main" && arity == 0 then s else if fname == "main" && arity > 0 then ErrorState "Runtime error: Function 'main' is not correctly defined" else lookupMain (Heap hs)
+        lookupMain (Heap (DEF {fname, arity} : hs)) = if fname == "main" && arity == 0 then s else if fname == "main" && arity > 0 then ErrorState "Runtime error: Function 'main' is not correctly defined." else lookupMain (Heap hs)
         lookupMain _                                = ErrorState "Runtime error: Function 'main' is not defined."
 
 -- | Compile a definition. 'compileDefinition' takes the definition to compile and the current machine state and updates its code, global environment and heap.
