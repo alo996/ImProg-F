@@ -42,7 +42,10 @@ compileProgram defs = compileProgram' defs s
       where
         -- | After compiling all definitions, 'lookupMain' checks whether the function 'main' has been specified as required.
         lookupMain :: Heap -> State
-        lookupMain (Heap (DEF {fname, arity} : hs)) = if fname == "main" && arity == 0 then s else if fname == "main" && arity > 0 then ErrorState "Runtime error: Function 'main' is not correctly defined." else lookupMain (Heap hs)
+        lookupMain (Heap (DEF {fname, arity} : hs)) 
+            | fname == "main" && arity == 0 = s 
+            | fname == "main" && arity > 0  = ErrorState "Runtime error: Function 'main' is not correctly defined." 
+            | otherwise                     = lookupMain (Heap hs)
         lookupMain _                                = ErrorState "Runtime error: Function 'main' is not defined."
 
 -- | Compile a definition. 'compileDefinition' takes the definition to compile and the current machine state and updates its code, global environment and heap.
@@ -64,27 +67,30 @@ compileDefinition _ _                                            = ErrorState "E
 -- | Compile an expression. 'compileExpression' takes the expression to be compiled and a local environment and returns a list of MF instructions.
 compileExpression :: Expr -> [(Expr, Int)] -> Global -> [Instruction]
 compileExpression e pos g = case e of
-    AtomicExpr (LitBool (BoolF False)) -> [Pushval "Bool" 0]
-    AtomicExpr (LitBool (BoolF True))  -> [Pushval "Bool" 1]
-    AtomicExpr (LitNum n)              -> [Pushval "Int" n]
-    AtomicExpr (Var name)              -> case pos of
+    AtomicExpr (LitBool (BoolF False))  -> [Pushval "Bool" 0]
+    AtomicExpr (LitBool (BoolF True))   -> [Pushval "Bool" 1]
+    AtomicExpr (LitNum n)               -> [Pushval "Int" n]
+    AtomicExpr (Var name)               -> case pos of
         [] -> [Pushfun name]
         _  -> posInd e pos g
-    AtomicExpr (Expr e)                -> compileExpression e pos g
-    Func (AtomicExpr (Var fname)) e2   -> compileExpression e2 pos g ++ [Pushfun fname, Makeapp]
-    Func e1 e2                         -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Makeapp]
-    LetIn ldefs e                      -> compileLocalDefinitions ldefs e pos g
-    Add e1 e2                          -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre PlusOp, Makeapp, Makeapp]
-    Mult e1 e2                         -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre TimesOp, Makeapp, Makeapp]
-    Div e1 e2                          -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre DivideOp, Makeapp, Makeapp]
-    Equal e1 e2                        -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre EqualsOp, Makeapp, Makeapp]
-    LessThan e1 e2                     -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre LessOp, Makeapp, Makeapp]
-    LogicalAnd e1 e2                   -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre AndOp, Makeapp, Makeapp]
-    LogicalOr e1 e2                    -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre OrOp, Makeapp, Makeapp]
-    BinaryMin e1 e2                    -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre BinaryMinOp, Makeapp, Makeapp]
-    UnaryMin e                         -> compileExpression e pos g ++ [Pushpre UnaryMinOp, Makeapp]
-    LogicalNot e                       -> compileExpression e pos g ++ [Pushpre NotOp, Makeapp]
-    IfThenElse e1 e2 e3                ->
+    AtomicExpr (Expr e)                 -> compileExpression e pos g
+    Func e1@(AtomicExpr (Var fname)) e2 -> case posInd e1 pos g of
+      [Pushparam n]  -> compileExpression e2 pos g ++ [Pushparam $ n+1, Makeapp]
+      [Pushfun name] -> compileExpression e2 pos g ++ [Pushfun name, Makeapp]
+      _              -> compileExpression e2 pos g ++ [Pushfun fname, Makeapp]
+    Func e1 e2                          -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Makeapp]
+    LetIn ldefs e                       -> compileLocalDefinitions ldefs e pos g
+    Add e1 e2                           -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre PlusOp, Makeapp, Makeapp]
+    Mult e1 e2                          -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre TimesOp, Makeapp, Makeapp]
+    Div e1 e2                           -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre DivideOp, Makeapp, Makeapp]
+    Equal e1 e2                         -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre EqualsOp, Makeapp, Makeapp]
+    LessThan e1 e2                      -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre LessOp, Makeapp, Makeapp]
+    LogicalAnd e1 e2                    -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre AndOp, Makeapp, Makeapp]
+    LogicalOr e1 e2                     -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre OrOp, Makeapp, Makeapp]
+    BinaryMin e1 e2                     -> compileExpression e2 pos g ++ compileExpression e1 (posInc pos 1) g ++ [Pushpre BinaryMinOp, Makeapp, Makeapp]
+    UnaryMin e                          -> compileExpression e pos g ++ [Pushpre UnaryMinOp, Makeapp]
+    LogicalNot e                        -> compileExpression e pos g ++ [Pushpre NotOp, Makeapp]
+    IfThenElse e1 e2 e3                 ->
         compileExpression e3 pos g ++ compileExpression e2 (posInc pos 1) g ++ compileExpression e1 (posInc pos 2) g ++ [Pushpre IfOp, Makeapp, Makeapp, Makeapp]
 
 {- | Compile a local definition. 'compileLocalDefinitions' takes a list of local definitions, the corresponding expression and a local environment. 
@@ -148,7 +154,7 @@ createPos' ldefs pos n = createPos'' ldefs pos' (length ldefs - 2)
 posInc :: [(Expr, Int)] -> Int -> [(Expr, Int)]
 posInc pos n = map (\ (a, b) -> (a, b + n)) pos
 
--- | Get the index of the first occurence of a formal parameter in a given local environment, or look for 
+-- | Get the index of the first occurence of a formal parameter in a given local environment, or look for .. !!!!!!!!! TBD
 posInd :: Expr -> [(Expr, Int)] -> Global -> [Instruction]
 posInd e@(AtomicExpr (Var name)) pos g@(Global gcells) = case lookup e pos of
     Just n -> [Pushparam n]
