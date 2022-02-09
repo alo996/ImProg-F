@@ -6,7 +6,6 @@ Description : This module contains all functionality to interpret a translated F
 module MF where
 
 import Data.Bits (Bits((.&.), (.|.), xor))
-import Debug.Trace
 import Declarations
     (Global(..),
     Heap(..),
@@ -28,14 +27,14 @@ import Store
 
 ---------------------------------------- MAIN EXECUTION CYCLE ----------------------------------------
 -- | 'interpret' recursively executes a set of MF instructions. Either return a state when instruction 'HALT' is reached, or an error occurs.
-interpret :: State -> Bool -> State
-interpret (ErrorState error) _ = ErrorState error
-interpret s debug              = case accessCode (code s) (pc s) of
+interpret :: State -> State
+interpret (ErrorState error) = ErrorState error
+interpret s                  = case accessCode (code s) (pc s) of
     Right instr -> case instr of
         Halt -> s
         _    -> case run instr s of
             ErrorState error -> ErrorState error
-            s'               -> if debug then trace (show s') (interpret s' True) else interpret s' False
+            s'               -> interpret s'
     Left error  -> ErrorState error
 
 -- | Given an instruction, 'run' executes the respective MF function.
