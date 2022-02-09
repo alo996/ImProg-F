@@ -1,5 +1,10 @@
 --tests from 9.2 that brings problems: 
 
+
+main = let x = fun in x 1 2; fun x y = x+y;
+should be Number 3 but we get: ---> Runtime error: Function 'x' not found.
+
+
 main = main*3;  - needs to complete a timeput functionality
 
 main x = x*x; x = 3; - needs fehlerbehandlung for diffrent problebs arising in main functionality in compiler.
