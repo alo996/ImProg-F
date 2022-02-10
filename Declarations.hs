@@ -115,7 +115,7 @@ instance Show Expr where
     show (BinaryMin e1 e2)     = "(" ++ show e1 ++ " - " ++ show e2 ++ ")"
     show (Div e1 e2)           = "(" ++ show e1 ++ " / " ++ show e2 ++ ")"
     show (Equal e1 e2)         = "(" ++ show e1 ++ " == " ++ show e2 ++ ")"
-    show (Func e1 e2)          = show "(FuncApp (" ++ show e1 ++ ") (" ++ show e2 ++ "))"
+    show (Func e1 e2)          = "(FuncApp (" ++ show e1 ++ ") (" ++ show e2 ++ "))"
     show (IfThenElse e1 e2 e3) = "if (" ++ show e1 ++ ") then (" ++ show e2 ++ ") else (" ++ show e3 ++ ")"
     show (LessThan e1 e2)      = "(" ++ show e1 ++ " < " ++ show e2 ++ ")"
     show (LetIn e1 e2)         = "let " ++ show e1 ++ " in " ++ show e2
@@ -258,4 +258,3 @@ instance Show Operator where
     show PlusOp      = "+"
     show TimesOp     = "*"
     show UnaryMinOp  = "-"
-    
