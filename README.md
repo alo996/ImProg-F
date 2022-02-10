@@ -7,39 +7,23 @@ Implementation of the functional programming language 'F' using Haskell.
 
 This group project was part of the practical 'Implementierung von Programmiersprachen' at the Ludwig-Maximilians-Universität in Munich, winter semester 2021/22. It introduced the participants to basic principles of formal languages, functional programming, parsing, compiler construction and abstract machines.
 
-## Notes
 
-- Int in Haskell is limited to the range of -2^29 to 2^29 - 1, and therefore, so are the values in our project
-- the result of a division is always an Integer
-- multiple operators without a bracket are not allowed (--, ++++,...)
-- no higher-order functions allowed
+##  Getting started
 
-
-##  Installations Needed for Execution 
-
-### Basic Functionality:
+### Required:
 
 - [GHC and Haskell](https://www.haskell.org/downloads/)
 
-### Additional Functionality:
+### Optional:
 
-- [The Haskell Tool Stack](https://www.haskell.org/downloads/)
+- [The Haskell Tool Stack](https://docs.haskellstack.org/en/stable/README/)
 
-## Usage (with Stack)
+## Execution (with Stack)
 
 - enter the directory where your Stack executable is located
 ```bash
 stack run
 ```
-(Output: "Please enter an F program and hit enter (end with an empty line):")
-```bash
-main = 9 + 10;
-
-```
-(Output:  "---> Result: 19"  
-          "Another one? [y/n]")      
-
-"y" input starts the program again, "n" ends the execution.
 
 
 ## Highlights
@@ -54,7 +38,35 @@ main = 9 + 10;
 
 ## Lowlight
 
-This implementation might not be the most efficient, e.g. O(n) list operations were often used in place of O(1) operations (e.g. (:) instead of (++)). Due to the nature of this project, which serves to introduce students to the aforementioned theoretical concepts and not to perform resource intensive calculations, this aspect was deprioritized.
+This implementation surely is not the most efficient, e.g. O(n) list operations were often used in place of O(1) operations for convenience ((:) instead of (++)). Due to the nature of this project, which in our view serves to introduce students to the aforementioned theoretical concepts and not to perform resource intensive calculations, this aspect was deprioritized.
+
+
+## Usage
+
+- every F program needs to contain a definition 'main = ...;'
+- 'main' is the only (lazyily) evaluated expression
+- local definitions are possible but restricted to value definitions
+- numeric values are restricted to integers of range [-2^29, 2^29-1]
+- division is performed without remainder
+- boolean values are lowercase
+- no structured or enumerated types, and therefore also no pattern matching, are supported 
+- lambda expressions and higher-order functions are not supported
+- tail recursion is not supported
+- no error handling for infinite recursion implemented
+
+
+## Supported flags
+
+- tokens
+- ast
+- instructions
+- states
+
+Use flags to print out generated tokens, the abstract syntax tree, MF instructions and intermediate MF states during program execution.
+
+```bash
+  stack run -- -flagName
+```
 
 
 ## Authors
@@ -65,20 +77,6 @@ This implementation might not be the most efficient, e.g. O(n) list operations w
 - [@richard](https://gitlab2.cip.ifi.lmu.de/richard)
 - [@suslov](https://gitlab2.cip.ifi.lmu.de/suslov)
 
-
-## Using flags
-
-Available flags:
-- tokens
-- parse 
-- instructions
-- states
-
-The flags output the list of tokens, parsing output, instructions in MF, and states in MF respectively.
-
-```bash
-  stack run -- -flagName
-```
 
 ## References
 
