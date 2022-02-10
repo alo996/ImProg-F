@@ -7,8 +7,7 @@ module Declarations where
 
 
 ---------------------------------------- TOKEN GENERATION ----------------------------------------
-{- | A token is a sequence of characters with some inherent structure, in our case it is either a boolean value, a reserved F-keyword, a name, or a number).
--}
+-- | A token is a sequence of characters with some inherent meaning, in our case it is either a boolean value, a reserved F-keyword, a name, or a number.
 data Token
     = BooleanToken BoolF
     | KeywordToken Keyword
@@ -16,7 +15,12 @@ data Token
     | NumberToken Int
     deriving (Eq, Show)
 
--- | A keyword is a sequence of characters that is reserved by F.
+-- | 'BoolF' adresses the fact that boolean values in F are lowercase, unlike those in Haskell.
+newtype BoolF 
+    = BoolF Bool 
+    deriving Eq
+
+-- | A keyword is a sequence of characters reserved by F.
 data Keyword
     = And
     | Assign
@@ -38,8 +42,9 @@ data Keyword
     | Then
     deriving Eq
 
--- | 'BoolF' adresses the fact that boolean values in F are lowercase, unlike those in Haskell.
-newtype BoolF = BoolF Bool deriving Eq
+instance Show BoolF where
+    show (BoolF True)  = "true"
+    show (BoolF False) = "false"
 
 instance Show Keyword where
     show And       = "&"
@@ -60,10 +65,6 @@ instance Show Keyword where
     show Semicolon = ";"
     show Times     = "*"
     show Then      = "then"
-
-instance Show BoolF where
-    show (BoolF True)  = "true"
-    show (BoolF False) = "false"
 
 
 ---------------------------------------- PARSING ----------------------------------------
@@ -132,7 +133,7 @@ instance Show AtomicExpr where
 
 
 ---------------------------------------- TRANSLATION AND INTERPRETATION OF F PROGRAMS ----------------------------------------
-{- | The abstract machine contains four types of stores: 'Code' contains a translated program as a sequence of MF instructions, 'Stack' contains references to expressions that need further evaluation, 'Global' contains non-local function definitions, and 'Heap' contains expressions represented as graphs.
+{- | The abstract machine contains four types of stores: 'Code' holds a translated program as a sequence of MF instructions, 'Stack' contains references to expressions that need further evaluation, 'Global' contains non-local function definitions and 'Heap' contains expressions represented as graphs.
 -}
 newtype Code = Code [Instruction]
 
@@ -163,7 +164,8 @@ newtype StackCell
     = StackCell Int
     deriving Show
 
--- | 'State' models the abstract machine. It contains a program counter, a stack pointer, and the already introduced stores code, stack, global and heap. In case of a faulty execution, it can also take on an error state that returns an error message to the user.
+{- | 'State' models the abstract machine. It contains a program counter, a stack pointer, and the already introduced stores code, stack, global and heap. In case of a faulty execution, it can also take on an error state that returns an error message to the user.
+-}
 data State
     = State
     {
@@ -234,7 +236,6 @@ formatCells xs prefix = formatCells' xs 0 ""
     formatCells' (x : xs) n acc = formatCells' xs (n + 1) (acc ++ prefix ++ show n ++ ": " ++ show x ++ "\n")
     formatCells' [] _ acc       = acc
 
--- | Custom show function to print states visually appealing.
 instance Show State where
     show (ErrorState error)          = error
     show s@State{code = Code ccells} =
