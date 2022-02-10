@@ -24,12 +24,12 @@ stack run
 
 ## Highlights
 
-- straightforward execution using the Stack build tool
-- detailed error handling and error messages
-- flag support for different levels of output verbosity
-- coherent coding style (based on https://kowainik.github.io/posts/2019-02-06-style-guide)
-- extensive commenting
-- no known bugs
+- Straightforward execution using the Stack build tool
+- Detailed error handling and error messages
+- Flag support for different levels of output verbosity
+- Coherent coding style (based on https://kowainik.github.io/posts/2019-02-06-style-guide)
+- Extensive commenting
+- No known bugs
 
 
 ## Lowlight
@@ -39,16 +39,18 @@ This implementation surely is not the most efficient, e.g. O(n) list operations 
 
 ## Usage
 
-- every F program needs to contain a definition 'main = ...;'
+- Every F program needs to contain a definition 'main = ...;'
 - 'main' is the only (lazyily) evaluated expression
-- local definitions are possible but restricted to value definitions
-- numeric values are restricted to integers of range [-2^29, 2^29-1]
-- division is performed without remainder
-- boolean values are lowercase
-- no structured or enumerated types, and therefore also no pattern matching, are supported 
-- lambda expressions and higher-order functions are not supported
-- tail recursion is not supported
-- no error handling for infinite recursion implemented
+- Local definitions are possible but restricted to value definitions
+- Numeric values are restricted to integers of range [-2^29, 2^29-1]
+- Division is performed without remainder
+- Boolean values are lowercase
+- Not supported:
+  - structured or enumerated types (and therefore also no pattern matching)
+  - lambda expressions and higher-order functions
+  - tail recursion
+  - error handling for infinite recursion
+
 
 
 ## Supported flags
@@ -58,7 +60,8 @@ This implementation surely is not the most efficient, e.g. O(n) list operations 
 - instructions
 - states
 
-Use flags to print out generated tokens, the abstract syntax tree, MF instructions and intermediate MF states during program execution.
+Use flags to print out generated tokens, the abstract syntax tree, 
+MF instructions and intermediate MF states during program execution.
 
 ```bash
   stack run -- -flagName
