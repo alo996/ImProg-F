@@ -59,36 +59,3 @@ main = do
             else do
                 xs <- getLines
                 return $ x ++ "\n" ++ xs
-
-
-
-------- TO BE DELETED -------
-
--- | 'main' ' takes a F code string as an input and prints the results to the console. This function also prints out all interim states of MF.
-main' :: String -> IO ()
-main' input =
-    case tokenize input of
-        Right toks -> do
-            putStrLn $ tokensToString toks
-            case program toks of
-                Right ast -> do
-                    putStrLn $ defsToString $ fst ast
-                    case compileProgram (fst ast) of
-                        ErrorState error -> putStrLn error
-                        state            -> do
-                            print $ code state
-                            putStrLn $ interpretVerbose state
-                Left error -> putStrLn error
-        Left error -> putStrLn error
-
-main'' :: String -> State
-main'' input =
-    case tokenize input of
-        Right toks -> do
-            case program toks of
-                Right ast -> do
-                    case compileProgram (fst ast) of
-                        ErrorState error -> ErrorState error
-                        state            -> state
-                Left error ->  ErrorState error
-        Left error -> ErrorState error
