@@ -27,7 +27,6 @@ library
   exposed-modules:
       Compiler
       Declarations
-      Lib
       MF
       Parser
       Store
