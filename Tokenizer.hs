@@ -5,6 +5,7 @@ Description : This module contains all functionality to pursue lexical analysis 
 module Tokenizer where
 
 import Data.Char (isAlpha, isAlphaNum, isDigit)
+
 import Declarations
     (BoolF(BoolF),
     Token(..),
@@ -12,23 +13,22 @@ import Declarations
             Divide, Less, LBracket, Minus, Or, Plus, RBracket, Semicolon))
 
 
--- | tokenize receives user input and transforms it into a list of tuples, each containing a token and its line number in the source code.
+-- | 'tokenize' receives user input and transforms it into a list of tuples, each containing a token and its line number in the source code.
 tokenize :: String -> Either String [(Token, Int)]
 tokenize ""    = Left "Runtime error: Can not compile empty program."
 tokenize input = tokenize' input [] 1
 
-{- | tokenize' deals with spaces and acts on keywords and booleans. It receives user input, a list of tokenized (token, line number)-pairs and an integer.
-     the Int is corresponding to the current line in the source code. It either returns an extended list of (token, line number)-pairs or an error message.
+{- | 'tokenize'' deals with spaces and acts on keywords and booleans. It receives user input, a list of tokenized (token, line number)-pairs and an integer, which corresponds to the current line in the source code. It either returns an extended list of (token, line number)-pairs or an error message.
 -}
 tokenize' :: String -> [(Token, Int)] -> Int -> Either String [(Token, Int)]
 tokenize' [] tAcc lAcc                                         = Right $ reverse tAcc
--- Checks whether next character is a space.
+-- Checks whether the next character is a space.
 tokenize' (' ' : xs) tAcc lAcc                                 = tokenize' xs tAcc lAcc
 tokenize' ('\t' : xs) tAcc lAcc                                = tokenize' xs tAcc lAcc
 tokenize' ('\r' : '\n' : xs) tAcc lAcc                         = tokenize' xs tAcc (lAcc + 1)
 tokenize' ('\n' : xs) tAcc lAcc                                = tokenize' xs tAcc (lAcc + 1)
 tokenize' ('\r' : xs) tAcc lAcc                                = tokenize' xs tAcc (lAcc + 1)
--- Checks whether next characters form a keyword or a boolean value, followed by a reserved special character or a space.
+-- Checks whether the next characters form a keyword or a boolean value, followed by a reserved special character or a space.
 tokenize' ('=' : '=' : xs) tAcc lAcc                           = tokenize' xs ((KeywordToken Equals, lAcc) : tAcc) lAcc
 tokenize' tok@('e' : 'l' : 's' : 'e' : x : xs) tAcc lAcc       = keyCheck x (KeywordToken Else) (x : xs) tok tAcc lAcc
 tokenize' tok@('f' : 'a' : 'l' : 's' : 'e' : x : xs) tAcc lAcc = keyCheck x (BooleanToken $ BoolF False) (x : xs) tok tAcc lAcc
@@ -38,7 +38,7 @@ tokenize' tok@('l' : 'e' : 't' : x : xs) tAcc lAcc             = keyCheck x (Key
 tokenize' tok@('n' : 'o' : 't' : x : xs) tAcc lAcc             = keyCheck x (KeywordToken Not) (x : xs) tok tAcc lAcc
 tokenize' tok@('t' : 'h' : 'e' : 'n' : x : xs) tAcc lAcc       = keyCheck x (KeywordToken Then) (x : xs) tok tAcc lAcc
 tokenize' tok@('t' : 'r' : 'u' : 'e' : x : xs) tAcc lAcc       = keyCheck x (BooleanToken $ BoolF True) (x : xs) tok tAcc lAcc
--- Checks that a multiple character keyword is either at the end of an identifier or the program.
+-- Checks whether a multiple character keyword is either at the end of an identifier or the program.
 tokenize' ('e' : 'l' : 's' : 'e' : xs) tAcc lAcc               = tokenize' xs ((KeywordToken Else, lAcc) : tAcc) lAcc
 tokenize' ('f' : 'a' : 'l' : 's' : 'e' : xs) tAcc lAcc         = tokenize' xs ((BooleanToken $ BoolF False , lAcc) : tAcc) lAcc
 tokenize' ('i' : 'f' : xs) tAcc lAcc                           = tokenize' xs ((KeywordToken If, lAcc) : tAcc) lAcc
@@ -59,7 +59,7 @@ tokenize' ('+' : xs) tAcc lAcc                                 = tokenize' xs ((
 tokenize' (')' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken RBracket, lAcc) : tAcc) lAcc
 tokenize' (';' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Semicolon, lAcc) : tAcc) lAcc
 tokenize' ('*' : xs) tAcc lAcc                                 = tokenize' xs ((KeywordToken Times, lAcc) : tAcc) lAcc
--- If the next character is not a space, a keyword or a part of a keyword, it checks for digits and letters, otherwise returns an error.
+-- If the next character is not a space, a keyword or part of a keyword, it checks for digits and letters, otherwise returns an error.
 tokenize' (x : xs) tAcc lAcc
     | isAlphaNum x = if isDigit x
                         then tokenizeNumber (x : xs) tAcc lAcc ""
@@ -74,7 +74,7 @@ tokenizeNumber (x : y : ys) tAcc lAcc num
     | isDigit y = tokenizeNumber (y : ys) tAcc lAcc (num ++ [x])
     | isAlpha y = Left $ "Lexical error in line " ++ show lAcc ++ ": Identifiers must not begin with a digit."
     | otherwise = tokenize' (y : ys) ((NumberToken (read (num ++ [x]) :: Int), lAcc) : tAcc) lAcc
-tokenizeNumber _ _ _ _              = Left "Lexical error."
+tokenizeNumber _ _ _ _           = Left "Lexical error."
 
 tokenizeName [x] tAcc lAcc name = Right $ reverse $ (NameToken $ name ++ [x], lAcc) : tAcc
 tokenizeName (x : y : ys) tAcc lAcc name
@@ -97,8 +97,6 @@ keyCheck c checktok rest input tAcc lAcc
     charCheck :: Char -> Bool
     charCheck c = c `elem` [';', '=', '(', ')', '&', '|', '+', '-', '*', '/', '<', ' ', '\n', '\t', '\r']
 
-{-
-Takes the tuple of tokenized values and line numbers and returns it as a string.
--}
+-- | 'tokensToString' is called when the user sets the '-tokens' flag before execution and prints out the list of generated tokens.
 tokensToString :: [(Token, Int)] -> String
 tokensToString toks = foldl (++) "+--------+\n| Tokens |\n+--------+\n" (map (\ (tok, _) -> show tok ++ "\n") toks)
