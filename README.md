@@ -10,7 +10,7 @@ This group project was part of the practical 'Implementierung von Programmierspr
 
 ##  Getting started
 
-- [GHC and Haskell](https://www.haskell.org/downloads/) (required)
+- [GHC](https://www.haskell.org/downloads/) (required)
 - [Haskell Tool Stack](https://docs.haskellstack.org/en/stable/README/) (optional)
 
 
