@@ -16,7 +16,7 @@ This group project was part of the practical 'Implementierung von Programmierspr
 
 ## Execution with Stack
 
-Enter the directory where your Stack executable is located
+Navigate to the cloned repository and execute
 ```bash
 stack run
 ```
