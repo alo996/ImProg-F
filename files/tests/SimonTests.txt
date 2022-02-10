@@ -1,0 +1,31 @@
+let x = 2; main = x*2; -> Syntaxfehler +
+
+main = let x = 2 in x+2; -> +
+
+main = sum 3; sum x = if x == 1 then 1 else x + sum (x-1); -> +
+
+main = sum 3; sum x = sum1 x 0; sum1 x rek = if x == 1 then rek else x+sum1 (x -1) (rek+1); -> sum' nicht erlaubt, result 7 +
+
+main = let x = not true in let y = 1 in not boolfunc x y; boolfunc x y = x; -> +
+
+main = -(-1 -2) +1; -> + funktioniert jetzt
+
+main = endless true; endless x = if x then endless x else false; -> Endlosschleife bricht nicht ab + -> StackOverflow Error
+
+div x y z = ((x/y)/z)*10; main = div 1 2 3/1 ; -> +
+
+main = 1/0; -> Runtime division by zero error +
+
+main = 1 == (2<3); + ist in ordnung so
+
+main = (1+2) < 3; -> +
+
+main = (1-(2-(3-(4-(5-7))))); -> +
+
+1x y = y*3; main = 1x 3 + 1; -> + unsere Fehlermeldung sogar besser
+
+x1 y = y*3; main = x1 3 + 1; -> +
+
+main = let x = 10 in let acc = if 3==x then x else 9 in acc*10; -> +
+
+main = let x = 10 in let acc = if 3<x then x else 9 in acc*10; -> +
