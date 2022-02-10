@@ -1,22 +1,23 @@
 {- |
 Module      : Main
-Description : This module is the main program of this project containing functions to enter F code and returning results at different levels from tokenizer to MF.
+Description : This module contains the entry point to the implementation.
 -}
 {-# LANGUAGE NamedFieldPuns #-}
 module Main where
 
-import System.Environment
-import Control.Monad
+import Control.Monad (when)
+import GHC.IO.Encoding (utf8, setLocaleEncoding)
+import System.Environment (getArgs)
+
 import Compiler (compileProgram)
 import Declarations (State(ErrorState, code, State))
 import MF (interpret, resultToString, interpretVerbose)
 import Parser (defsToString, program)
 import Tokenizer (tokenize, tokensToString)
-import GHC.IO.Encoding
 
 
-{- |'main' is the program loop which asks for F code and prints the results and interim results of the compiler process.
-Supported flags: -tokens -parse -instructions -states
+{- | Call 'main' either with stack or manually to enter F programs and execute them. 
+Look under the hood by setting one or more command line flags: -tokens, -ast, -instructions, -states
 -}
 main :: IO ()
 main = do
@@ -29,7 +30,7 @@ main = do
             when ("-tokens" `elem` args) $ do putStrLn $ tokensToString toks
             case program toks of
                 Right ast -> do
-                    when ("-parse" `elem` args) $ do putStrLn $ defsToString $ fst ast
+                    when ("-ast" `elem` args) $ do putStrLn $ defsToString $ fst ast
                     case compileProgram (fst ast) of
                         ErrorState error -> putStrLn error >> anotherOne
                         state            -> do
@@ -39,23 +40,29 @@ main = do
                                 else putStrLn (resultToString $ interpret state) >> anotherOne
                 Left error -> putStrLn error >> anotherOne
         Left error -> putStrLn error >> anotherOne
-      where
-        anotherOne :: IO ()
-        anotherOne = do
-            putStrLn "\nAnother one? [y/n]"
-            response <- getLine
-            case response of
-                "y" -> putStrLn "\n" >> main
-                "n" -> putStrLn "Goodbye!"
-                _   -> anotherOne
-        getLines :: IO String
-        getLines = do
-            x <- getLine
-            if x == ""
-                then return []
-                else do
-                    xs <- getLines
-                    return $ x ++ "\n" ++ xs
+  where
+    -- 'anotherOne' allows the user to either input another program or abort.
+    anotherOne :: IO ()
+    anotherOne = do
+        putStrLn "\nAnother one? [y/n]"
+        response <- getLine
+        case response of
+            "y" -> putStrLn "\n" >> main
+            "n" -> putStrLn "Goodbye!"
+            _   -> anotherOne
+    -- 'getLines' reads one or more lines as input from the terminal.
+    getLines :: IO String
+    getLines = do
+        x <- getLine
+        if x == ""
+            then return []
+            else do
+                xs <- getLines
+                return $ x ++ "\n" ++ xs
+
+
+
+------- TO BE DELETED -------
 
 -- | 'main' ' takes a F code string as an input and prints the results to the console. This function also prints out all interim states of MF.
 main' :: String -> IO ()
