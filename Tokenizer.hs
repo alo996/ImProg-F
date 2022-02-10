@@ -97,6 +97,6 @@ keyCheck c checktok rest input tAcc lAcc
     charCheck :: Char -> Bool
     charCheck c = c `elem` [';', '=', '(', ')', '&', '|', '+', '-', '*', '/', '<', ' ', '\n', '\t', '\r']
 
--- | 'tokensToString' is called when the user sets the '-tokens' flag before execution and prints out the list of generated tokens.
+-- | 'tokensToString' is called when the user sets the '-tokens' flag before execution. It prints the list of generated tokens.
 tokensToString :: [(Token, Int)] -> String
 tokensToString toks = foldl (++) "+--------+\n| Tokens |\n+--------+\n" (map (\ (tok, _) -> show tok ++ "\n") toks)

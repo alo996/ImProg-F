@@ -1,6 +1,7 @@
 {- |
 Module      : Parser
-Description : This module contains all functionality to pursue syntactical analysis in F. It implements a recursive descent LL(1) parser, which specifies one function per rule in the F grammar. As defined in the Declarations file, a parser has type 'type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])'.
+Description : This module contains all functionality to pursue syntactical analysis in F. It implements a recursive descent LL(1) parser, which specifies one function per rule in the F grammar. 
+As defined in the Declarations file, a parser has type 'type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])'.
 -}
 module Parser where
 
@@ -38,7 +39,7 @@ def ts = do
     (KeywordToken Assign, _) : ts2 -> expr ts2 >>= \ (e1, ts3) -> return (Def e [] e1, ts3) 
     -- The next token is neither a variable nor '='. This is syntactically incorrect, therefore returns an error. 
     (token, line) : _              -> Left $ "Syntax error in line " ++ show line ++ ": Keyword '=' or expression expected but found '" ++ toksToString token ++ "'."
-    -- The tokenstream has suddenly ended, which is also syntactically incorrect.
+    -- The tokenstream has suddenly ended, which is syntactically incorrect.
     []                             -> Left "Syntax error at end of program: Keyword '=' or expression expected."
 
 -- | Parses a list of local definitions.
@@ -55,7 +56,7 @@ localDef ts = do
   (e, ts1) <- variable ts
   match (KeywordToken Assign) ts1 >>= \ (_, ts2) -> expr ts2 >>= \ (e1, ts3) -> return (LocalDef e e1, ts3)
 
--- | All expressions are of the same type.
+-- | All expressions are of type '[(Token, Int)] -> Either String (Expr, [(Token, Int)])'.
 expr, expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, atomicExpr, variable :: Parser Expr
 expr ((KeywordToken Let, _) : ts) = do
   (e, ts1) <- localDefs ts
@@ -142,6 +143,7 @@ restExpr8 ts = case ts of
 
 
 ---------------------------------------- HELPER FUNCTIONS FOR PARSER ----------------------------------------
+-- | 'defsToString' is called when the user sets the '-ast' flag before execution. It prints the parsed function definitions.
 defsToString :: [Def] -> String
 defsToString defs = foldl (++) "+---------------+\n| Parser Output |\n+---------------+\n" (map (\ d -> show d ++ "\n") defs)
 
