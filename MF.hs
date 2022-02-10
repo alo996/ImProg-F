@@ -6,6 +6,7 @@ Description : This module contains all functionality to interpret a translated F
 module MF where
 
 import Data.Bits (Bits((.&.), (.|.), xor))
+
 import Declarations
     (Global(..),
     Heap(..),
@@ -26,7 +27,7 @@ import Store
 
 
 ---------------------------------------- MAIN EXECUTION CYCLE ----------------------------------------
--- | 'interpret' recursively executes a set of MF instructions. Either return a state when instruction 'HALT' is reached, or an error occurs.
+-- | 'interpret' recursively executes a set of MF instructions. Either returns a valid state when instruction 'HALT' is reached, or an error occurs.
 interpret :: State -> State
 interpret (ErrorState error) = ErrorState error
 interpret s                  = case accessCode (code s) (pc s) of
@@ -37,7 +38,7 @@ interpret s                  = case accessCode (code s) (pc s) of
             s'               -> interpret s'
     Left error  -> ErrorState error
 
--- | Given an instruction, 'run' executes the respective MF function.
+-- | Given an instruction, 'run' executes its respective MF function.
 run :: Instruction -> State -> State
 run Alloc s            = alloc s
 run Call s             = call s
@@ -279,7 +280,6 @@ pushval s t w = s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (St
 reset :: State -> State
 reset s = s {sp = -1, pc = pc s + 1}
 
-
 return' :: State -> State
 return' s = case accessStack (stack s) (sp s - 1) of
     Right (StackCell addr) -> case accessStack (stack s) (sp s) of
@@ -361,6 +361,7 @@ arity' op = case op of
     TimesOp     -> 2
     UnaryMinOp  -> 1
 
+-- | 'boolify' returns more readable output for boolean values.
 boolify :: String -> String
 boolify x = if x == "0" then "'false'" else "'true'"
 
@@ -412,3 +413,4 @@ value heap addr = case accessHeap heap addr of
     Right (IND addr1) -> value heap addr1
     Right hcell       -> Right hcell
     Left error        -> Left error
+    

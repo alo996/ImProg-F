@@ -258,3 +258,4 @@ instance Show Operator where
     show PlusOp      = "+"
     show TimesOp     = "*"
     show UnaryMinOp  = "-"
+    
