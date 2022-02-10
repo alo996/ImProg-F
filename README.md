@@ -10,15 +10,11 @@ This group project was part of the practical 'Implementierung von Programmierspr
 
 ##  Getting started
 
-### Required:
+[GHC and Haskell](https://www.haskell.org/downloads/) (required)
 
-- [GHC and Haskell](https://www.haskell.org/downloads/)
+[Haskell Tool Stack](https://docs.haskellstack.org/en/stable/README/) (optional)
 
-### Optional:
-
-- [The Haskell Tool Stack](https://docs.haskellstack.org/en/stable/README/)
-
-## Execution (with Stack)
+# Execution with Stack
 
 - enter the directory where your Stack executable is located
 ```bash
