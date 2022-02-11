@@ -34,22 +34,23 @@ stack run
 
 ## Lowlight
 
-This implementation surely is not the most efficient, e.g. O(n) list operations were often used in place of O(1) operations for convenience ((:) instead of (++)). Due to the nature of this project, which in our view serves to introduce students to the aforementioned theoretical concepts and not to perform resource intensive calculations, this aspect was deprioritized.
+This implementation surely is not the most efficient, e.g. O(n) list operations were often used in place of O(1) operations for convenience. 
+Due to the nature of this project, which in our view serves to introduce students to the aforementioned theoretical concepts and not to perform resource intensive calculations, this aspect was deprioritized.
 
 
 ## Usage
 
-- Every F program needs to contain a definition 'main = ...;'
-- 'main' is the only (lazyily) evaluated expression
+- Every F program must contain a definition 'main = ...;'
+- 'main' is the only (lazily) evaluated expression
 - Local definitions are possible but restricted to value definitions
 - Numeric values are restricted to integers of range [-2^29, 2^29-1]
 - Division is performed without remainder
 - Boolean values are lowercase
 - Not supported:
-  - structured or enumerated types (and therefore also no pattern matching)
-  - lambda expressions and higher-order functions
-  - tail recursion
-  - error handling for infinite recursion
+  - Structured or enumerated types (and therefore also no pattern matching)
+  - Lambda expressions and higher-order functions
+  - Tail recursion
+  - Error handling for infinite recursion
 
 
 
