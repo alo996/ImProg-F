@@ -14,7 +14,7 @@ import Declarations
     Code(..))
 
 
--- | Access element at index 'n' in a code, stack or heap.
+-- | Access element at index 'n' in code, stack or heap.
 accessCode :: Code -> Int -> Either String Instruction
 accessCode c@(Code ccells) n
     | n < length ccells && n >= 0 && not (null ccells) = return $ ccells !! n 
@@ -35,14 +35,14 @@ codeInit :: Code
 codeInit =
     Code [Reset, Pushfun "main", Call, Halt, Pushparam 1, Unwind, Call, Pushparam 3, Unwind, Call, Operator 2, OpUpdate, Return, Pushparam 1, Unwind, Call, Operator 3, OpUpdate, Unwind, Call, Return, Pushparam 1, Unwind, Call, Operator 1, OpUpdate, Return]
 
--- | Push element at the end of a stack or heap.
+-- | Push element at the end of stack or heap.
 pushHeap :: Heap -> HeapCell -> Heap
 pushHeap (Heap hcells) elem = Heap $ hcells ++ [elem]
 
 pushStack :: Stack -> StackCell -> Stack
 pushStack (Stack scells) elem = Stack $ scells ++ [elem]
 
--- | Either overwrite element at index 'n' in a stack or heap, or push element to its end.
+-- | Either overwrite element at index 'n' in stack or heap, or push element to its end.
 saveHeap :: Heap -> HeapCell -> Int -> Either String Heap
 saveHeap h@(Heap hcells) hcell n 
     | n <= length hcells && n >= 0 = return $ Heap (take n hcells ++ [hcell] ++ drop (n + 1) hcells) 
