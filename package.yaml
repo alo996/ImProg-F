@@ -1,10 +1,10 @@
 name:                improg
 version:             0.1.0.0
-github:              "githubuser/improg"
+github:              "/"
 license:             BSD3
-author:              "Author name here"
+author:              "S. Haller, O. Katz, L. Ljubuncic, A. Richard, I. Suslov"
 maintainer:          "example@example.com"
-copyright:           "2022 Author name here"
+copyright:           "2022 S. Haller, O. Katz, L. Ljubuncic, A. Richard, I. Suslov"
 
 extra-source-files:
 - README.md
@@ -17,7 +17,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/improg#readme>
+description:         Please see the README on GitLab2 at <https://gitlab2.cip.ifi.lmu.de/richard/improg-f>
 
 dependencies:
 - base >= 4.7 && < 5
