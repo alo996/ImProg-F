@@ -38,6 +38,7 @@ main = do
                             if "-states" `elem` args 
                                 then putStrLn (interpretVerbose state) >> anotherOne 
                                 else putStrLn (resultToString $ interpret state) >> anotherOne
+                            when ("-tokens" `notElem` args && "-ast" `notElem` args && "-instructions" `notElem` args && "-states" `notElem` args ) $ do putStrLn "\nNo flags used or incorrect flag name. Flag options:\n\n-tokens\n-ast\n-instructions\n-states\n\n"
                 Left error -> putStrLn error >> anotherOne
         Left error -> putStrLn error >> anotherOne
   where
