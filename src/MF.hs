@@ -77,7 +77,7 @@ call s = case accessStack (stack s) (sp s) of
         _                     -> ErrorState "Runtime error in 'call'."
     Left error             -> ErrorState $ "Runtime error in 'call': " ++ error
 
--- | 'funcUpdate'
+-- | 'funcUpdate' manages the stack for functions, adds heap cells
 funcUpdate :: State -> Int -> State
 funcUpdate s arg = case accessStack (stack s) (sp s) of
     Right (StackCell addr) -> let hcell = IND addr in case accessStack (stack s) (sp s - arg - 2) of
