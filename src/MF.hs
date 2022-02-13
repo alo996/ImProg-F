@@ -32,7 +32,7 @@ interpret :: State -> State
 interpret (ErrorState error) = ErrorState error
 interpret s                  = case accessCode (code s) (pc s) of
     Right instr -> case instr of
-        Halt -> s
+        Halt -> halt s
         _    -> case run instr s of
             ErrorState error -> ErrorState error
             s'               -> interpret s'
@@ -63,11 +63,7 @@ run (UpdateLet n) s    = updateLet s n
 
 
 ---------------------------------------- MF FUNCTIONS ----------------------------------------
-alloc :: State -> State
-alloc s = s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell n), heap = heap'}
-  where
-    (n, heap') = newUNI (heap s)
-
+-- | 'call' equals to the DEF-case in MFmini reduce: calls a function, saves the return address
 call :: State -> State
 call s = case accessStack (stack s) (sp s) of
     Right (StackCell addr) -> case value (heap s) addr of
@@ -81,6 +77,7 @@ call s = case accessStack (stack s) (sp s) of
         _                     -> ErrorState "Runtime error in 'call'."
     Left error             -> ErrorState $ "Runtime error in 'call': " ++ error
 
+-- | 'funcUpdate'
 funcUpdate :: State -> Int -> State
 funcUpdate s arg = case accessStack (stack s) (sp s) of
     Right (StackCell addr) -> let hcell = IND addr in case accessStack (stack s) (sp s - arg - 2) of
@@ -90,9 +87,11 @@ funcUpdate s arg = case accessStack (stack s) (sp s) of
         Left error              -> ErrorState $ "Runtime error in 'funcUpdate': " ++ error
     Left error             -> ErrorState $ "Runtime error in 'funcUpdate': " ++ error
 
+-- | 'halt' function returns the given state unchanged. Implemented for the sake of completeness though not really necessary.
 halt :: State -> State
 halt s = s
 
+-- | 'makeapp' creates new APP-cell and saves its address on the stack
 makeapp :: State -> State
 makeapp s = case accessStack (stack s) (sp s) of
     Right (StackCell a) -> case accessStack (stack s) (sp s - 1) of
@@ -254,11 +253,15 @@ opUpdate s = case accessStack (stack s) (sp s) of
         Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
     Left error            -> ErrorState $ "Runtime error in 'opUpdate': " ++ error
 
+-- | 'pushfun' pushes the heap address of a given function name on the stack.
+-- | pushfun state nameOfFunction
 pushfun :: State -> String -> State
 pushfun s name = case address (global s) name of
     Right int  -> s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell int)}
     Left error -> ErrorState error
 
+-- | 'pushparam' calls 'add2arg' and pushes the returned address of the second argument on the stack.
+-- | pushparam state adr
 pushparam :: State -> Int -> State
 pushparam s n = case accessStack (stack s) (sp s - n - 1) of
     Right (StackCell addr) -> case add2arg (heap s) addr of
@@ -266,20 +269,25 @@ pushparam s n = case accessStack (stack s) (sp s - n - 1) of
         Left error -> ErrorState $ "Runtime error in 'pushparam': " ++ error
     Left error -> ErrorState $ "Runtime error in 'pushparam': " ++ error
 
+-- | 'pushpre' loads pre defined function by creating a new PRE-cell and pushing its address on the stack.
 pushpre :: State -> Operator -> State
 pushpre s op = let (n, heap') = newPRE (heap s) op (arity' op) in
     case saveStack (stack s) (StackCell n) (sp s + 1) of
             Right stack -> s{pc = pc s + 1, sp = sp s + 1, stack = stack, heap = heap'}
             Left error  -> ErrorState $ "Runtime error in 'pushpre': " ++ error
 
+-- | 'pushpre' creates new VAL-cell and pushes its address on the stack.
+-- | pushpre state type value
 pushval :: State -> Int -> Int -> State
 pushval s t w = s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell n), heap = heap'}
   where
     (n, heap') = newVAL (heap s) t w
 
+-- | 'reset' initializes state in the beginning of MF run through.
 reset :: State -> State
 reset s = s {sp = -1, pc = pc s + 1}
 
+-- | 'return'' returns to previously saved code address by changing the programm counter.
 return' :: State -> State
 return' s = case accessStack (stack s) (sp s - 1) of
     Right (StackCell addr) -> case accessStack (stack s) (sp s) of
@@ -289,6 +297,7 @@ return' s = case accessStack (stack s) (sp s - 1) of
         Left error             -> ErrorState $ "Runtime error in 'return'': " ++ error
     Left error            -> ErrorState $ "Runtime error in 'return'': " ++ error
 
+-- | 'slide' clears the stack by n cells below the top two cells
 slide :: State -> Int -> State
 slide s n = case accessStack (stack s) (sp s - 1) of
     Right scell -> case saveStack (stack s) scell (sp s - n - 1) of
@@ -300,13 +309,7 @@ slide s n = case accessStack (stack s) (sp s - 1) of
         Left error -> ErrorState $ "Runtime error in 'slide': " ++ error
     Left error -> ErrorState $ "Runtime error in 'slide': " ++ error
 
-slideLet :: State -> Int -> State
-slideLet s n = case accessStack (stack s) (sp s) of
-    Right scell -> case saveStack (stack s) scell (sp s - n) of
-        Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n + 1) scells)}
-        Left error           -> ErrorState $ "Runtime error in 'slideLet': " ++ error
-    Left error  -> ErrorState $ "Runtime error in 'slideLet': " ++ error
-
+-- | 'unwind' equals to the APP-case in MFmini reduce: exposes the backbone
 unwind :: State -> State
 unwind s = case accessStack (stack s) (sp s) of
     Right (StackCell addr) -> case value (heap s) addr of
@@ -315,6 +318,16 @@ unwind s = case accessStack (stack s) (sp s) of
         Left error          -> ErrorState $ "Runtime error in 'unwind': " ++ error
     Left error             -> ErrorState $ "Runtime error in 'undwind': " ++ error
 
+--------------------------------- MF FUNCTIONS EXTENSION ---------------------------------
+-- | 'slideLet' clears the stack by n cells below the uppermost cell
+slideLet :: State -> Int -> State
+slideLet s n = case accessStack (stack s) (sp s) of
+    Right scell -> case saveStack (stack s) scell (sp s - n) of
+        Right (Stack scells) -> s {pc = pc s + 1, sp = sp s - n, stack = Stack (take (sp s - n + 1) scells)}
+        Left error           -> ErrorState $ "Runtime error in 'slideLet': " ++ error
+    Left error  -> ErrorState $ "Runtime error in 'slideLet': " ++ error
+
+-- | 'updateLet'
 updateLet :: State -> Int -> State
 updateLet s@State{stack = Stack scells} n = case accessStack (stack s) (sp s - n - 1) of
     Right (StackCell addr) -> case add2arg (heap s) addr of
@@ -327,6 +340,11 @@ updateLet s@State{stack = Stack scells} n = case accessStack (stack s) (sp s - n
     Left error             -> ErrorState $ "Runtime error in 'updateLet': " ++ error
 updateLet (ErrorState error) _            = ErrorState $ "Runtime error in 'updateLet': " ++ error
 
+-- | 'alloc' creates new UNI-cell and pushes its address on the stack
+alloc :: State -> State
+alloc s = s {pc = pc s + 1, sp = sp s + 1, stack = pushStack (stack s) (StackCell n), heap = heap'}
+  where
+    (n, heap') = newUNI (heap s)
 
 ---------------------------------------- HELPER FUNCTIONS FOR MF ----------------------------------------
 -- | 'address' returns the heap address of a given function name if successful, otherwise it returns an error.
@@ -337,7 +355,7 @@ address (Global gcells) f = address' gcells f
     address' ((fname, n) : xs) f = if fname == f then return n else address' xs f
     address' [] f                = Left $ "Runtime error: Function '" ++ f ++ "' not found."
 
--- If 'add2arg' accesses an APP-cell, it returns its second argument. If it accesses an IND cell, it recursively calls itself with its argument.
+-- | If 'add2arg' accesses an APP-cell, it returns its second argument. If it accesses an IND cell, it recursively calls itself with its argument.
 add2arg :: Heap -> Int -> Either String Int
 add2arg h@(Heap hcells) addr
     | (addr >= 0) && (addr < length hcells) = let hcell = hcells !! addr in case hcell of
@@ -385,15 +403,19 @@ newVAL h@(Heap hcells) t w
         | t == 1    = (length hcells, pushHeap h (VALNum w))
         | otherwise = (length hcells, pushHeap h (VALBool w))
 
+-- | 'newIND' pushes a heapcell of type IND (pointer cell)
 newIND :: Heap -> Int -> (Int, Heap)
 newIND h@(Heap hcells) n = (length hcells, pushHeap h (IND n))
 
+-- | 'newPRE' pushes a heapcell of type PRE (pre defined)
 newPRE :: Heap -> Operator -> Int -> (Int, Heap)
 newPRE h@(Heap hcells) op n = (length hcells, pushHeap h (PRE op $ arity' op))
 
+-- | 'newPRE' pushes a heapcell of type UNI (uninitialized)
 newUNI :: Heap -> (Int, Heap)
 newUNI h@(Heap hcells) = (length hcells, pushHeap h UNINITIALIZED)
 
+-- | 'resultToString' takes the last state of interpret and returns the result string
 resultToString :: State -> String
 resultToString (ErrorState error) = "---> " ++ error
 resultToString s                  = case accessStack (stack s) (sp s) of
@@ -408,9 +430,9 @@ resultToString s                  = case accessStack (stack s) (sp s) of
         _                 -> "---> Runtime error."
     Left error             -> "---> " ++ error
 
+-- | 'value' returns the heap cell pointed at by IND-cell
 value :: Heap -> Int -> Either String HeapCell
 value heap addr = case accessHeap heap addr of
     Right (IND addr1) -> value heap addr1
     Right hcell       -> Right hcell
     Left error        -> Left error
-    
