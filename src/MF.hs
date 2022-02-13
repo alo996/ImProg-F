@@ -91,7 +91,7 @@ funcUpdate s arg = case accessStack (stack s) (sp s) of
 halt :: State -> State
 halt s = s
 
--- | 'makeapp' creates new APP-cell and saves its address on the stack
+-- | 'makeapp' creates new APP-cell and saves its address on the stack.
 makeapp :: State -> State
 makeapp s = case accessStack (stack s) (sp s) of
     Right (StackCell a) -> case accessStack (stack s) (sp s - 1) of
@@ -102,6 +102,7 @@ makeapp s = case accessStack (stack s) (sp s) of
         Left error         -> ErrorState $ "Runtime error in 'makeapp': " ++ error
     Left error         -> ErrorState $ "Runtime error in 'makeapp': " ++ error
 
+-- | 'operator' evaluates operators; op states the arity of the operator.
 operator :: State -> Int -> State
 operator s op = case op of
     1 -> case accessStack (stack s) (sp s - 2) of
@@ -234,6 +235,7 @@ operator s op = case op of
         Left error              -> ErrorState $ "Runtime error in 'operator': " ++ error
     _ -> ErrorState "Runtime error in 'operator'."
 
+-- | 'opUpdate' manages the stack for operators
 opUpdate :: State -> State
 opUpdate s = case accessStack (stack s) (sp s) of
     Right (StackCell addr) -> case accessHeap (heap s) addr of
