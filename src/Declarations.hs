@@ -114,10 +114,10 @@ instance Show Expr where
     show (BinaryMin e1 e2)     = "(" ++ show e1 ++ " - " ++ show e2 ++ ")"
     show (Div e1 e2)           = "(" ++ show e1 ++ " / " ++ show e2 ++ ")"
     show (Equal e1 e2)         = "(" ++ show e1 ++ " == " ++ show e2 ++ ")"
-    show (Func e1 e2)          = "(FuncApp (" ++ show e1 ++ ") (" ++ show e2 ++ "))"
-    show (IfThenElse e1 e2 e3) = "if (" ++ show e1 ++ ") then (" ++ show e2 ++ ") else (" ++ show e3 ++ ")"
+    show (Func e1 e2)          = "(FuncApp " ++ show e1 ++ " " ++ show e2 ++ ")"
+    show (IfThenElse e1 e2 e3) = "(if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3 ++ ")"
     show (LessThan e1 e2)      = "(" ++ show e1 ++ " < " ++ show e2 ++ ")"
-    show (LetIn e1 e2)         = "let " ++ show e1 ++ " in " ++ show e2
+    show (LetIn e1 e2)         = "(let " ++ show e1 ++ " in " ++ show e2 ++ ")"
     show (LogicalAnd e1 e2)    = "(" ++ show e1 ++ " & " ++ show e2 ++ ")"
     show (LogicalNot e)        = "(Not " ++ show e ++ ")"
     show (LogicalOr e1 e2)     = "(" ++ show e1 ++ " | " ++ show e2 ++ ")"

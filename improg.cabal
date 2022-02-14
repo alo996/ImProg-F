@@ -1,11 +1,14 @@
 cabal-version: 1.12
 
 -- This file has been generated from package.yaml by hpack version 0.34.4.
+--
 -- see: https://github.com/sol/hpack
 
 name:           improg
 version:        0.1.0.0
 description:    Please see the README on GitLab2 at <https://gitlab2.cip.ifi.lmu.de/richard/improg-f>
+homepage:       https://github.com//#readme
+bug-reports:    https://github.com///issues
 author:         S. Haller, O. Katz, L. Ljubuncic, A. Richard, I. Suslov
 maintainer:     a.richard@campus.lmu.de
 copyright:      2022 S. Haller, O. Katz, L. Ljubuncic, A. Richard, I. Suslov
