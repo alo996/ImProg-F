@@ -2,7 +2,6 @@
 Module      : MF
 Description : This module contains all functionality to interpret a translated F program.
 -}
-{-# LANGUAGE NamedFieldPuns #-}
 module MF where
 
 import Data.Bits (Bits((.&.), (.|.), xor))

@@ -2,7 +2,6 @@
 Module      : Compiler
 Description : This module contains all functionality to translate a parsed F program into a set of MF instructions, while setting up the global environment and heap for the interpretation process.
 -}
-{-# LANGUAGE NamedFieldPuns #-}
 module Compiler where
 
 import Declarations
@@ -116,7 +115,7 @@ checkDuplicate f s = checkDuplicate' f s (heap s)
     -- 'checkDuplicate'' recursively iterates through the heap and checks whether a function 'f' has already been specified.
     checkDuplicate' :: String -> State -> Heap -> State
     checkDuplicate' f s (Heap (DEF{fname} : hcells))
-        | f == fname = ErrorState $ "Runtime error in 'checkDuplicate'': Multiple declarations of function '" ++ f ++ "'."
+        | f == fname = ErrorState $ "Runtime error: Multiple declarations of function '" ++ f ++ "'."
         | otherwise  = checkDuplicate' f s (Heap hcells)
     checkDuplicate' _ s (Heap []) = s
     checkDuplicate' _ _ _         = ErrorState "Runtime error 'checkDuplicate'': Heap set up incorrectly."

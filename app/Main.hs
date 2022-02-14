@@ -2,7 +2,6 @@
 Module      : Main
 Description : This module contains the entry point to the implementation.
 -}
-{-# LANGUAGE NamedFieldPuns #-}
 module Main where
 
 import Control.Monad (when)
@@ -23,22 +22,26 @@ main :: IO ()
 main = do
     setLocaleEncoding utf8
     args <- getArgs
+    when (subset args flags == False) $ do 
+        putStrLn "Incorrect flag name. Flag options:\n-tokens\n-ast\n-instructions\n-states"
     putStrLn "Please enter an F program and hit enter (end with an empty line):"
     input <- getLines
     case tokenize input of
         Right toks -> do
-            when ("-tokens" `elem` args) $ do putStrLn $ tokensToString toks
+            when ("-tokens" `elem` args) $ do 
+                putStrLn $ tokensToString toks
             case program toks of
                 Right ast -> do
-                    when ("-ast" `elem` args) $ do putStrLn $ defsToString $ fst ast
+                    when ("-ast" `elem` args) $ do 
+                        putStrLn $ defsToString $ fst ast
                     case compileProgram (fst ast) of
                         ErrorState error -> putStrLn error >> anotherOne
                         state            -> do
-                            when ("-instructions" `elem` args) $ do print (code state)
+                            when ("-instructions" `elem` args) $ do 
+                                print (code state)
                             if "-states" `elem` args 
                                 then putStrLn (interpretVerbose state) >> anotherOne 
                                 else putStrLn (resultToString $ interpret state) >> anotherOne
-                            when ("-tokens" `notElem` args && "-ast" `notElem` args && "-instructions" `notElem` args && "-states" `notElem` args ) $ do putStrLn "\nNo flags used or incorrect flag name. Flag options:\n\n-tokens\n-ast\n-instructions\n-states\n\n"
                 Left error -> putStrLn error >> anotherOne
         Left error -> putStrLn error >> anotherOne
   where
@@ -60,3 +63,10 @@ main = do
             else do
                 xs <- getLines
                 return $ x ++ "\n" ++ xs
+    flags = ["-tokens", "-ast", "-instructions", "-states"]
+    -- 'subset' checks whether the elements of a given list are all contained in another list.
+    subset :: Eq a => [a] -> [a] -> Bool
+    subset (x : xs) ys 
+        | x `elem` ys = subset xs ys
+        | otherwise   = False
+    subset [] _  = True

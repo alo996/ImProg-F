@@ -2,7 +2,6 @@
 Module      : Declarations
 Description : This module contains all type declarations and type class instantiations needed to tokenize, parse, compile and interpret F programs.
 -}
-{-# LANGUAGE NamedFieldPuns #-}
 module Declarations where
 
 

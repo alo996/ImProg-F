@@ -3,12 +3,11 @@ version:             0.1.0.0
 github:              "/"
 license:             BSD3
 author:              "S. Haller, O. Katz, L. Ljubuncic, A. Richard, I. Suslov"
-maintainer:          "example@example.com"
+maintainer:          "a.richard@campus.lmu.de"
 copyright:           "2022 S. Haller, O. Katz, L. Ljubuncic, A. Richard, I. Suslov"
 
 extra-source-files:
 - README.md
-- ChangeLog.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -20,7 +19,12 @@ extra-source-files:
 description:         Please see the README on GitLab2 at <https://gitlab2.cip.ifi.lmu.de/richard/improg-f>
 
 dependencies:
-- base >= 4.7 && < 5
+- base
+- tasty
+- tasty-hunit
+
+default-extensions:
+- NamedFieldPuns
 
 library:
   source-dirs: src
