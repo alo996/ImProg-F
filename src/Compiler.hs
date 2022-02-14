@@ -90,8 +90,7 @@ compileExpression e pos g = case e of
     IfThenElse e1 e2 e3                 ->
         compileExpression e3 pos g ++ compileExpression e2 (posInc pos 1) g ++ compileExpression e1 (posInc pos 2) g ++ [Pushpre IfOp, Makeapp, Makeapp, Makeapp]
 
-{- | Compile local definitions. 'compileLocalDefinitions' takes a list of local definitions, the expression for which the local definitions have been specified, a local environment and the already set up global environment of the program.
-It returns a list of MF instructions.
+{- | Compile local definitions. 'compileLocalDefinitions' takes a list of local definitions, the expression for which the local definitions have been specified, a local environment and the already set up global environment of the program. It returns a list of MF instructions.
 -}
 compileLocalDefinitions :: [LocalDef] -> Expr -> [(Expr, Int)] -> Global ->[Instruction]
 compileLocalDefinitions ldefs e pos s = compileLocalDefinitions' ldefs e (replicate' [Alloc, Alloc, Makeapp] len) pos' s len len
@@ -108,7 +107,7 @@ compileLocalDefinitions ldefs e pos s = compileLocalDefinitions' ldefs e (replic
 
 
 ---------------------------------------- HELPER FUNCTIONS FOR COMPILER ----------------------------------------
--- | 'checkDuplicate' returns True if the definition of a function 'f' does not already exist in a heap.
+-- | 'checkDuplicate' returns True if the definition of a function 'f' does not already exist in the heap.
 checkDuplicate :: String -> State -> State
 checkDuplicate f s = checkDuplicate' f s (heap s)
   where
@@ -142,8 +141,7 @@ createPos' :: [LocalDef] -> [(Expr, Int)] -> Int -> [(Expr, Int)]
 createPos' ldefs pos n = createPos'' ldefs pos' (length ldefs - 2)
   where
     pos' = posInc pos n
-    {- | 'createPos''' takes a list of local definitions, a local environment and an index.
-    It recursively iterates through the list of local definitions, adding (variable, index)-bindings to the front of the local environment.
+    {- 'createPos''' takes a list of local definitions, a local environment and an index. It recursively iterates through the list of local definitions, adding (variable, index)-bindings to the front of the local environment.
     -}
     createPos'' :: [LocalDef] -> [(Expr, Int)] -> Int -> [(Expr, Int)]
     createPos'' ((LocalDef e1 _) : ldefs) pos n = createPos'' ldefs ((e1, n) : pos) (n - 1)
@@ -167,4 +165,3 @@ replicate' :: [a] -> Int -> [a]
 replicate' xs n
     | n > 1     = xs ++ replicate' xs (n - 1)
     | otherwise = xs
-    

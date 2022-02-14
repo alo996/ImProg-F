@@ -25,10 +25,10 @@ stack run
 ## Highlights
 
 - Straightforward execution using the Stack build tool
-- Detailed error handling and error messages
+- Detailed error handling and error messages (see examples in test suite)
 - Flag support for different levels of output verbosity
 - Coherent coding style (based on https://kowainik.github.io/posts/2019-02-06-style-guide)
-- Extensive commenting
+- Extensive comments
 - No known bugs
 
 

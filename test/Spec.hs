@@ -105,13 +105,7 @@ interpreterTest4 = testCase "Testing interpreter"
 
 
 ---------------------------------------- HELPER FUNCTIONS FOR TEST SUITE ----------------------------------------
-parseString :: String -> String
-parseString x = case tokenize x of
-    Right toks -> case program toks of
-        Right prog -> show prog
-        Left error -> error
-    Left error -> error
-
+-- | Tokenize, parse and compile a program.
 compileString :: String -> String
 compileString x = case tokenize x of
     Right toks -> case program toks of
@@ -121,6 +115,7 @@ compileString x = case tokenize x of
         Left error -> error
     Left error -> error
 
+-- | Tokenize, parse, compile and interpret a program.
 interpretString :: String -> String
 interpretString x = case tokenize x of
     Right toks -> case program toks of
@@ -129,5 +124,13 @@ interpretString x = case tokenize x of
             s                -> case interpret s of
                 ErrorState error -> error
                 s            -> show s
+        Left error -> error
+    Left error -> error
+
+-- | Tokenize and parse a program.
+parseString :: String -> String
+parseString x = case tokenize x of
+    Right toks -> case program toks of
+        Right prog -> show prog
         Left error -> error
     Left error -> error

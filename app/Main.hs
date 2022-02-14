@@ -7,6 +7,7 @@ module Main where
 import Control.Monad (when)
 import GHC.IO.Encoding (utf8, setLocaleEncoding)
 import System.Environment (getArgs)
+import System.Exit (exitSuccess)
 
 import Compiler (compileProgram)
 import Declarations (State(ErrorState, code, State))
@@ -22,8 +23,10 @@ main :: IO ()
 main = do
     setLocaleEncoding utf8
     args <- getArgs
-    when (subset args flags == False) $ do 
-        putStrLn "Incorrect flag name. Flag options:\n-tokens\n-ast\n-instructions\n-states"
+    -- All passed arguments by the user need to match one of the defined command line flags, otherwise terminate with a help message.
+    when (subset args flags == False) $ do
+        putStrLn "Incorrect flag name. Flag options:\n-tokens\n-ast\n-instructions\n-states\n"
+        exitSuccess
     putStrLn "Please enter an F program and hit enter (end with an empty line):"
     input <- getLines
     case tokenize input of

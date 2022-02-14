@@ -1,7 +1,7 @@
 {- |
 Module      : Parser
 Description : This module contains all functionality to pursue syntactical analysis in F. It implements a recursive descent LL(1) parser, which specifies one function per rule in the F grammar. 
-As defined in the Declarations file, a parser has type 'type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])'.
+As defined in the declarations file, a parser has type 'type Parser a = [(Token, Int)] -> Either String (a, [(Token, Int)])'.
 -}
 module Parser where
 
@@ -15,7 +15,6 @@ import Declarations
     Keyword(LBracket, Semicolon, Assign, Let, In, If, Then, Else, Or,
             And, Not, Equals, Less, Minus, Divide, RBracket, Plus, Times),
       Token(..))
-import Tokenizer (tokenize)
 
 
 {- | 'program' parses a program (a list of definitions). It takes a list of tuples, each tuple containing a token and its line number in the source code. If successful, it returns a tuple, containing a list of definitions and an empty list as the entire input was parsed. Otherwise it returns an error.

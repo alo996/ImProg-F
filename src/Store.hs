@@ -52,4 +52,3 @@ saveStack :: Stack -> StackCell -> Int -> Either String Stack
 saveStack s@(Stack scells) scell n
     | n <= length scells && n >= 0 = return $ Stack (take n scells ++ [scell] ++ drop (n + 1) scells) 
     | otherwise                    = Left $ "Stack has no index " ++ show n ++ "."
-    

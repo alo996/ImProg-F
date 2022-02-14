@@ -18,7 +18,7 @@ tokenize :: String -> Either String [(Token, Int)]
 tokenize ""    = Left "Runtime error: Can not compile empty program."
 tokenize input = tokenize' input [] 1
 
-{- | 'tokenize'' deals with spaces and acts on keywords and booleans. It receives user input, a list of tokenized (token, line number)-pairs and an integer, which corresponds to the current line in the source code. It either returns an extended list of (token, line number)-pairs or an error message.
+{- | 'tokenize'' deals with spaces and acts on keywords and booleans. It receives user input, a list of tokenized (token, line number)-pairs and an integer which corresponds to the current line in the source code. It either returns an extended list of (token, line number)-pairs or an error message.
 -}
 tokenize' :: String -> [(Token, Int)] -> Int -> Either String [(Token, Int)]
 tokenize' [] tAcc lAcc                                         = Right $ reverse tAcc
@@ -84,9 +84,8 @@ tokenizeName _ _ _ _            = Left "Lexical error."
 
 
 ---------------------------------------- HELPER FUNCTIONS FOR TOKENIZER ----------------------------------------
-{- | 'keyCheck' validates whether a string is a keyword or a part of a longer name, based on its following character. 
+{- | 'keyCheck' validates whether a string is a keyword or part of a longer name, based on its following character. 
 It takes the character following the assumed keyword, the assumed keyword, the remaining input with and without the assumed keyword, the already processed list of (token, line number)-pairs and the line number.
-It returns either the checked keyword/name to be tokenized, or tokenize the name as is.
 -}
 keyCheck :: Char -> Token -> String -> String -> [(Token, Int)] -> Int -> Either String [(Token, Int)]
 keyCheck c checktok rest input tAcc lAcc

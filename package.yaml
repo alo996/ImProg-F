@@ -20,8 +20,6 @@ description:         Please see the README on GitLab2 at <https://gitlab2.cip.if
 
 dependencies:
 - base
-- tasty
-- tasty-hunit
 
 default-extensions:
 - NamedFieldPuns
@@ -50,3 +48,5 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - improg
+    - tasty
+    - tasty-hunit
