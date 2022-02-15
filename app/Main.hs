@@ -4,7 +4,7 @@ Description : This module contains the entry point to the implementation.
 -}
 module Main where
 
-import Control.Monad (when)
+import Control.Monad (when, unless)
 import GHC.IO.Encoding (utf8, setLocaleEncoding)
 import System.Environment (getArgs)
 import System.Exit (exitSuccess)
@@ -24,26 +24,26 @@ main = do
     setLocaleEncoding utf8
     args <- getArgs
     -- All passed arguments by the user need to match one of the defined command line flags, otherwise terminate with a help message.
-    when (subset args flags == False) $ do
+    unless (subset args flags) $ do
         putStrLn "Incorrect flag name. Flag options:\n-tokens\n-ast\n-instructions\n-states\n"
         exitSuccess
     putStrLn "Please enter an F program and hit enter (end with an empty line):"
     input <- getLines
     case tokenize input of
         Right toks -> do
-            when ("-tokens" `elem` args) $ do 
+            when ("-tokens" `elem` args) $ do
                 putStrLn $ tokensToString toks
             case program toks of
                 Right ast -> do
-                    when ("-ast" `elem` args) $ do 
+                    when ("-ast" `elem` args) $ do
                         putStrLn $ defsToString $ fst ast
                     case compileProgram (fst ast) of
                         ErrorState error -> putStrLn error >> anotherOne
                         state            -> do
-                            when ("-instructions" `elem` args) $ do 
+                            when ("-instructions" `elem` args) $ do
                                 print (code state)
-                            if "-states" `elem` args 
-                                then putStrLn (interpretVerbose state) >> anotherOne 
+                            if "-states" `elem` args
+                                then putStrLn (interpretVerbose state) >> anotherOne
                                 else putStrLn (resultToString $ interpret state) >> anotherOne
                 Left error -> putStrLn error >> anotherOne
         Left error -> putStrLn error >> anotherOne
@@ -69,7 +69,7 @@ main = do
     flags = ["-tokens", "-ast", "-instructions", "-states"]
     -- 'subset' checks whether the elements of a given list are all contained in another list.
     subset :: Eq a => [a] -> [a] -> Bool
-    subset (x : xs) ys 
+    subset (x : xs) ys
         | x `elem` ys = subset xs ys
         | otherwise   = False
     subset [] _  = True
