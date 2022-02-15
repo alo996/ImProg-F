@@ -16,7 +16,7 @@ This group project was part of the practical 'Implementierung von Programmierspr
 
 ## Execution with Stack
 
-Navigate to the cloned repository and execute
+Navigate into the cloned repository and execute
 ```bash
 stack run
 ```
